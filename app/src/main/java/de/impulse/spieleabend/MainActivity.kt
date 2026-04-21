@@ -1,20 +1,28 @@
-package de.impulse.spieleabend;
+package de.impulse.spieleabend
 
-import android.app.Activity;
-import android.os.Bundle;
-import android.view.Gravity;
-import android.widget.TextView;
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dagger.hilt.android.AndroidEntryPoint
+import de.impulse.spieleabend.frontend.hello.HelloScreen
+import de.impulse.spieleabend.frontend.hello.HelloViewModel
+import de.impulse.spieleabend.frontend.theme.SpieleabendTheme
 
-public class MainActivity extends Activity {
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+    private val viewModel: HelloViewModel by viewModels()
 
-        TextView helloWorld = new TextView(this);
-        helloWorld.setGravity(Gravity.CENTER);
-        helloWorld.setText("Hello World!");
-        helloWorld.setTextSize(24);
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-        setContentView(helloWorld);
+        setContent {
+            val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+
+            SpieleabendTheme {
+                HelloScreen(uiState.value)
+            }
+        }
     }
 }
