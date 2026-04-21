@@ -1,23 +1,30 @@
-@file:Suppress("MagicNumber")
-
 package de.impulse.spieleabend.frontend.start
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.graphics.Color
+import androidx.annotation.DrawableRes
+import de.impulse.spieleabend.R
 
 @Immutable
 data class BoardGameShelfItem(
     val id: String,
-    val title: String,
-    val category: String,
-    val accentColor: Color,
+    @param:DrawableRes val imageResId: Int,
 )
 
 val placeholderBoardGames = listOf(
     BoardGameShelfItem(
-        id = "placeholder",
-        title = "Platzhalter",
-        category = "Brettspiel",
-        accentColor = Color(0xFF3F6F5D),
+        id = "placeholder-1",
+        imageResId = R.drawable.placeholder_game_box_side_1,
+    ),
+    BoardGameShelfItem(
+        id = "placeholder-2",
+        imageResId = R.drawable.placeholder_game_box_side_2,
+    ),
+    BoardGameShelfItem(
+        id = "placeholder-3",
+        imageResId = R.drawable.placeholder_game_box_side_3,
+    ),
+    BoardGameShelfItem(
+        id = "placeholder-4",
+        imageResId = R.drawable.placeholder_game_box_side_4,
     ),
 )
