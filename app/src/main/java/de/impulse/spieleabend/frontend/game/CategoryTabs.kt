@@ -46,7 +46,7 @@ import kotlin.math.roundToInt
 internal fun CategoryTabs(
     kategorien: List<GameKategorieUiModel>,
     modifier: Modifier = Modifier,
-    onKategorieSelected: (GameKategorieUiModel, Color) -> Unit = { _, _ -> },
+    onKategorieSelected: (String) -> Unit = {},
     onRandomSelected: () -> Unit = {},
 ) {
     SubcomposeLayout(modifier = modifier) { constraints ->
@@ -200,7 +200,6 @@ private fun CategoryTabPreview() {
                 tab = GameKategorieUiModel(
                     id = "vorherige-karte",
                     name = "Vorherige Karte",
-                    kartentexte = emptyList(),
                 ),
                 side = CategoryTabSide.Right,
                 color = CategoryTabColors.last(),
@@ -264,7 +263,7 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
     constraints: Constraints,
     randomTabHeight: Dp,
     normalTabHeight: Dp,
-    onKategorieSelected: (GameKategorieUiModel, Color) -> Unit,
+    onKategorieSelected: (String) -> Unit,
     onRandomSelected: () -> Unit,
 ): MeasuredCategoryTabs {
     val measureConstraints = constraints.copy(minWidth = 0, minHeight = 0)
@@ -295,7 +294,7 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
                     side = side,
                     color = color,
                     fixedHeight = normalTabHeight,
-                    onClick = { onKategorieSelected(tab, color) },
+                    onClick = { onKategorieSelected(tab.id) },
                 )
             }.single().measure(measureConstraints),
         )
@@ -358,12 +357,10 @@ private const val RANDOM_CATEGORY_TAB_HEIGHT_FRACTION = 1f / 3f
 private val RandomTab = GameKategorieUiModel(
     id = "random",
     name = "Zuf\u00e4llig",
-    kartentexte = emptyList(),
 )
 private val PreviousCardTab = GameKategorieUiModel(
     id = "previous-card",
     name = "Vorherige Karte",
-    kartentexte = emptyList(),
 )
 private val RandomTabColor = Color(0xFF1F2937)
 private val PreviousCardTabColor = Color(0xFF5F6268)

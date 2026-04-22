@@ -70,7 +70,7 @@ internal fun GameCard(
 private fun GameCardPreview() {
     SpieleabendTheme {
         GameCard(
-            kartentexte = PreviewUiState.kartentexte,
+            kartentexte = PreviewUiState.aktuelleKarte.kartentexte,
             modifier = Modifier
                 .width(320.dp)
                 .height(520.dp)
@@ -117,9 +117,9 @@ private fun CardTextPanel(
 private fun CardTextPanelPreview() {
     SpieleabendTheme {
         CardTextPanel(
-            kartentext = PreviewUiState.kartentexte.first(),
+            kartentext = PreviewUiState.aktuelleKarte.kartentexte.first(),
             index = 0,
-            kartentextCount = PreviewUiState.kartentexte.size,
+            kartentextCount = PreviewUiState.aktuelleKarte.kartentexte.size,
             modifier = Modifier
                 .width(320.dp)
                 .height(124.dp)

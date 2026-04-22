@@ -1,5 +1,7 @@
 package de.impulse.spieleabend.frontend.game
 
+import de.impulse.spieleabend.domain.model.GezogeneKarte
+import de.impulse.spieleabend.domain.model.GezogenerKartentext
 import de.impulse.spieleabend.domain.model.Kartentext
 import de.impulse.spieleabend.domain.model.Kategorie
 import de.impulse.spieleabend.domain.model.Lokalisierung
@@ -10,7 +12,7 @@ import org.junit.Test
 
 class GameUiStateTest {
     @Test
-    fun liestKartentexteTransitivUeberKategorien() {
+    fun lokalisiertGezogeneKarteUndKategorien() {
         val frage = kartentext(id = "frage", text = "Frage")
         val hinweis = kartentext(id = "hinweis", text = "Hinweis")
         val spiel = Spiel(
@@ -22,14 +24,24 @@ class GameUiStateTest {
             ),
         )
 
-        val uiState = spiel.toGameUiState(sprachCode = "de")
+        val uiState = spiel.toGameUiState(
+            aktuelleKarte = GezogeneKarte(
+                kartentexte = listOf(
+                    GezogenerKartentext(kartentext = frage, kategorieId = "wissen"),
+                    GezogenerKartentext(kartentext = hinweis, kategorieId = "wissen"),
+                ),
+            ),
+            sprachCode = "de",
+        )
 
         assertEquals("Quiz", uiState.spielName)
-        assertEquals(listOf("frage", "hinweis"), uiState.kartentexte.map { it.id })
-        assertEquals(listOf("Frage", "Hinweis"), uiState.kartentexte.map { it.text })
         assertEquals(listOf("Wissen", "Finale"), uiState.kategorien.map { it.name })
-        assertEquals(listOf("frage", "hinweis"), uiState.kategorien[0].kartentexte.map { it.id })
-        assertEquals(listOf("frage"), uiState.kategorien[1].kartentexte.map { it.id })
+        assertEquals(listOf("frage", "hinweis"), uiState.aktuelleKarte.kartentexte.map { it.id })
+        assertEquals(listOf("Frage", "Hinweis"), uiState.aktuelleKarte.kartentexte.map { it.text })
+        assertEquals(
+            listOf("wissen", "wissen"),
+            uiState.aktuelleKarte.kartentexte.map { it.kategorieId },
+        )
     }
 
     private fun kategorie(

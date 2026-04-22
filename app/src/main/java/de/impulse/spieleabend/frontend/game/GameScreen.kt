@@ -16,9 +16,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,6 +38,8 @@ fun GameScreen(
     GameScreenContent(
         uiState = uiState,
         modifier = modifier,
+        onKategorieSelected = viewModel::selectKategorie,
+        onRandomSelected = viewModel::selectRandom,
     )
 }
 
@@ -56,15 +55,14 @@ private fun GameScreenPreview() {
 private fun GameScreenContent(
     uiState: GameUiState,
     modifier: Modifier = Modifier,
+    onKategorieSelected: (String) -> Unit = {},
+    onRandomSelected: () -> Unit = {},
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
         color = TableBackground,
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            var selectedCard by remember(uiState) {
-                mutableStateOf(uiState.randomCardSelection())
-            }
             val horizontalPadding = if (maxWidth < CompactWidthBreakpoint) {
                 CompactHorizontalPadding
             } else {
@@ -73,7 +71,8 @@ private fun GameScreenContent(
 
             GamePlayArea(
                 spielName = uiState.spielName,
-                selectedCard = selectedCard,
+                aktuelleKarte = uiState.aktuelleKarte,
+                kategorien = uiState.kategorien,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(
@@ -87,12 +86,8 @@ private fun GameScreenContent(
             CategoryTabs(
                 kategorien = uiState.kategorien,
                 modifier = Modifier.fillMaxSize(),
-                onKategorieSelected = { kategorie, color ->
-                    selectedCard = kategorie.cardSelection(color = color)
-                },
-                onRandomSelected = {
-                    selectedCard = uiState.randomCardSelection()
-                },
+                onKategorieSelected = { kategorieId -> onKategorieSelected(kategorieId) },
+                onRandomSelected = onRandomSelected,
             )
         }
     }
@@ -104,10 +99,8 @@ private fun GamePlayAreaPreview() {
     SpieleabendTheme {
         GamePlayArea(
             spielName = PreviewUiState.spielName,
-            selectedCard = GameCardSelection(
-                kartentexte = PreviewUiState.kartentexte,
-                textPanelColors = emptyList(),
-            ),
+            aktuelleKarte = PreviewUiState.aktuelleKarte,
+            kategorien = PreviewUiState.kategorien,
             modifier = Modifier.fillMaxSize(),
         )
     }
@@ -116,7 +109,8 @@ private fun GamePlayAreaPreview() {
 @Composable
 private fun GamePlayArea(
     spielName: String,
-    selectedCard: GameCardSelection,
+    aktuelleKarte: GameCardUiModel,
+    kategorien: List<GameKategorieUiModel>,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -144,8 +138,8 @@ private fun GamePlayArea(
             contentAlignment = Alignment.Center,
         ) {
             GameCard(
-                kartentexte = selectedCard.kartentexte,
-                textPanelColors = selectedCard.textPanelColors,
+                kartentexte = aktuelleKarte.kartentexte,
+                textPanelColors = aktuelleKarte.textPanelColors(kategorien),
                 modifier = Modifier
                     .widthIn(max = 560.dp)
                     .heightIn(max = 720.dp)
@@ -171,40 +165,17 @@ private val CompactWidthBreakpoint = 420.dp
 private val CompactHorizontalPadding = 52.dp
 private val ExpandedHorizontalPadding = 76.dp
 
-private fun GameKategorieUiModel.cardSelection(color: Color): GameCardSelection {
-    val shuffledKartentexte = kartentexte.shuffled()
-    return GameCardSelection(
-        kartentexte = shuffledKartentexte,
-        textPanelColors = List(shuffledKartentexte.size) { color },
-    )
-}
-
-private fun GameUiState.randomCardSelection(): GameCardSelection =
-    kategorien
-        .flatMapIndexed { index, kategorie ->
-            kategorie.kartentexte.map { kartentext ->
-                ColoredKartentext(
-                    kartentext = kartentext,
-                    color = categoryTabColor(index),
-                )
-            }
+private fun GameCardUiModel.textPanelColors(kategorien: List<GameKategorieUiModel>): List<Color> =
+    kartentexte.map { kartentext ->
+        val kategorieIndex = kategorien.indexOfFirst { kategorie ->
+            kategorie.id == kartentext.kategorieId
         }
-        .shuffled()
-        .distinctBy { coloredKartentext -> coloredKartentext.kartentext.id }
-        .toGameCardSelection()
 
-private fun List<ColoredKartentext>.toGameCardSelection(): GameCardSelection =
-    GameCardSelection(
-        kartentexte = map { coloredKartentext -> coloredKartentext.kartentext },
-        textPanelColors = map { coloredKartentext -> coloredKartentext.color },
-    )
+        if (kategorieIndex >= 0) {
+            categoryTabColor(kategorieIndex)
+        } else {
+            FallbackTextPanelColor
+        }
+    }
 
-private data class GameCardSelection(
-    val kartentexte: List<GameKartentextUiModel>,
-    val textPanelColors: List<Color>,
-)
-
-private data class ColoredKartentext(
-    val kartentext: GameKartentextUiModel,
-    val color: Color,
-)
+private val FallbackTextPanelColor = Color(0xFFE8E0FF)
