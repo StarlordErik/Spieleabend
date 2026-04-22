@@ -31,7 +31,7 @@ class GameRepositoryImpl @Inject constructor(
         return spielDao.spiel(gameId)
             ?: spielDao.spiel(InitialGameData.DEFAULT_GAME_ID)
             ?: requireNotNull(spielDao.erstesSpiel()) {
-                "Die Spieleabend-Datenbank enthaelt kein Spiel."
+                "Die Spieleabend-Datenbank enthält kein Spiel."
             }
     }
 
