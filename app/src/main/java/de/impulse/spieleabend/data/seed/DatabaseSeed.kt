@@ -1,12 +1,12 @@
 package de.impulse.spieleabend.data.seed
 
-import de.impulse.spieleabend.data.local.entity.KartentextEntity
-import de.impulse.spieleabend.data.local.entity.KategorieEntity
-import de.impulse.spieleabend.data.local.entity.KategorieXKartentextEntity
-import de.impulse.spieleabend.data.local.entity.LokalisierungEntity
-import de.impulse.spieleabend.data.local.entity.SpielEntity
-import de.impulse.spieleabend.data.local.entity.SpielXKategorieEntity
-import de.impulse.spieleabend.data.local.entity.TranslationEntity
+import de.impulse.spieleabend.data.entity.KartentextEntity
+import de.impulse.spieleabend.data.entity.KategorieEntity
+import de.impulse.spieleabend.data.entity.KategorieXKartentextEntity
+import de.impulse.spieleabend.data.entity.LokalisierungEntity
+import de.impulse.spieleabend.data.entity.SpielEntity
+import de.impulse.spieleabend.data.entity.SpielXKategorieEntity
+import de.impulse.spieleabend.data.entity.TranslationEntity
 import de.impulse.spieleabend.data.mapper.toEntity
 import de.impulse.spieleabend.data.mapper.toKategorieXKartentextEntities
 import de.impulse.spieleabend.data.mapper.toSpielXKategorieEntities

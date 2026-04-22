@@ -7,11 +7,11 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import de.impulse.spieleabend.data.local.SpieleabendDatabase
-import de.impulse.spieleabend.data.local.dao.KartentextDao
-import de.impulse.spieleabend.data.local.dao.KategorieDao
-import de.impulse.spieleabend.data.local.dao.LokalisierungDao
-import de.impulse.spieleabend.data.local.dao.SpielDao
+import de.impulse.spieleabend.data.SpieleabendDatabase
+import de.impulse.spieleabend.data.dao.KartentextDao
+import de.impulse.spieleabend.data.dao.KategorieDao
+import de.impulse.spieleabend.data.dao.LokalisierungDao
+import de.impulse.spieleabend.data.dao.SpielDao
 import de.impulse.spieleabend.data.seed.InitialDatabaseSeedCallback
 import javax.inject.Singleton
 

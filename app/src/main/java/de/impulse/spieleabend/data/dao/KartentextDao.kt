@@ -1,10 +1,10 @@
-package de.impulse.spieleabend.data.local.dao
+package de.impulse.spieleabend.data.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import de.impulse.spieleabend.data.local.entity.KartentextEntity
+import de.impulse.spieleabend.data.entity.KartentextEntity
 
 @Dao
 interface KartentextDao {

@@ -1,4 +1,4 @@
-package de.impulse.spieleabend.data.local.entity
+package de.impulse.spieleabend.data.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity

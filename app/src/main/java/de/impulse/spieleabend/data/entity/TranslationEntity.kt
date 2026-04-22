@@ -1,13 +1,12 @@
-package de.impulse.spieleabend.data.local.entity
+package de.impulse.spieleabend.data.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "kategorie",
+    tableName = "translation",
+    primaryKeys = ["lokalisierung_id", "sprach_code"],
     foreignKeys = [
         ForeignKey(
             entity = LokalisierungEntity::class,
@@ -16,11 +15,9 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [
-        Index(value = ["lokalisierung_id"], unique = true),
-    ],
 )
-data class KategorieEntity(
-    @PrimaryKey val id: String,
+data class TranslationEntity(
     @ColumnInfo(name = "lokalisierung_id") val lokalisierungId: String,
+    @ColumnInfo(name = "sprach_code") val sprachCode: String,
+    val text: String,
 )

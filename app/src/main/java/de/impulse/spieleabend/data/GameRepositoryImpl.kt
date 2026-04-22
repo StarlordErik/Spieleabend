@@ -1,10 +1,10 @@
 package de.impulse.spieleabend.data
 
 import androidx.room.withTransaction
-import de.impulse.spieleabend.data.local.SpieleabendDatabase
-import de.impulse.spieleabend.data.local.entity.KartentextEntity
-import de.impulse.spieleabend.data.local.entity.KategorieEntity
-import de.impulse.spieleabend.data.local.entity.SpielEntity
+import de.impulse.spieleabend.data.SpieleabendDatabase
+import de.impulse.spieleabend.data.entity.KartentextEntity
+import de.impulse.spieleabend.data.entity.KategorieEntity
+import de.impulse.spieleabend.data.entity.SpielEntity
 import de.impulse.spieleabend.data.mapper.toDomain
 import de.impulse.spieleabend.data.seed.InitialGameData
 import de.impulse.spieleabend.domain.model.Kartentext

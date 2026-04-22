@@ -1,12 +1,12 @@
-package de.impulse.spieleabend.data.local.dao
+package de.impulse.spieleabend.data.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import de.impulse.spieleabend.data.local.entity.KartentextEntity
-import de.impulse.spieleabend.data.local.entity.KategorieEntity
-import de.impulse.spieleabend.data.local.entity.KategorieXKartentextEntity
+import de.impulse.spieleabend.data.entity.KartentextEntity
+import de.impulse.spieleabend.data.entity.KategorieEntity
+import de.impulse.spieleabend.data.entity.KategorieXKartentextEntity
 
 @Dao
 interface KategorieDao {
