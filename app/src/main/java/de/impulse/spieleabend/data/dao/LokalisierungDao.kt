@@ -1,11 +1,11 @@
-package de.impulse.spieleabend.data.local.dao
+package de.impulse.spieleabend.data.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import de.impulse.spieleabend.data.local.entity.LokalisierungEntity
-import de.impulse.spieleabend.data.local.entity.TranslationEntity
+import de.impulse.spieleabend.data.entity.LokalisierungEntity
+import de.impulse.spieleabend.data.entity.TranslationEntity
 
 @Dao
 interface LokalisierungDao {
