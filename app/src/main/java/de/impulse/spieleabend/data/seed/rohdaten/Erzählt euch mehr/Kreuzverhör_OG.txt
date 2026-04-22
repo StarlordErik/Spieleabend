@@ -1,0 +1,10 @@
+"Würdest du lieber ...\n\n ... das Weltall oder den Ozean erkunden?\n ... den ganzen Tag lang Anzug oder Jogginganzug tragen?\n ... alle Sprachen dieser Welt oder alle Instrumente dieser Welt beherrschen?",
+"Bevorzugst du ...\n\n ... Podcast oder Hörbuch hören?\n ... Online Shopping oder in Geschäfte gehen?\n ... Nachrichten schreiben oder telefonieren?\n ... Sport machen oder Sport gucken?",
+"Wie informierst du dich? Nenne jeweils 3 ...\n\n ... Websites\n ... Printerzeugnisse\n ... TV Formate\n ... Podcasts",
+"Teile je Stichwort eine Kindheitserinnerung:\n\n-Süßigkeit\n-TV Serie\n-Gesellschaftsspiel\n-beste(r) Freund(in)",
+"Dein Lieblingsgetränk ...\n\n ... beim Frühstück?\n ... im Kino?\n ... im Club?\n ... auf der Arbeit?",
+"Bist du eher ...\n\n ... ein Fluss,\n ... ein See,\n ... ein Meer oder\n ... ein Wasserfall?\n\nWarum?",
+"Verzichtest du eher auf ...\n\n ... Kaffee oder Alkohol?\n ... Fleisch oder Fisch?\n ... die Fähigkeit zu schreiben oder die Fähigkeit zu lesen?\n ... 1,5 Monatsgehälter oder deinen Jahresurlaub?",
+"Regnerischer Spielnachmittag, aber wie?\n\n-Karten oder Brettspiel?\n-Wii oder Playstation?\n-Fifa oder Mario Kart?\n-Heißer Kakao oder Bier?",
+"Du hast eine eigene Minibar im Haus. Was darf nicht fehlen?\n\n-Wein oder Bier?\n-Klarer oder Kräuterschnaps?\n-Coca-Cola oder Red Bull?\n-Schokolade oder Erdnüsse?",
+"Wieviel Bargeld hast du in diesem Moment bei dir?\n\nWas war deine letzte Anschaffung < 100€?\n\nWas war deine letzte Anschaffung > 100€?\n\nWofür sparst du gerade?"
