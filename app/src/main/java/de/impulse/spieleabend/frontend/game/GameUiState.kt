@@ -7,6 +7,17 @@ import de.impulse.spieleabend.domain.model.Lokalisierung
 import de.impulse.spieleabend.domain.model.Spiel
 
 @Immutable
+sealed interface GameScreenUiState {
+    @Immutable
+    data object Loading : GameScreenUiState
+
+    @Immutable
+    data class Loaded(
+        val game: GameUiState,
+    ) : GameScreenUiState
+}
+
+@Immutable
 data class GameUiState(
     val spielName: String,
     val aktuelleKarte: GameCardUiModel,

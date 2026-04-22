@@ -7,5 +7,5 @@ import javax.inject.Inject
 class GetGameUseCase @Inject constructor(
     private val repository: GameRepository,
 ) {
-    operator fun invoke(gameId: String): Spiel = repository.getGame(gameId)
+    suspend operator fun invoke(gameId: String): Spiel = repository.getGame(gameId)
 }

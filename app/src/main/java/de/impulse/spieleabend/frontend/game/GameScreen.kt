@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,12 +36,17 @@ fun GameScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    GameScreenContent(
-        uiState = uiState,
-        modifier = modifier,
-        onKategorieSelected = viewModel::selectKategorie,
-        onRandomSelected = viewModel::selectRandom,
-    )
+    when (val state = uiState) {
+        GameScreenUiState.Loading -> GameLoadingContent(modifier = modifier)
+        is GameScreenUiState.Loaded -> {
+            GameScreenContent(
+                uiState = state.game,
+                modifier = modifier,
+                onKategorieSelected = viewModel::selectKategorie,
+                onRandomSelected = viewModel::selectRandom,
+            )
+        }
+    }
 }
 
 @Preview(showBackground = true)
@@ -48,6 +54,31 @@ fun GameScreen(
 private fun GameScreenPreview() {
     SpieleabendTheme {
         GameScreenContent(uiState = PreviewUiState)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun GameLoadingContentPreview() {
+    SpieleabendTheme {
+        GameLoadingContent()
+    }
+}
+
+@Composable
+private fun GameLoadingContent(
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = TableBackground,
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(color = TitleColor)
+        }
     }
 }
 
