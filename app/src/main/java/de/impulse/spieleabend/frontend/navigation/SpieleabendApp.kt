@@ -7,6 +7,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import de.impulse.spieleabend.frontend.game.GAME_ID_ARG
 import de.impulse.spieleabend.frontend.game.GameScreen
 import de.impulse.spieleabend.frontend.start.StartScreen
 import de.impulse.spieleabend.frontend.start.placeholderBoardGames
@@ -53,9 +54,7 @@ private sealed interface AppDestination {
     }
 
     data object Game : AppDestination {
-        private const val GameIdArg = "gameId"
-
-        override val route = "game/{$GameIdArg}"
+        override val route = "game/{$GAME_ID_ARG}"
 
         fun createRoute(gameId: String): String = "game/${Uri.encode(gameId)}"
     }

@@ -1,7 +1,16 @@
+@file:Suppress("MagicNumber")
+
 package de.impulse.spieleabend.frontend.game
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -9,7 +18,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.impulse.spieleabend.frontend.theme.SpieleabendTheme
@@ -31,9 +45,7 @@ fun GameScreen(
 @Composable
 private fun GameScreenPreview() {
     SpieleabendTheme {
-        GameScreenContent(
-            uiState = GameUiState(message = "Hello World!"),
-        )
+        GameScreenContent(uiState = PreviewUiState)
     }
 }
 
@@ -44,16 +56,61 @@ private fun GameScreenContent(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
+        color = TableBackground,
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = uiState.message,
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val horizontalPadding = if (maxWidth < CompactWidthBreakpoint) {
+                CompactHorizontalPadding
+            } else {
+                ExpandedHorizontalPadding
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = horizontalPadding,
+                        top = 24.dp,
+                        end = horizontalPadding,
+                        bottom = 24.dp,
+                    ),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = uiState.spielName,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp),
+                    color = TitleColor,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                    ),
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    GameCard(
+                        kartentexte = uiState.kartentexte,
+                        modifier = Modifier
+                            .widthIn(max = 560.dp)
+                            .heightIn(max = 720.dp)
+                            .fillMaxWidth()
+                            .fillMaxHeight()
+                            .padding(vertical = 12.dp),
+                    )
+                }
+            }
+
+            CategoryTabs(
+                kategorien = uiState.kategorien,
+                modifier = Modifier.fillMaxSize(),
             )
         }
     }
@@ -63,8 +120,12 @@ private fun GameScreenContent(
 @Composable
 private fun GameScreenContentPreview() {
     SpieleabendTheme {
-        GameScreenContent(
-            uiState = GameUiState(message = "Hello World!"),
-        )
+        GameScreenContent(uiState = PreviewUiState)
     }
 }
+
+private val TableBackground = Color(0xFFE5EFE9)
+private val TitleColor = Color(0xFF22201D)
+private val CompactWidthBreakpoint = 420.dp
+private val CompactHorizontalPadding = 52.dp
+private val ExpandedHorizontalPadding = 76.dp

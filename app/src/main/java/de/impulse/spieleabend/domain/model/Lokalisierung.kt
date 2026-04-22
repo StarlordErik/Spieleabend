@@ -14,11 +14,21 @@ data class Lokalisierung(
         }
     }
 
-    fun textFuer(sprachCode: String): String? =
-        translationen.firstOrNull { translation -> translation.istFuer(sprachCode) }?.text
+    fun textFuer(sprachCode: String): String? {
+        val normalisierterSprachCode = sprachCode.normalisierterSprachCode()
+        val normalisierteSprache = normalisierterSprachCode.sprache()
+
+        return translationen.firstOrNull { translation ->
+            translation.istFuer(normalisierterSprachCode)
+        }?.text ?: translationen.firstOrNull { translation ->
+            translation.sprachCode.normalisierterSprachCode().sprache() == normalisierteSprache
+        }?.text
+    }
 
     fun textFuer(
         sprachCode: String,
         fallbackSprachCode: String,
     ): String? = textFuer(sprachCode) ?: textFuer(fallbackSprachCode)
 }
+
+private fun String.sprache(): String = substringBefore('-')

@@ -4,8 +4,8 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import de.impulse.spieleabend.data.GreetingRepositoryImpl
-import de.impulse.spieleabend.domain.repository.GreetingRepository
+import de.impulse.spieleabend.data.GameRepositoryImpl
+import de.impulse.spieleabend.domain.repository.GameRepository
 import javax.inject.Singleton
 
 @Module
@@ -14,7 +14,7 @@ import javax.inject.Singleton
 interface RepositoryModule {
     @Binds
     @Singleton
-    fun bindGreetingRepository(
-        implementation: GreetingRepositoryImpl,
-    ): GreetingRepository
+    fun bindGameRepository(
+        implementation: GameRepositoryImpl,
+    ): GameRepository
 }
