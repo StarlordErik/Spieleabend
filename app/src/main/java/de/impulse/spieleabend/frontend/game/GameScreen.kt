@@ -16,6 +16,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -59,13 +62,18 @@ private fun GameScreenContent(
         color = TableBackground,
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            var selectedCard by remember(uiState) {
+                mutableStateOf(uiState.randomCardSelection())
+            }
             val horizontalPadding = if (maxWidth < CompactWidthBreakpoint) {
                 CompactHorizontalPadding
             } else {
                 ExpandedHorizontalPadding
             }
 
-            Column(
+            GamePlayArea(
+                spielName = uiState.spielName,
+                selectedCard = selectedCard,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(
@@ -74,43 +82,76 @@ private fun GameScreenContent(
                         end = horizontalPadding,
                         bottom = 24.dp,
                     ),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = uiState.spielName,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                    color = TitleColor,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                    ),
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    GameCard(
-                        kartentexte = uiState.kartentexte,
-                        modifier = Modifier
-                            .widthIn(max = 560.dp)
-                            .heightIn(max = 720.dp)
-                            .fillMaxWidth()
-                            .fillMaxHeight()
-                            .padding(vertical = 12.dp),
-                    )
-                }
-            }
+            )
 
             CategoryTabs(
                 kategorien = uiState.kategorien,
                 modifier = Modifier.fillMaxSize(),
+                onKategorieSelected = { kategorie, color ->
+                    selectedCard = kategorie.cardSelection(color = color)
+                },
+                onRandomSelected = {
+                    selectedCard = uiState.randomCardSelection()
+                },
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun GamePlayAreaPreview() {
+    SpieleabendTheme {
+        GamePlayArea(
+            spielName = PreviewUiState.spielName,
+            selectedCard = GameCardSelection(
+                kartentexte = PreviewUiState.kartentexte,
+                textPanelColors = emptyList(),
+            ),
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+@Composable
+private fun GamePlayArea(
+    spielName: String,
+    selectedCard: GameCardSelection,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = spielName,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp),
+            color = TitleColor,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.ExtraBold,
+            ),
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentAlignment = Alignment.Center,
+        ) {
+            GameCard(
+                kartentexte = selectedCard.kartentexte,
+                textPanelColors = selectedCard.textPanelColors,
+                modifier = Modifier
+                    .widthIn(max = 560.dp)
+                    .heightIn(max = 720.dp)
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .padding(vertical = 12.dp),
             )
         }
     }
@@ -129,3 +170,41 @@ private val TitleColor = Color(0xFF22201D)
 private val CompactWidthBreakpoint = 420.dp
 private val CompactHorizontalPadding = 52.dp
 private val ExpandedHorizontalPadding = 76.dp
+
+private fun GameKategorieUiModel.cardSelection(color: Color): GameCardSelection {
+    val shuffledKartentexte = kartentexte.shuffled()
+    return GameCardSelection(
+        kartentexte = shuffledKartentexte,
+        textPanelColors = List(shuffledKartentexte.size) { color },
+    )
+}
+
+private fun GameUiState.randomCardSelection(): GameCardSelection =
+    kategorien
+        .flatMapIndexed { index, kategorie ->
+            kategorie.kartentexte.map { kartentext ->
+                ColoredKartentext(
+                    kartentext = kartentext,
+                    color = categoryTabColor(index),
+                )
+            }
+        }
+        .shuffled()
+        .distinctBy { coloredKartentext -> coloredKartentext.kartentext.id }
+        .toGameCardSelection()
+
+private fun List<ColoredKartentext>.toGameCardSelection(): GameCardSelection =
+    GameCardSelection(
+        kartentexte = map { coloredKartentext -> coloredKartentext.kartentext },
+        textPanelColors = map { coloredKartentext -> coloredKartentext.color },
+    )
+
+private data class GameCardSelection(
+    val kartentexte: List<GameKartentextUiModel>,
+    val textPanelColors: List<Color>,
+)
+
+private data class ColoredKartentext(
+    val kartentext: GameKartentextUiModel,
+    val color: Color,
+)

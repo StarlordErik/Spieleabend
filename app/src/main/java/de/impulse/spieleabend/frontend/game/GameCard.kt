@@ -31,6 +31,7 @@ import de.impulse.spieleabend.frontend.theme.SpieleabendTheme
 @Composable
 internal fun GameCard(
     kartentexte: List<GameKartentextUiModel>,
+    textPanelColors: List<Color> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -53,6 +54,7 @@ internal fun GameCard(
                         kartentext = kartentext,
                         index = index,
                         kartentextCount = kartentexte.size,
+                        textPanelColor = textPanelColors.getOrNull(index),
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
@@ -82,6 +84,7 @@ private fun CardTextPanel(
     kartentext: GameKartentextUiModel,
     index: Int,
     kartentextCount: Int,
+    textPanelColor: Color? = null,
     modifier: Modifier = Modifier,
 ) {
     val textStyle = when (kartentextCount) {
@@ -94,7 +97,7 @@ private fun CardTextPanel(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(18.dp))
-            .background(CardTextPanelColors[index % CardTextPanelColors.size])
+            .background(textPanelColor ?: CardTextPanelColors[index % CardTextPanelColors.size])
             .padding(horizontal = 18.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {

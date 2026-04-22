@@ -3,6 +3,7 @@
 package de.impulse.spieleabend.frontend.game
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,6 +46,8 @@ import kotlin.math.roundToInt
 internal fun CategoryTabs(
     kategorien: List<GameKategorieUiModel>,
     modifier: Modifier = Modifier,
+    onKategorieSelected: (GameKategorieUiModel, Color) -> Unit = { _, _ -> },
+    onRandomSelected: () -> Unit = {},
 ) {
     SubcomposeLayout(modifier = modifier) { constraints ->
         val layoutWidth = constraints.maxWidth
@@ -63,6 +66,8 @@ internal fun CategoryTabs(
             constraints = constraints,
             randomTabHeight = randomTabHeight.toDp(),
             normalTabHeight = normalTabHeight,
+            onKategorieSelected = onKategorieSelected,
+            onRandomSelected = onRandomSelected,
         )
 
         val previousTabY = (layoutHeight - measuredTabs.previousTab.height - tabSpacing)
@@ -104,6 +109,9 @@ private fun rightCategoryTabHeight(
     return (layoutHeight - totalSpacing).coerceAtLeast(0) / tabCount
 }
 
+internal fun categoryTabColor(index: Int): Color =
+    CategoryTabColors[index % CategoryTabColors.size]
+
 @Preview(showBackground = true)
 @Composable
 private fun CategoryTabsPreview() {
@@ -124,6 +132,7 @@ private fun CategoryTab(
     color: Color,
     modifier: Modifier = Modifier,
     fixedHeight: Dp? = null,
+    onClick: (() -> Unit)? = null,
 ) {
     val labelText = tab.name.uppercase()
     val baseTextStyle = MaterialTheme.typography.labelMedium.copy(
@@ -151,7 +160,7 @@ private fun CategoryTab(
     )
 
     Box(
-        modifier = modifier
+        modifier = (if (onClick == null) modifier else modifier.clickable(onClick = onClick))
             .width(CategoryTabWidth)
             .height(tabHeight)
             .clip(categoryTabShape(side))
@@ -188,7 +197,11 @@ private fun CategoryTabPreview() {
                 color = CategoryTabColors.first(),
             )
             CategoryTab(
-                tab = GameKategorieUiModel(id = "vorherige-karte", name = "Vorherige Karte"),
+                tab = GameKategorieUiModel(
+                    id = "vorherige-karte",
+                    name = "Vorherige Karte",
+                    kartentexte = emptyList(),
+                ),
                 side = CategoryTabSide.Right,
                 color = CategoryTabColors.last(),
             )
@@ -251,6 +264,8 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
     constraints: Constraints,
     randomTabHeight: Dp,
     normalTabHeight: Dp,
+    onKategorieSelected: (GameKategorieUiModel, Color) -> Unit,
+    onRandomSelected: () -> Unit,
 ): MeasuredCategoryTabs {
     val measureConstraints = constraints.copy(minWidth = 0, minHeight = 0)
     val previousTab = subcompose(CategoryTabSlot.PreviousCard) {
@@ -266,18 +281,21 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
             side = CategoryTabSide.Left,
             color = RandomTabColor,
             fixedHeight = randomTabHeight,
+            onClick = onRandomSelected,
         )
     }.single().measure(measureConstraints)
     val normalTabs = kategorien.mapIndexed { index, tab ->
         val side = CategoryTabSide.Right
+        val color = categoryTabColor(index)
         MeasuredCategoryTab(
             side = side,
             placeable = subcompose(NormalCategoryTabSlot(index = index, id = tab.id)) {
                 CategoryTab(
                     tab = tab,
                     side = side,
-                    color = CategoryTabColors[index % CategoryTabColors.size],
+                    color = color,
                     fixedHeight = normalTabHeight,
+                    onClick = { onKategorieSelected(tab, color) },
                 )
             }.single().measure(measureConstraints),
         )
@@ -337,9 +355,17 @@ private val CategoryTabLabelVerticalPadding = 14.dp
 private val CategoryTabTextExtraWidth = 4.dp
 private const val RANDOM_CATEGORY_TAB_HEIGHT_FRACTION = 1f / 3f
 
-private val RandomTab = GameKategorieUiModel(id = "random", name = "Zuf\u00e4llig")
-private val PreviousCardTab = GameKategorieUiModel(id = "previous-card", name = "Vorherige Karte")
-private val RandomTabColor = Color(0xFF2A7F62)
+private val RandomTab = GameKategorieUiModel(
+    id = "random",
+    name = "Zuf\u00e4llig",
+    kartentexte = emptyList(),
+)
+private val PreviousCardTab = GameKategorieUiModel(
+    id = "previous-card",
+    name = "Vorherige Karte",
+    kartentexte = emptyList(),
+)
+private val RandomTabColor = Color(0xFF1F2937)
 private val PreviousCardTabColor = Color(0xFF5F6268)
 
 private val CategoryTabColors = listOf(

@@ -28,6 +28,8 @@ class GameUiStateTest {
         assertEquals(listOf("frage", "hinweis"), uiState.kartentexte.map { it.id })
         assertEquals(listOf("Frage", "Hinweis"), uiState.kartentexte.map { it.text })
         assertEquals(listOf("Wissen", "Finale"), uiState.kategorien.map { it.name })
+        assertEquals(listOf("frage", "hinweis"), uiState.kategorien[0].kartentexte.map { it.id })
+        assertEquals(listOf("frage"), uiState.kategorien[1].kartentexte.map { it.id })
     }
 
     private fun kategorie(

@@ -22,6 +22,7 @@ data class GameKartentextUiModel(
 data class GameKategorieUiModel(
     val id: String,
     val name: String,
+    val kartentexte: List<GameKartentextUiModel>,
 )
 
 internal fun Spiel.toGameUiState(
@@ -40,6 +41,12 @@ internal fun Spiel.toGameUiState(
             GameKategorieUiModel(
                 id = kategorie.id,
                 name = kategorie.lokalisierung.textOderId(sprachCode, fallbackSprachCode),
+                kartentexte = kategorie.kartentexte.map { kartentext ->
+                    GameKartentextUiModel(
+                        id = kartentext.id,
+                        text = kartentext.lokalisierung.textOderId(sprachCode, fallbackSprachCode),
+                    )
+                },
             )
         },
     )
