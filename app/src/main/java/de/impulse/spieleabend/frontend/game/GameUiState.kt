@@ -84,4 +84,7 @@ private fun Lokalisierung.textOderId(
     sprachCode: String,
     fallbackSprachCode: String,
 ): String =
-    textFuer(sprachCode = sprachCode, fallbackSprachCode = fallbackSprachCode) ?: id
+    textFuer(fallbackSprachCode)
+        ?: textFuer(sprachCode)
+        ?: translationen.firstOrNull()?.text
+        ?: id

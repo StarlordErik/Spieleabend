@@ -71,6 +71,6 @@ class GameViewModel @Inject constructor(
         )
 
     private companion object {
-        const val DefaultGameId = "placeholder-1"
+        const val DefaultGameId = "erzaehlt-euch-mehr"
     }
 }

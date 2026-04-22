@@ -80,6 +80,23 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
+tasks.register<Exec>("generateInitialGameData") {
+    group = "spieleabend"
+    description = "Generates InitialGameData.kt from raw seed text files."
+    workingDir = rootProject.projectDir
+    commandLine(
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        rootProject.layout.projectDirectory
+            .file("scripts/generate-initial-game-data.ps1")
+            .asFile
+            .absolutePath,
+    )
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(platform(libs.androidx.compose.bom))

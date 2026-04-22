@@ -51,7 +51,7 @@ fun StartScreen(
 private fun StartScreenPreview() {
     SpieleabendTheme {
         StartScreen(
-            games = placeholderBoardGames,
+            games = boardGameShelfItems,
             onGameClick = {},
         )
     }
@@ -142,7 +142,7 @@ private fun StackedGameImages(
 private fun StackedGameImagesPreview() {
     SpieleabendTheme {
         StackedGameImages(
-            games = placeholderBoardGames,
+            games = boardGameShelfItems,
             onGameClick = {},
             modifier = Modifier
                 .fillMaxWidth()
@@ -173,7 +173,7 @@ private fun GameSideImage(
 private fun GameSideImagePreview() {
     SpieleabendTheme {
         GameSideImage(
-            game = placeholderBoardGames.first(),
+            game = boardGameShelfItems.first(),
             onClick = {},
             modifier = Modifier
                 .fillMaxWidth()

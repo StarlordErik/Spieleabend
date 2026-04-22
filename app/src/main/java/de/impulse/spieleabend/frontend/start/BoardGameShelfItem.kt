@@ -10,21 +10,21 @@ data class BoardGameShelfItem(
     @param:DrawableRes val imageResId: Int,
 )
 
-val placeholderBoardGames = listOf(
+val boardGameShelfItems = listOf(
     BoardGameShelfItem(
-        id = "placeholder-1",
+        id = "erzaehlt-euch-mehr",
         imageResId = R.drawable.placeholder_game_box_side_1,
     ),
     BoardGameShelfItem(
-        id = "placeholder-2",
+        id = "erzaehlt-euch-mehr-fuer-paare",
         imageResId = R.drawable.placeholder_game_box_side_2,
     ),
     BoardGameShelfItem(
-        id = "placeholder-3",
+        id = "fun-facts",
         imageResId = R.drawable.placeholder_game_box_side_3,
     ),
     BoardGameShelfItem(
-        id = "placeholder-4",
+        id = "were-not-really-strangers",
         imageResId = R.drawable.placeholder_game_box_side_4,
     ),
 )

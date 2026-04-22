@@ -44,6 +44,61 @@ class GameUiStateTest {
         )
     }
 
+    @Test
+    fun bevorzugtDeutscheAnzeigeUndNutztSonstVorhandeneTranslation() {
+        val frage = Kartentext(
+            id = "frage",
+            lokalisierung = lokalisierung(
+                id = "frage-text",
+                Translation(sprachCode = "en", text = "English text"),
+                Translation(sprachCode = "de", text = "Deutscher Text"),
+            ),
+        )
+        val hinweis = Kartentext(
+            id = "hinweis",
+            lokalisierung = lokalisierung(
+                id = "hinweis-text",
+                Translation(sprachCode = "en", text = "English only"),
+            ),
+        )
+        val spiel = Spiel(
+            id = "spiel",
+            lokalisierung = lokalisierung(
+                id = "spiel-name",
+                Translation(sprachCode = "en", text = "Game"),
+                Translation(sprachCode = "de", text = "Spiel"),
+            ),
+            kategorien = linkedSetOf(
+                Kategorie(
+                    id = "kategorie",
+                    lokalisierung = lokalisierung(
+                        id = "kategorie-name",
+                        Translation(sprachCode = "en", text = "Category"),
+                        Translation(sprachCode = "de", text = "Kategorie"),
+                    ),
+                    kartentexte = linkedSetOf(frage, hinweis),
+                ),
+            ),
+        )
+
+        val uiState = spiel.toGameUiState(
+            aktuelleKarte = GezogeneKarte(
+                kartentexte = listOf(
+                    GezogenerKartentext(kartentext = frage, kategorieId = "kategorie"),
+                    GezogenerKartentext(kartentext = hinweis, kategorieId = "kategorie"),
+                ),
+            ),
+            sprachCode = "en",
+        )
+
+        assertEquals("Spiel", uiState.spielName)
+        assertEquals(listOf("Kategorie"), uiState.kategorien.map { kategorie -> kategorie.name })
+        assertEquals(
+            listOf("Deutscher Text", "English only"),
+            uiState.aktuelleKarte.kartentexte.map { kartentext -> kartentext.text },
+        )
+    }
+
     private fun kategorie(
         id: String,
         name: String,
@@ -68,8 +123,17 @@ class GameUiStateTest {
         id: String,
         text: String,
     ): Lokalisierung =
+        lokalisierung(
+            id = id,
+            Translation(sprachCode = "de", text = text),
+        )
+
+    private fun lokalisierung(
+        id: String,
+        vararg translationen: Translation,
+    ): Lokalisierung =
         Lokalisierung(
             id = id,
-            translationen = setOf(Translation(sprachCode = "de", text = text)),
+            translationen = translationen.toCollection(LinkedHashSet()),
         )
 }

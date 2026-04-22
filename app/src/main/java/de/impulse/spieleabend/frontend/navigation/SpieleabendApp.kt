@@ -10,7 +10,7 @@ import androidx.navigation.compose.rememberNavController
 import de.impulse.spieleabend.frontend.game.GAME_ID_ARG
 import de.impulse.spieleabend.frontend.game.GameScreen
 import de.impulse.spieleabend.frontend.start.StartScreen
-import de.impulse.spieleabend.frontend.start.placeholderBoardGames
+import de.impulse.spieleabend.frontend.start.boardGameShelfItems
 import de.impulse.spieleabend.frontend.theme.SpieleabendTheme
 
 @Composable
@@ -26,7 +26,7 @@ fun SpieleabendApp(
     ) {
         composable(AppDestination.Start.route) {
             StartScreen(
-                games = placeholderBoardGames,
+                games = boardGameShelfItems,
                 onGameClick = { gameId ->
                     navController.navigate(AppDestination.Game.createRoute(gameId))
                 },
