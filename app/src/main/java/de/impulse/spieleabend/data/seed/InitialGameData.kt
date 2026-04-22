@@ -1405,7 +1405,7 @@ internal object InitialGameData {
         spiel(
             id = "fun-facts",
             name = "Fun Facts",
-            kartentexteProKarte = 3,
+            kartentexteProKarte = 1,
             kategorien = linkedSetOf(
                 kategorie(
                     id = "fun-facts-freitextfragen",
