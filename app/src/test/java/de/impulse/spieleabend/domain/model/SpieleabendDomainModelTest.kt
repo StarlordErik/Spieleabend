@@ -13,10 +13,9 @@ class SpieleabendDomainModelTest {
         val teamKategorie = kategorie("team")
         val wissenKategorie = kategorie("wissen")
 
-        val spiel = spiel("party")
-            .mitKategorie(teamKategorie)
+        val spiel = spiel("party", teamKategorie)
             .mitKategorie(wissenKategorie)
-        val weiteresSpiel = spiel("quiz").mitKategorie(teamKategorie)
+        val weiteresSpiel = spiel("quiz", teamKategorie)
 
         assertTrue(spiel.enthaeltKategorie("team"))
         assertTrue(spiel.enthaeltKategorie("wissen"))
@@ -73,18 +72,32 @@ class SpieleabendDomainModelTest {
         val alteKategorie = kategorie("aktion")
         val neueKategorie = kategorie("aktion").mitKartentext(kartentext("rennen"))
 
-        val spiel = spiel("party")
-            .mitKategorie(alteKategorie)
+        val spiel = spiel("party", alteKategorie)
             .mitKategorie(neueKategorie)
 
         assertEquals(setOf(neueKategorie), spiel.kategorien)
         assertFalse(alteKategorie in spiel.kategorien)
     }
 
-    private fun spiel(id: String): Spiel =
+    @Test
+    fun spielBenoetigtMindestensEineKategorie() {
+        assertThrows(IllegalArgumentException::class.java) {
+            Spiel(
+                id = "leer",
+                lokalisierung = lokalisierung("leer-lokalisierung"),
+                kategorien = emptySet(),
+            )
+        }
+    }
+
+    private fun spiel(
+        id: String,
+        vararg kategorien: Kategorie,
+    ): Spiel =
         Spiel(
             id = id,
             lokalisierung = lokalisierung("$id-lokalisierung"),
+            kategorien = kategorien.toSet(),
         )
 
     private fun kategorie(id: String): Kategorie =

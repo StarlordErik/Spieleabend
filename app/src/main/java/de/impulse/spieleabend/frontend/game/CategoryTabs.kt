@@ -370,4 +370,5 @@ private val CategoryTabColors = listOf(
     Color(0xFFC84C31),
     Color(0xFF276A8A),
     Color(0xFF8B5A96),
+    Color(0xFFB68A1F),
 )
