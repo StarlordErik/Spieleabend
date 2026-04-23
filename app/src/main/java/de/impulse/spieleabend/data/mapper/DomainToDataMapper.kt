@@ -60,14 +60,22 @@ internal fun Spiel.toSpielXKategorieEntities(): List<SpielXKategorieEntity> =
         SpielXKategorieEntity(
             spielId = id(),
             kategorieId = kategorie.id(),
-            inaktiv = kategorie.id() in inaktiveKategorien.map { inaktiveKategorie -> inaktiveKategorie.id() }.toSet(),
+            inaktiv =
+                kategorie.id() in
+                    inaktiveKategorien
+                        .map { inaktiveKategorie -> inaktiveKategorie.id() }
+                        .toSet(),
             selbstErstellt = false,
         )
     } + hinzugefuegteKategorien.map { kategorie ->
         SpielXKategorieEntity(
             spielId = id(),
             kategorieId = kategorie.id(),
-            inaktiv = kategorie.id() in inaktiveKategorien.map { inaktiveKategorie -> inaktiveKategorie.id() }.toSet(),
+            inaktiv =
+                kategorie.id() in
+                    inaktiveKategorien
+                        .map { inaktiveKategorie -> inaktiveKategorie.id() }
+                        .toSet(),
             selbstErstellt = true,
         )
     }
@@ -77,14 +85,22 @@ internal fun Kategorie.toKategorieXKartentextEntities(): List<KategorieXKartente
         KategorieXKartentextEntity(
             kategorieId = id(),
             kartentextId = kartentext.id(),
-            inaktiv = kartentext.id() in inaktiveKartentexte.map { inaktiverKartentext -> inaktiverKartentext.id() }.toSet(),
+            inaktiv =
+                kartentext.id() in
+                    inaktiveKartentexte
+                        .map { inaktiverKartentext -> inaktiverKartentext.id() }
+                        .toSet(),
             selbstErstellt = false,
         )
     } + hinzugefuegteKartentexte.map { kartentext ->
         KategorieXKartentextEntity(
             kategorieId = id(),
             kartentextId = kartentext.id(),
-            inaktiv = kartentext.id() in inaktiveKartentexte.map { inaktiverKartentext -> inaktiverKartentext.id() }.toSet(),
+            inaktiv =
+                kartentext.id() in
+                    inaktiveKartentexte
+                        .map { inaktiverKartentext -> inaktiverKartentext.id() }
+                        .toSet(),
             selbstErstellt = true,
         )
     }

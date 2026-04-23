@@ -26,7 +26,7 @@ data class Kategorie(
 
         val hinzugefuegteKartentextIds = hinzugefuegteKartentexte.map { kartentext -> kartentext.id() }
         require(hinzugefuegteKartentextIds.distinct().size == hinzugefuegteKartentextIds.size) {
-            "Eine Kategorie darf einen hinzugefuegten Kartentext nur einmal referenzieren."
+            "Eine Kategorie darf einen hinzugefügten Kartentext nur einmal referenzieren."
         }
 
         val inaktiveKartentextIds = inaktiveKartentexte.map { kartentext -> kartentext.id() }
@@ -36,7 +36,7 @@ data class Kategorie(
 
         val doppelteKartentextIds = originaleKartentextIds.intersect(hinzugefuegteKartentextIds.toSet())
         require(doppelteKartentextIds.isEmpty()) {
-            "Eine Kategorie darf einen Kartentext nicht gleichzeitig original und hinzugefuegt referenzieren."
+            "Eine Kategorie darf einen Kartentext nicht gleichzeitig original und hinzugefügt referenzieren."
         }
 
         val bekannteKartentextIds = (originaleKartentextIds + hinzugefuegteKartentextIds).toSet()

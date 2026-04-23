@@ -45,7 +45,7 @@ class GameUiStateTest {
     }
 
     @Test
-    fun nutztAngeforderteSpracheUndFaelltFuerOriginalspracheAufOgZurueck() {
+    fun nutztAngeforderteSpracheUndFälltFürOriginalspracheAufOgZurück() {
         val frage = Kartentext(
             lokalisierung = lokalisierung(
                 id = 101,

@@ -7,7 +7,7 @@ import org.junit.Test
 
 class SpieleabendDomainModelTest {
     @Test
-    fun spielEnthaeltKategorienAlsVieleZuVieleBeziehung() {
+    fun spielEnthältKategorienAlsVieleZuVieleBeziehung() {
         val teamKategorie = kategorie(1)
         val wissenKategorie = kategorie(2)
 
@@ -19,7 +19,7 @@ class SpieleabendDomainModelTest {
     }
 
     @Test
-    fun spielLeitetAktiveKategorienAusJoinZustaendenAb() {
+    fun spielLeitetAktiveKategorienAusJoinZuständenAb() {
         val originaleKategorie = kategorie(1)
         val hinzugefuegteKategorie = kategorie(2)
 
@@ -34,7 +34,7 @@ class SpieleabendDomainModelTest {
     }
 
     @Test
-    fun kategorieEnthaeltKartentexteAlsVieleZuVieleBeziehung() {
+    fun kategorieEnthältKartentexteAlsVieleZuVieleBeziehung() {
         val pantomimeText = kartentext(101)
         val quizText = kartentext(102)
 
@@ -46,7 +46,7 @@ class SpieleabendDomainModelTest {
     }
 
     @Test
-    fun kategorieLeitetAktiveKartentexteAusJoinZustaendenAb() {
+    fun kategorieLeitetAktiveKartentexteAusJoinZuständenAb() {
         val originalerKartentext = kartentext(101)
         val hinzugefuegterKartentext = kartentext(102)
 
@@ -61,7 +61,7 @@ class SpieleabendDomainModelTest {
     }
 
     @Test
-    fun lokalisierungLiefertTextUndFaelltSonstAufOgZurueck() {
+    fun lokalisierungLiefertTextUndFälltSonstAufOgZurück() {
         val lokalisierung = lokalisierung(
             id = 1,
             ogText = "Game Night",
@@ -92,7 +92,7 @@ class SpieleabendDomainModelTest {
     }
 
     @Test
-    fun lokalisierungFaelltBeiFehlenderTranslationAufOgZurueck() {
+    fun lokalisierungFälltBeiFehlenderTranslationAufOgZurück() {
         val lokalisierung = lokalisierung(
             id = 3,
             ogText = "Game Night",
@@ -146,7 +146,7 @@ class SpieleabendDomainModelTest {
     }
 
     @Test
-    fun lokalisierungBenoetigtOgTranslation() {
+    fun lokalisierungBenötigtOgTranslation() {
         assertThrows(IllegalArgumentException::class.java) {
             Lokalisierung(
                 id = 4,
@@ -157,7 +157,7 @@ class SpieleabendDomainModelTest {
     }
 
     @Test
-    fun gezogeneKarteBenoetigtMindestensEinenKartentext() {
+    fun gezogeneKarteBenötigtMindestensEinenKartentext() {
         assertThrows(IllegalArgumentException::class.java) {
             GezogeneKarte(kartentexte = emptyList())
         }

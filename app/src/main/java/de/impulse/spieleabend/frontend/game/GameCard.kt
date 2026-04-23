@@ -194,8 +194,8 @@ private fun AutoShrinkText(
                 if (layoutResult.didOverflowHeight || layoutResult.didOverflowWidth) {
                     val nextFontSize =
                         maxOf(
-                            scaledStyle.fontSize.value * ShrinkFactor,
-                            MinCardTextFontSize.value,
+                            scaledStyle.fontSize.value * SHRINK_FACTOR,
+                            MIN_CARD_TEXT_FONT_SIZE.value,
                         ).sp
                     if (nextFontSize < scaledStyle.fontSize) {
                         scaledStyle = scaledStyle.scaleTo(nextFontSize)
@@ -221,8 +221,8 @@ private fun TextStyle.scaleTo(fontSize: androidx.compose.ui.unit.TextUnit): Text
 
 private val CardBackground = Color(0xFFFFFCF4)
 private val CardTextColor = Color(0xFF28231D)
-private val MinCardTextFontSize = 10.sp
-private const val ShrinkFactor = 0.92f
+private val MIN_CARD_TEXT_FONT_SIZE = 10.sp
+private const val SHRINK_FACTOR = 0.92f
 
 private val CardTextPanelColors = listOf(
     Color(0xFFF3E5C7),

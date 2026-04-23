@@ -127,7 +127,7 @@ class GameRepositoryImpl @Inject constructor(
         kategorieId: Int,
     ): Kategorie =
         requireNotNull(kategorienById[kategorieId]) {
-            "Die Kategorie $kategorieId fehlt fuer die Spiel-Verknuepfung."
+            "Die Kategorie $kategorieId fehlt für die Spiel-Verknüpfung."
         }
 
     private fun kartentext(
@@ -135,7 +135,7 @@ class GameRepositoryImpl @Inject constructor(
         kartentextId: Int,
     ): Kartentext =
         requireNotNull(kartentexteById[kartentextId]) {
-            "Der Kartentext $kartentextId fehlt fuer die Kategorie-Verknuepfung."
+            "Der Kartentext $kartentextId fehlt für die Kategorie-Verknüpfung."
         }
 
     private data class KategorienSets(

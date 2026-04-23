@@ -32,7 +32,7 @@ data class Spiel(
 
         val hinzugefuegteKategorieIds = hinzugefuegteKategorien.map { kategorie -> kategorie.id() }
         require(hinzugefuegteKategorieIds.distinct().size == hinzugefuegteKategorieIds.size) {
-            "Ein Spiel darf eine hinzugefuegte Kategorie nur einmal referenzieren."
+            "Ein Spiel darf eine hinzugefügte Kategorie nur einmal referenzieren."
         }
 
         val inaktiveKategorieIds = inaktiveKategorien.map { kategorie -> kategorie.id() }
@@ -42,7 +42,7 @@ data class Spiel(
 
         val doppelteKategorieIds = originaleKategorieIds.intersect(hinzugefuegteKategorieIds.toSet())
         require(doppelteKategorieIds.isEmpty()) {
-            "Ein Spiel darf eine Kategorie nicht gleichzeitig original und hinzugefuegt referenzieren."
+            "Ein Spiel darf eine Kategorie nicht gleichzeitig original und hinzugefügt referenzieren."
         }
 
         val bekannteKategorieIds = (originaleKategorieIds + hinzugefuegteKategorieIds).toSet()
