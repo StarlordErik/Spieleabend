@@ -33,7 +33,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.impulse.spieleabend.R
 import de.impulse.spieleabend.frontend.theme.SpieleabendTheme
-import kotlinx.coroutines.Dispatchers
+import java.util.concurrent.Executors
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -175,7 +177,7 @@ private fun GameSideImage(
     val imageBitmap by produceState<ImageBitmap?>(initialValue = null, assetPath) {
         value =
             assetPath?.let { normalizedAssetPath ->
-                withContext(Dispatchers.IO) {
+                withContext(ASSET_IMAGE_LOADING_CONTEXT) {
                     context.loadAssetImageBitmap(normalizedAssetPath)
                 }
             }
@@ -232,6 +234,8 @@ private const val TOP_SHELF_MARGIN_DP = 96
 private const val TOP_SHELF_TOP_FRACTION = 0.307f
 private const val MIDDLE_SHELF_TOP_FRACTION = 0.547f
 private const val BOTTOM_SHELF_TOP_FRACTION = 0.786f
+private val ASSET_IMAGE_LOADING_CONTEXT: CoroutineContext =
+    Executors.newFixedThreadPool(2).asCoroutineDispatcher()
 
 private data class ShelfStack(
     val shelfTop: Dp,

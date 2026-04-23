@@ -52,8 +52,8 @@ private fun shelfAppearance(
     gameId: Int,
     index: Int,
 ): GameShelfAppearance {
-    val fallbackAppearance = FallbackShelfAppearances[index % FallbackShelfAppearances.size]
-    val dimensions = GameShelfDimensionsById[gameId] ?: return fallbackAppearance
+    val fallbackAppearance = fallbackShelfAppearances[index % fallbackShelfAppearances.size]
+    val dimensions = gameShelfDimensionsById[gameId] ?: return fallbackAppearance
 
     return GameShelfAppearance(
         fallbackImageResId = fallbackAppearance.fallbackImageResId,
@@ -75,7 +75,7 @@ private data class GameShelfDimensions(
     val heightDp: Int,
 )
 
-private val GameShelfDimensionsById =
+private val gameShelfDimensionsById =
     mapOf(
         1 to GameShelfDimensions(
             widthFraction = 0.82f,
@@ -99,7 +99,7 @@ private val GameShelfDimensionsById =
         ),
     )
 
-private val FallbackShelfAppearances =
+private val fallbackShelfAppearances =
     listOf(
         GameShelfAppearance(
             fallbackImageResId = R.drawable.placeholder_game_box_side_1,
@@ -123,16 +123,25 @@ private val FallbackShelfAppearances =
         ),
     )
 
-internal fun drawableResourceNameFromImagePath(imagePath: String?): String? {
-    val fileName =
-        imagePath
-            ?.substringAfterLast('/')
-            ?.substringAfterLast('\\')
-            ?.trim()
-            ?.takeIf(String::isNotEmpty)
-            ?: return null
+internal fun assetImagePathFromMetadataPath(imagePath: String?): String? {
+    val normalizedPath = imagePath?.trim()?.takeIf(String::isNotEmpty)
+    val assetPath =
+        when {
+            normalizedPath == null -> null
+            normalizedPath.startsWith("images/") -> normalizedPath
+            normalizedPath.startsWith("app/src/main/assets/") -> normalizedPath.removePrefix("app/src/main/assets/")
+            else -> {
+                val fileName =
+                    normalizedPath
+                        .substringAfterLast('/')
+                        .substringAfterLast('\\')
+                        .takeIf(String::isNotEmpty)
 
-    return fileName.substringBeforeLast('.').takeIf(String::isNotBlank)
+                fileName?.let { name -> "images/$name" }
+            }
+        }
+
+    return assetPath
 }
 
 val boardGameShelfItems =
@@ -140,31 +149,31 @@ val boardGameShelfItems =
         previewShelfItem(
             id = 1,
             name = "Erzählt euch mehr",
-            imagePath = "app/src/main/res/drawable-nodpi/game_box_side_erzaehlt_euch_mehr.png",
+            imagePath = "images/game_box_side_erzaehlt_euch_mehr.png",
             index = 0,
         ),
         previewShelfItem(
             id = 75,
             name = "Erzählt euch mehr für Paare",
-            imagePath = "app/src/main/res/drawable-nodpi/game_box_side_erzaehlt_euch_mehr_fuer_paare.png",
+            imagePath = "images/game_box_side_erzaehlt_euch_mehr_fuer_paare.png",
             index = 1,
         ),
         previewShelfItem(
             id = 149,
             name = "Fun Facts",
-            imagePath = "app/src/main/res/drawable-nodpi/game_box_side_fun_facts.png",
+            imagePath = "images/game_box_side_fun_facts.png",
             index = 2,
         ),
         previewShelfItem(
             id = 337,
             name = "Privacy",
-            imagePath = "app/src/main/res/drawable-nodpi/game_box_side_privacy.png",
+            imagePath = "images/game_box_side_privacy.png",
             index = 3,
         ),
         previewShelfItem(
             id = 699,
             name = "We're Not Really Strangers",
-            imagePath = "app/src/main/res/drawable-nodpi/game_box_side_were_not_really_strangers.png",
+            imagePath = "images/game_box_side_were_not_really_strangers.png",
             index = 4,
         ),
     )

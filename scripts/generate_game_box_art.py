@@ -8,10 +8,14 @@ from PIL import Image, ImageColor, ImageDraw, ImageFont
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-OUTPUT_DIR = ROOT_DIR / "app" / "src" / "main" / "res" / "drawable-nodpi"
+OUTPUT_DIRS = (
+    ROOT_DIR / "app" / "src" / "main" / "assets" / "images",
+    ROOT_DIR / "app" / "src" / "main" / "res" / "drawable-nodpi",
+)
 FONT_DIR = Path(r"C:\Windows\Fonts")
 TITLE_FONTS = ("arialbd.ttf", "bahnschrift.ttf", "arial.ttf")
 BODY_FONTS = ("bahnschrift.ttf", "arial.ttf")
+WERE_NOT_REALLY_STRANGERS_FILENAME = "game_box_side_were_not_really_strangers.png"
 
 
 @dataclass(frozen=True)
@@ -73,7 +77,7 @@ ART_SPECS = (
         pattern="rings",
     ),
     ArtSpec(
-        filename="game_box_side_were_not_really_strangers.png",
+        filename=WERE_NOT_REALLY_STRANGERS_FILENAME,
         size=(1580, 250),
         title="WE'RE NOT REALLY\nSTRANGERS",
         strapline="Perception. Connection. Reflection.",
@@ -87,10 +91,12 @@ ART_SPECS = (
 
 
 def main() -> None:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for output_dir in OUTPUT_DIRS:
+        output_dir.mkdir(parents=True, exist_ok=True)
     for spec in ART_SPECS:
         image = create_image(spec)
-        image.save(OUTPUT_DIR / spec.filename, optimize=True)
+        for output_dir in OUTPUT_DIRS:
+            image.save(output_dir / spec.filename, optimize=True)
 
 
 def create_image(spec: ArtSpec) -> Image.Image:
@@ -199,7 +205,7 @@ def draw_title(draw: ImageDraw.ImageDraw, spec: ArtSpec) -> None:
         (x, y),
         "\n".join(lines),
         font=font,
-        fill=spec.light if spec.filename != "game_box_side_were_not_really_strangers.png" else spec.dark,
+        fill=title_fill(spec),
         spacing=int(font.size * 0.12),
         align="center",
     )
@@ -231,13 +237,34 @@ def draw_strapline(draw: ImageDraw.ImageDraw, spec: ArtSpec) -> None:
         (x, y),
         "\n".join(lines),
         font=font,
-        fill=spec.dark if spec.filename == "game_box_side_were_not_really_strangers.png" else spec.dark,
+        fill=spec.dark,
         spacing=4,
         align="center",
     )
 
 
+def title_fill(spec: ArtSpec) -> str:
+    return spec.dark if spec.filename == WERE_NOT_REALLY_STRANGERS_FILENAME else spec.light
+
+
 def draw_pattern(
+    draw: ImageDraw.ImageDraw,
+    area: tuple[int, int, int, int],
+    spec: ArtSpec,
+) -> None:
+    if spec.pattern == "bands":
+        draw_bands_pattern(draw, area, spec)
+    elif spec.pattern == "hearts":
+        draw_hearts_pattern(draw, area, spec)
+    elif spec.pattern == "confetti":
+        draw_confetti_pattern(draw, area, spec)
+    elif spec.pattern == "rings":
+        draw_rings_pattern(draw, area, spec)
+    elif spec.pattern == "blocks":
+        draw_blocks_pattern(draw, area, spec)
+
+
+def draw_bands_pattern(
     draw: ImageDraw.ImageDraw,
     area: tuple[int, int, int, int],
     spec: ArtSpec,
@@ -246,55 +273,87 @@ def draw_pattern(
     width = right - left
     height = bottom - top
 
-    if spec.pattern == "bands":
-        for offset in range(-height, width, 96):
-            draw.polygon(
-                (
-                    (left + offset, bottom),
-                    (left + offset + 32, bottom),
-                    (left + offset + height, top),
-                    (left + offset + height - 32, top),
-                ),
-                fill=with_alpha(spec.light, 34),
-            )
-    elif spec.pattern == "hearts":
-        for x in range(left + 70, right, 150):
-            for y in range(top + 60, bottom, 120):
-                heart(draw, x, y, 22, with_alpha(spec.light, 60))
-    elif spec.pattern == "confetti":
-        for x in range(left + 50, right, 110):
-            draw.rounded_rectangle(
-                (x, top + 30, x + 24, bottom - 30),
-                radius=12,
-                fill=with_alpha(spec.light, 46),
-            )
-        for y in range(top + 30, bottom, 56):
-            draw.polygon(
-                ((right - 120, y), (right - 82, y + 18), (right - 120, y + 36), (right - 158, y + 18)),
-                fill=with_alpha(spec.accent, 130),
-            )
-    elif spec.pattern == "rings":
-        for radius in (42, 76, 108):
-            ring_box = (
-                right - 210 - radius,
-                top + height // 2 - radius,
-                right - 210 + radius,
-                top + height // 2 + radius,
-            )
-            draw.ellipse(ring_box, outline=with_alpha(spec.light, 74), width=8)
-        draw.rectangle((left + 40, top + 36, right - 40, top + 56), fill=with_alpha(spec.light, 34))
-    elif spec.pattern == "blocks":
-        for x in range(left + 30, right, 150):
-            draw.rounded_rectangle(
-                (x, top + 24, x + 92, top + 82),
-                radius=20,
-                fill=with_alpha(spec.accent, 112),
-            )
-            draw.rounded_rectangle(
-                (x + 38, bottom - 88, x + 136, bottom - 28),
-                radius=20,
-                fill=with_alpha(spec.dark, 74),
-            )
+    for offset in range(-height, width, 96):
+        draw.polygon(
+            (
+                (left + offset, bottom),
+                (left + offset + 32, bottom),
+                (left + offset + height, top),
+                (left + offset + height - 32, top),
+            ),
+            fill=with_alpha(spec.light, 34),
+        )
+
+
+def draw_hearts_pattern(
+    draw: ImageDraw.ImageDraw,
+    area: tuple[int, int, int, int],
+    spec: ArtSpec,
+) -> None:
+    left, top, right, bottom = area
+
+    for x in range(left + 70, right, 150):
+        for y in range(top + 60, bottom, 120):
+            heart(draw, x, y, 22, with_alpha(spec.light, 60))
+
+
+def draw_confetti_pattern(
+    draw: ImageDraw.ImageDraw,
+    area: tuple[int, int, int, int],
+    spec: ArtSpec,
+) -> None:
+    left, top, right, bottom = area
+
+    for x in range(left + 50, right, 110):
+        draw.rounded_rectangle(
+            (x, top + 30, x + 24, bottom - 30),
+            radius=12,
+            fill=with_alpha(spec.light, 46),
+        )
+    for y in range(top + 30, bottom, 56):
+        draw.polygon(
+            ((right - 120, y), (right - 82, y + 18), (right - 120, y + 36), (right - 158, y + 18)),
+            fill=with_alpha(spec.accent, 130),
+        )
+
+
+def draw_rings_pattern(
+    draw: ImageDraw.ImageDraw,
+    area: tuple[int, int, int, int],
+    spec: ArtSpec,
+) -> None:
+    left, top, right, bottom = area
+    height = bottom - top
+
+    for radius in (42, 76, 108):
+        ring_box = (
+            right - 210 - radius,
+            top + height // 2 - radius,
+            right - 210 + radius,
+            top + height // 2 + radius,
+        )
+        draw.ellipse(ring_box, outline=with_alpha(spec.light, 74), width=8)
+    draw.rectangle((left + 40, top + 36, right - 40, top + 56), fill=with_alpha(spec.light, 34))
+
+
+def draw_blocks_pattern(
+    draw: ImageDraw.ImageDraw,
+    area: tuple[int, int, int, int],
+    spec: ArtSpec,
+) -> None:
+    left, top, right, bottom = area
+
+    for x in range(left + 30, right, 150):
+        draw.rounded_rectangle(
+            (x, top + 24, x + 92, top + 82),
+            radius=20,
+            fill=with_alpha(spec.accent, 112),
+        )
+        draw.rounded_rectangle(
+            (x + 38, bottom - 88, x + 136, bottom - 28),
+            radius=20,
+            fill=with_alpha(spec.dark, 74),
+        )
 
 
 def heart(
@@ -394,8 +453,8 @@ def load_font(font_names: Iterable[str], size: int) -> ImageFont.FreeTypeFont:
     for font_name in font_names:
         font_path = FONT_DIR / font_name
         if font_path.exists():
-            return ImageFont.truetype(font_path.as_posix(), size=size)
-    return ImageFont.load_default(size=size)
+            return ImageFont.truetype(font_path.as_posix(), size)
+    return ImageFont.load_default()
 
 
 def with_alpha(color_hex: str, alpha: int) -> tuple[int, int, int, int]:
