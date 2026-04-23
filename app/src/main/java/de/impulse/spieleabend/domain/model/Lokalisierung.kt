@@ -1,5 +1,7 @@
 package de.impulse.spieleabend.domain.model
 
+import de.impulse.spieleabend.common.Sprache
+
 data class Lokalisierung(
     val id: String,
     val translationen: Set<Translation>,
@@ -8,27 +10,24 @@ data class Lokalisierung(
         require(id.isNotBlank()) { "Die ID einer Lokalisierung darf nicht leer sein." }
         require(translationen.isNotEmpty()) { "Eine Lokalisierung braucht mindestens eine Translation." }
 
-        val sprachCodes = translationen.map { it.sprachCode.normalisierterSprachCode() }
-        require(sprachCodes.distinct().size == sprachCodes.size) {
-            "Eine Lokalisierung darf pro Sprachcode nur eine Translation enthalten."
+        val sprachen = translationen.map { it.sprache }
+        require(sprachen.distinct().size == sprachen.size) {
+            "Eine Lokalisierung darf pro Sprache nur eine Translation enthalten."
         }
     }
 
-    fun textFuer(sprachCode: String): String? {
-        val normalisierterSprachCode = sprachCode.normalisierterSprachCode()
-        val normalisierteSprache = normalisierterSprachCode.sprache()
+    fun textFuer(sprache: Sprache): String? =
+        translationen.firstOrNull { translation -> translation.istFuer(sprache) }?.text
 
-        return translationen.firstOrNull { translation ->
-            translation.istFuer(normalisierterSprachCode)
-        }?.text ?: translationen.firstOrNull { translation ->
-            translation.sprachCode.normalisierterSprachCode().sprache() == normalisierteSprache
-        }?.text
-    }
+    fun textFuer(sprache: String): String? = Sprache.fromCode(sprache)?.let(::textFuer)
 
     fun textFuer(
-        sprachCode: String,
-        fallbackSprachCode: String,
-    ): String? = textFuer(sprachCode) ?: textFuer(fallbackSprachCode)
-}
+        sprache: Sprache,
+        fallbackSprache: Sprache,
+    ): String? = textFuer(sprache) ?: textFuer(fallbackSprache)
 
-private fun String.sprache(): String = substringBefore('-')
+    fun textFuer(
+        sprache: String,
+        fallbackSprache: String,
+    ): String? = textFuer(sprache) ?: textFuer(fallbackSprache)
+}

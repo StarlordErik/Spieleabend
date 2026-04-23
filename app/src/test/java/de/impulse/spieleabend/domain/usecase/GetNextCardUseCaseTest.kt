@@ -90,6 +90,6 @@ class GetNextCardUseCaseTest {
     private fun lokalisierung(id: String): Lokalisierung =
         Lokalisierung(
             id = id,
-            translationen = setOf(Translation(sprachCode = "de", text = id)),
+            translationen = setOf(Translation(sprache = "de", text = id)),
         )
 }

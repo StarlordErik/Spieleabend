@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.impulse.spieleabend.common.Sprache
 import de.impulse.spieleabend.domain.model.GezogeneKarte
 import de.impulse.spieleabend.domain.model.Spiel
 import de.impulse.spieleabend.domain.usecase.GetGameUseCase
@@ -24,7 +25,7 @@ class GameViewModel @Inject constructor(
     private val getNextRandomCard: GetNextRandomCardUseCase,
 ) : ViewModel() {
     private val gameId: String = savedStateHandle[GAME_ID_ARG] ?: DefaultGameId
-    private val sprachCode: String = Locale.getDefault().toLanguageTag()
+    private val sprache: Sprache = Sprache.fromLocale(Locale.getDefault()) ?: Sprache.DE
     private var spiel: Spiel? = null
 
     private val _uiState = MutableStateFlow<GameScreenUiState>(GameScreenUiState.Loading)
@@ -67,7 +68,7 @@ class GameViewModel @Inject constructor(
     private fun Spiel.toUiState(aktuelleKarte: GezogeneKarte): GameUiState =
         toGameUiState(
             aktuelleKarte = aktuelleKarte,
-            sprachCode = sprachCode,
+            sprache = sprache,
         )
 
     private companion object {

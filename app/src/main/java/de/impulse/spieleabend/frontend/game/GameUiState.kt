@@ -1,6 +1,7 @@
 package de.impulse.spieleabend.frontend.game
 
 import androidx.compose.runtime.Immutable
+import de.impulse.spieleabend.common.Sprache
 import de.impulse.spieleabend.domain.model.GezogeneKarte
 import de.impulse.spieleabend.domain.model.GezogenerKartentext
 import de.impulse.spieleabend.domain.model.Lokalisierung
@@ -44,47 +45,47 @@ data class GameKategorieUiModel(
 
 internal fun Spiel.toGameUiState(
     aktuelleKarte: GezogeneKarte,
-    sprachCode: String,
-    fallbackSprachCode: String = FALLBACK_SPRACH_CODE,
+    sprache: Sprache,
+    fallbackSprache: Sprache = FALLBACK_SPRACHE,
 ): GameUiState =
     GameUiState(
-        spielName = lokalisierung.textOderId(sprachCode, fallbackSprachCode),
-        aktuelleKarte = aktuelleKarte.toGameCardUiModel(sprachCode, fallbackSprachCode),
+        spielName = lokalisierung.textOderId(sprache, fallbackSprache),
+        aktuelleKarte = aktuelleKarte.toGameCardUiModel(sprache, fallbackSprache),
         kategorien = kategorien.map { kategorie ->
             GameKategorieUiModel(
                 id = kategorie.id,
-                name = kategorie.lokalisierung.textOderId(sprachCode, fallbackSprachCode),
+                name = kategorie.lokalisierung.textOderId(sprache, fallbackSprache),
             )
         },
     )
 
-private const val FALLBACK_SPRACH_CODE = "de"
+private val FALLBACK_SPRACHE = Sprache.DE
 
 private fun GezogeneKarte.toGameCardUiModel(
-    sprachCode: String,
-    fallbackSprachCode: String,
+    sprache: Sprache,
+    fallbackSprache: Sprache,
 ): GameCardUiModel =
     GameCardUiModel(
         kartentexte = kartentexte.map { gezogenerKartentext ->
-            gezogenerKartentext.toGameKartentextUiModel(sprachCode, fallbackSprachCode)
+            gezogenerKartentext.toGameKartentextUiModel(sprache, fallbackSprache)
         },
     )
 
 private fun GezogenerKartentext.toGameKartentextUiModel(
-    sprachCode: String,
-    fallbackSprachCode: String,
+    sprache: Sprache,
+    fallbackSprache: Sprache,
 ): GameKartentextUiModel =
     GameKartentextUiModel(
         id = kartentext.id,
-        text = kartentext.lokalisierung.textOderId(sprachCode, fallbackSprachCode),
+        text = kartentext.lokalisierung.textOderId(sprache, fallbackSprache),
         kategorieId = kategorieId,
     )
 
 private fun Lokalisierung.textOderId(
-    sprachCode: String,
-    fallbackSprachCode: String,
+    sprache: Sprache,
+    fallbackSprache: Sprache,
 ): String =
-    textFuer(fallbackSprachCode)
-        ?: textFuer(sprachCode)
+    textFuer(fallbackSprache)
+        ?: textFuer(sprache)
         ?: translationen.firstOrNull()?.text
         ?: id

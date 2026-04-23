@@ -1,5 +1,6 @@
 package de.impulse.spieleabend.data.seed
 
+import de.impulse.spieleabend.common.Sprache
 import de.impulse.spieleabend.data.entity.KartentextEntity
 import de.impulse.spieleabend.data.entity.KategorieEntity
 import de.impulse.spieleabend.data.entity.KategorieXKartentextEntity
@@ -28,7 +29,7 @@ internal fun List<Spiel>.toDatabaseSeed(): DatabaseSeed {
     val kategorien = LinkedHashMap<String, KategorieEntity>()
     val kartentexte = LinkedHashMap<String, KartentextEntity>()
     val lokalisierungen = LinkedHashMap<String, LokalisierungEntity>()
-    val translationen = LinkedHashMap<Pair<String, String>, TranslationEntity>()
+    val translationen = LinkedHashMap<Pair<String, Sprache>, TranslationEntity>()
     val spielXKategorien = LinkedHashMap<Pair<String, String>, SpielXKategorieEntity>()
     val kategorieXKartentexte =
         LinkedHashMap<Pair<String, String>, KategorieXKartentextEntity>()
@@ -72,8 +73,8 @@ internal fun List<Spiel>.toDatabaseSeed(): DatabaseSeed {
     )
 }
 
-private val TranslationEntity.key: Pair<String, String>
-    get() = lokalisierungId to sprachCode
+private val TranslationEntity.key: Pair<String, Sprache>
+    get() = lokalisierungId to sprache
 
 private val SpielXKategorieEntity.key: Pair<String, String>
     get() = spielId to kategorieId

@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 1,
-    "identityHash": "e732ba91eec6bfa1c51f5b5cd89fec13",
+    "version": 2,
+    "identityHash": "37f9efc0635c68be7f47418bd1a59c06",
     "entities": [
       {
         "tableName": "spiel",
@@ -174,7 +174,7 @@
       },
       {
         "tableName": "translation",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`lokalisierung_id` TEXT NOT NULL, `sprach_code` TEXT NOT NULL, `text` TEXT NOT NULL, PRIMARY KEY(`lokalisierung_id`, `sprach_code`), FOREIGN KEY(`lokalisierung_id`) REFERENCES `lokalisierung`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`lokalisierung_id` TEXT NOT NULL, `sprache` TEXT NOT NULL, `text` TEXT NOT NULL, PRIMARY KEY(`lokalisierung_id`, `sprache`), FOREIGN KEY(`lokalisierung_id`) REFERENCES `lokalisierung`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "lokalisierungId",
@@ -183,8 +183,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "sprachCode",
-            "columnName": "sprach_code",
+            "fieldPath": "sprache",
+            "columnName": "sprache",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -199,7 +199,7 @@
           "autoGenerate": false,
           "columnNames": [
             "lokalisierung_id",
-            "sprach_code"
+            "sprache"
           ]
         },
         "foreignKeys": [
@@ -371,7 +371,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e732ba91eec6bfa1c51f5b5cd89fec13')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '37f9efc0635c68be7f47418bd1a59c06')"
     ]
   }
 }

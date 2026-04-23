@@ -1,5 +1,6 @@
 package de.impulse.spieleabend.frontend.game
 
+import de.impulse.spieleabend.common.Sprache
 import de.impulse.spieleabend.domain.model.GezogeneKarte
 import de.impulse.spieleabend.domain.model.GezogenerKartentext
 import de.impulse.spieleabend.domain.model.Kartentext
@@ -31,7 +32,7 @@ class GameUiStateTest {
                     GezogenerKartentext(kartentext = hinweis, kategorieId = "wissen"),
                 ),
             ),
-            sprachCode = "de",
+            sprache = Sprache.DE,
         )
 
         assertEquals("Quiz", uiState.spielName)
@@ -50,31 +51,31 @@ class GameUiStateTest {
             id = "frage",
             lokalisierung = lokalisierung(
                 id = "frage-text",
-                Translation(sprachCode = "en", text = "English text"),
-                Translation(sprachCode = "de", text = "Deutscher Text"),
+                Translation(sprache = "en", text = "English text"),
+                Translation(sprache = "de", text = "Deutscher Text"),
             ),
         )
         val hinweis = Kartentext(
             id = "hinweis",
             lokalisierung = lokalisierung(
                 id = "hinweis-text",
-                Translation(sprachCode = "en", text = "English only"),
+                Translation(sprache = "en", text = "English only"),
             ),
         )
         val spiel = Spiel(
             id = "spiel",
             lokalisierung = lokalisierung(
                 id = "spiel-name",
-                Translation(sprachCode = "en", text = "Game"),
-                Translation(sprachCode = "de", text = "Spiel"),
+                Translation(sprache = "en", text = "Game"),
+                Translation(sprache = "de", text = "Spiel"),
             ),
             kategorien = linkedSetOf(
                 Kategorie(
                     id = "kategorie",
                     lokalisierung = lokalisierung(
                         id = "kategorie-name",
-                        Translation(sprachCode = "en", text = "Category"),
-                        Translation(sprachCode = "de", text = "Kategorie"),
+                        Translation(sprache = "en", text = "Category"),
+                        Translation(sprache = "de", text = "Kategorie"),
                     ),
                     kartentexte = linkedSetOf(frage, hinweis),
                 ),
@@ -88,7 +89,7 @@ class GameUiStateTest {
                     GezogenerKartentext(kartentext = hinweis, kategorieId = "kategorie"),
                 ),
             ),
-            sprachCode = "en",
+            sprache = Sprache.EN,
         )
 
         assertEquals("Spiel", uiState.spielName)
@@ -125,7 +126,7 @@ class GameUiStateTest {
     ): Lokalisierung =
         lokalisierung(
             id = id,
-            Translation(sprachCode = "de", text = text),
+            Translation(sprache = "de", text = text),
         )
 
     private fun lokalisierung(

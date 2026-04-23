@@ -26,7 +26,7 @@ interface LokalisierungDao {
         SELECT *
         FROM translation
         WHERE lokalisierung_id = :lokalisierungId
-        ORDER BY sprach_code
+        ORDER BY sprache
         """,
     )
     suspend fun translationenFuerLokalisierung(

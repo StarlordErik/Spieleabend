@@ -38,7 +38,7 @@ internal fun Lokalisierung.toEntity(): LokalisierungEntity =
 internal fun Translation.toEntity(lokalisierungId: String): TranslationEntity =
     TranslationEntity(
         lokalisierungId = lokalisierungId,
-        sprachCode = sprachCode,
+        sprache = sprache,
         text = text,
     )
 

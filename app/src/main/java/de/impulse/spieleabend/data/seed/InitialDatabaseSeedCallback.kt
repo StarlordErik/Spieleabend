@@ -38,12 +38,12 @@ private fun SupportSQLiteDatabase.insert(lokalisierung: LokalisierungEntity) {
 private fun SupportSQLiteDatabase.insert(translation: TranslationEntity) {
     execSQL(
         """
-        INSERT OR REPLACE INTO translation (lokalisierung_id, sprach_code, text)
+        INSERT OR REPLACE INTO translation (lokalisierung_id, sprache, text)
         VALUES (?, ?, ?)
         """,
         arrayOf<Any>(
             translation.lokalisierungId,
-            translation.sprachCode,
+            translation.sprache.code,
             translation.text,
         ),
     )

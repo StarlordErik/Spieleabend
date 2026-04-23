@@ -40,28 +40,28 @@ class SpieleabendDomainModelTest {
     }
 
     @Test
-    fun lokalisierungLiefertTextFuerSprachcodeMitFallback() {
+    fun lokalisierungLiefertTextFuerSpracheMitFallback() {
         val lokalisierung = lokalisierung(
             id = "spiel-name",
             translations = setOf(
-                Translation(sprachCode = "de", text = "Spieleabend"),
-                Translation(sprachCode = "en", text = "Game Night"),
+                Translation(sprache = "de", text = "Spieleabend"),
+                Translation(sprache = "en", text = "Game Night"),
             ),
         )
 
         assertEquals("Spieleabend", lokalisierung.textFuer("DE"))
-        assertEquals("Game Night", lokalisierung.textFuer("fr", fallbackSprachCode = "en"))
+        assertEquals("Game Night", lokalisierung.textFuer("fr", fallbackSprache = "en"))
         assertNull(lokalisierung.textFuer("fr"))
     }
 
     @Test
-    fun lokalisierungErlaubtProSprachcodeNurEineTranslation() {
+    fun lokalisierungErlaubtProSpracheNurEineTranslation() {
         assertThrows(IllegalArgumentException::class.java) {
             lokalisierung(
                 id = "doppelt",
                 translations = setOf(
-                    Translation(sprachCode = "de", text = "Erster Text"),
-                    Translation(sprachCode = "DE", text = "Zweiter Text"),
+                    Translation(sprache = "de", text = "Erster Text"),
+                    Translation(sprache = "DE", text = "Zweiter Text"),
                 ),
             )
         }
@@ -114,7 +114,7 @@ class SpieleabendDomainModelTest {
 
     private fun lokalisierung(
         id: String,
-        translations: Set<Translation> = setOf(Translation(sprachCode = "de", text = id)),
+        translations: Set<Translation> = setOf(Translation(sprache = "de", text = id)),
     ): Lokalisierung =
         Lokalisierung(
             id = id,

@@ -48,6 +48,6 @@ internal fun LokalisierungEntity.toDomain(
 
 internal fun TranslationEntity.toDomain(): Translation =
     Translation(
-        sprachCode = sprachCode,
+        sprache = sprache,
         text = text,
     )
