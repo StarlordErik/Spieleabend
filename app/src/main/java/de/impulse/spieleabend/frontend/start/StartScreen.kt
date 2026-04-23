@@ -35,7 +35,7 @@ fun StartScreen(
     Box(modifier = modifier.fillMaxSize()) {
         ShelfBackground(modifier = Modifier.fillMaxSize())
         StackedGameImages(
-            games = games.take(GAME_STACK_SIZE),
+            games = games,
             onGameClick = onGameClick,
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -160,7 +160,7 @@ private fun GameSideImage(
 ) {
     Image(
         painter = painterResource(game.imageResId),
-        contentDescription = null,
+        contentDescription = game.name,
         modifier = modifier
             .clip(RoundedCornerShape(7.dp))
             .clickable { onClick(game.id) },
@@ -183,7 +183,6 @@ private fun GameSideImagePreview() {
     }
 }
 
-private const val GAME_STACK_SIZE = 4
 private const val GAME_IMAGE_HEIGHT_DP = 52
 private const val GAME_IMAGE_GAP_DP = 4
 private const val GAME_STACK_STEP_DP = GAME_IMAGE_HEIGHT_DP + GAME_IMAGE_GAP_DP

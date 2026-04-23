@@ -4,5 +4,7 @@ import de.impulse.spieleabend.domain.model.Spiel
 
 @Suppress("kotlin:S6517")
 interface GameRepository {
+    suspend fun getGames(): List<Spiel>
+
     suspend fun getGame(gameId: Int): Spiel
 }

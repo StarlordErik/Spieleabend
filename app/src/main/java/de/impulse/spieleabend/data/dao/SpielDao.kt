@@ -19,11 +19,11 @@ interface SpielDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertSpielXKategorien(spielXKategorien: List<SpielXKategorieEntity>)
 
+    @Query("SELECT * FROM spiel ORDER BY lokalisierung_id")
+    suspend fun spiele(): List<SpielEntity>
+
     @Query("SELECT * FROM spiel WHERE lokalisierung_id = :spielId LIMIT 1")
     suspend fun spiel(spielId: Int): SpielEntity?
-
-    @Query("SELECT * FROM spiel ORDER BY lokalisierung_id LIMIT 1")
-    suspend fun erstesSpiel(): SpielEntity?
 
     @Query(
         """

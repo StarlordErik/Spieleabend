@@ -12,7 +12,6 @@ import de.impulse.spieleabend.data.dao.KartentextDao
 import de.impulse.spieleabend.data.dao.KategorieDao
 import de.impulse.spieleabend.data.dao.LokalisierungDao
 import de.impulse.spieleabend.data.dao.SpielDao
-import de.impulse.spieleabend.data.seed.InitialDatabaseSeedCallback
 import javax.inject.Singleton
 
 @Module
@@ -28,7 +27,7 @@ object DatabaseModule {
             SpieleabendDatabase::class.java,
             DATABASE_NAME,
         )
-            .addCallback(InitialDatabaseSeedCallback())
+            .createFromAsset(DATABASE_ASSET_PATH)
             .fallbackToDestructiveMigration(true)
             .fallbackToDestructiveMigrationOnDowngrade(true)
             .build()
@@ -50,4 +49,5 @@ object DatabaseModule {
         database.lokalisierungDao()
 
     private const val DATABASE_NAME = "spieleabend.db"
+    private const val DATABASE_ASSET_PATH = "spieleabend.db"
 }

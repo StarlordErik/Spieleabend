@@ -15,25 +15,35 @@ import javax.inject.Inject
 class GameRepositoryImpl @Inject constructor(
     private val database: SpieleabendDatabase,
 ) : GameRepository {
+    override suspend fun getGames(): List<Spiel> =
+        database.withTransaction {
+            database.spielDao().spiele().map { spiel ->
+                spiel.toDomain()
+            }
+        }
+
     override suspend fun getGame(gameId: Int): Spiel =
         database.withTransaction {
-            val spiel = spielEntity(gameId)
-            val kategorien = kategorien(spiel.lokalisierungId)
-            spiel.toDomain(
-                lokalisierung = lokalisierung(spiel.lokalisierungId),
-                originaleKategorien = kategorien.originale,
-                hinzugefuegteKategorien = kategorien.hinzugefuegte,
-                inaktiveKategorien = kategorien.inaktive,
-            )
+            spielEntity(gameId).toDomain()
         }
 
     private suspend fun spielEntity(gameId: Int): SpielEntity {
         val spielDao = database.spielDao()
 
-        return spielDao.spiel(gameId)
-            ?: requireNotNull(spielDao.erstesSpiel()) {
-                "Die Spieleabend-Datenbank enthaelt kein Spiel."
-            }
+        return requireNotNull(spielDao.spiel(gameId)) {
+            "Das Spiel $gameId fehlt in der Datenbank."
+        }
+    }
+
+    private suspend fun SpielEntity.toDomain(): Spiel {
+        val kategorien = kategorien(lokalisierungId)
+
+        return toDomain(
+            lokalisierung = lokalisierung(lokalisierungId),
+            originaleKategorien = kategorien.originale,
+            hinzugefuegteKategorien = kategorien.hinzugefuegte,
+            inaktiveKategorien = kategorien.inaktive,
+        )
     }
 
     private suspend fun kategorien(spielId: Int): KategorienSets {
