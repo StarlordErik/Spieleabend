@@ -56,11 +56,15 @@ internal fun CategoryTabs(
             .roundToInt()
             .coerceAtMost(layoutHeight)
         val tabSpacing = CategoryTabSpacing.roundToPx()
-        val normalTabHeight = rightCategoryTabHeight(
-            tabCount = kategorien.size,
-            layoutHeight = layoutHeight,
-            spacing = tabSpacing,
-        ).toDp()
+        val normalTabHeightPx = min(
+            rightCategoryTabHeight(
+                tabCount = kategorien.size,
+                layoutHeight = layoutHeight,
+                spacing = tabSpacing,
+            ),
+            randomTabHeight,
+        )
+        val normalTabHeight = normalTabHeightPx.toDp()
         val measuredTabs = measureCategoryTabs(
             kategorien = kategorien,
             constraints = constraints,
@@ -74,9 +78,12 @@ internal fun CategoryTabs(
             .coerceAtLeast(0)
         val randomTabY = ((layoutHeight - measuredTabs.randomTab.height) / 2)
             .coerceAtLeast(0)
+        val normalTabsTotalHeight = measuredTabs.normalTabs.sumOf { tab -> tab.placeable.height } +
+            (measuredTabs.normalTabs.size - 1).coerceAtLeast(0) * tabSpacing
+        val centeredNormalTabsY = ((layoutHeight - normalTabsTotalHeight) / 2).coerceAtLeast(0)
 
         layout(width = layoutWidth, height = layoutHeight) {
-            var nextNormalTabY = tabSpacing
+            var nextNormalTabY = centeredNormalTabsY
             measuredTabs.normalTabs.forEach { tab ->
                 tab.placeable.placeRelative(
                     x = when (tab.side) {
@@ -347,7 +354,7 @@ private data class FittedCategoryTabLabel(
 )
 
 private val CategoryTabContentColor = Color.White
-private val CategoryTabWidth = 36.dp
+private val CategoryTabWidth = 24.dp
 private val MinimumCategoryTabHeight = 64.dp
 private val CategoryTabSpacing = 10.dp
 private val CategoryTabLabelVerticalPadding = 14.dp
