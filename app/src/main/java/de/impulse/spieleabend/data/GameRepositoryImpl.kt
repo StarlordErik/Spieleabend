@@ -18,9 +18,12 @@ class GameRepositoryImpl @Inject constructor(
     override suspend fun getGame(gameId: Int): Spiel =
         database.withTransaction {
             val spiel = spielEntity(gameId)
+            val kategorien = kategorien(spiel.lokalisierungId)
             spiel.toDomain(
                 lokalisierung = lokalisierung(spiel.lokalisierungId),
-                kategorien = kategorien(spiel.lokalisierungId),
+                originaleKategorien = kategorien.originale,
+                hinzugefuegteKategorien = kategorien.hinzugefuegte,
+                inaktiveKategorien = kategorien.inaktive,
             )
         }
 
@@ -33,25 +36,65 @@ class GameRepositoryImpl @Inject constructor(
             }
     }
 
-    private suspend fun kategorien(spielId: Int): Set<Kategorie> =
-        database
-            .spielDao()
-            .kategorienFuerSpiel(spielId)
-            .map { kategorie -> kategorie.toDomain() }
-            .toCollection(LinkedHashSet())
+    private suspend fun kategorien(spielId: Int): KategorienSets {
+        val spielDao = database.spielDao()
+        val spielXKategorien = spielDao.spielXKategorienFuerSpiel(spielId)
+        val kategorienById =
+            spielDao
+                .kategorienFuerSpiel(spielId)
+                .map { kategorie -> kategorie.toDomain() }
+                .associateBy { kategorie -> kategorie.id() }
+
+        return KategorienSets(
+            originale = spielXKategorien
+                .filterNot { spielXKategorie -> spielXKategorie.selbstErstellt }
+                .map { spielXKategorie -> kategorie(kategorienById, spielXKategorie.kategorieId) }
+                .toCollection(LinkedHashSet()),
+            hinzugefuegte = spielXKategorien
+                .filter { spielXKategorie -> spielXKategorie.selbstErstellt }
+                .map { spielXKategorie -> kategorie(kategorienById, spielXKategorie.kategorieId) }
+                .toCollection(LinkedHashSet()),
+            inaktive = spielXKategorien
+                .filter { spielXKategorie -> spielXKategorie.inaktiv }
+                .map { spielXKategorie -> kategorie(kategorienById, spielXKategorie.kategorieId) }
+                .toCollection(LinkedHashSet()),
+        )
+    }
 
     private suspend fun KategorieEntity.toDomain(): Kategorie =
-        toDomain(
-            lokalisierung = lokalisierung(lokalisierungId),
-            kartentexte = kartentexte(lokalisierungId),
-        )
+        kartentexte(lokalisierungId).let { kartentexte ->
+            toDomain(
+                lokalisierung = lokalisierung(lokalisierungId),
+                originaleKartentexte = kartentexte.originale,
+                hinzugefuegteKartentexte = kartentexte.hinzugefuegte,
+                inaktiveKartentexte = kartentexte.inaktive,
+            )
+        }
 
-    private suspend fun kartentexte(kategorieId: Int): Set<Kartentext> =
-        database
-            .kategorieDao()
-            .kartentexteFuerKategorie(kategorieId)
-            .map { kartentext -> kartentext.toDomain() }
-            .toCollection(LinkedHashSet())
+    private suspend fun kartentexte(kategorieId: Int): KartentexteSets {
+        val kategorieDao = database.kategorieDao()
+        val kategorieXKartentexte = kategorieDao.kategorieXKartentexteFuerKategorie(kategorieId)
+        val kartentexteById =
+            kategorieDao
+                .kartentexteFuerKategorie(kategorieId)
+                .map { kartentext -> kartentext.toDomain() }
+                .associateBy { kartentext -> kartentext.id() }
+
+        return KartentexteSets(
+            originale = kategorieXKartentexte
+                .filterNot { kategorieXKartentext -> kategorieXKartentext.selbstErstellt }
+                .map { kategorieXKartentext -> kartentext(kartentexteById, kategorieXKartentext.kartentextId) }
+                .toCollection(LinkedHashSet()),
+            hinzugefuegte = kategorieXKartentexte
+                .filter { kategorieXKartentext -> kategorieXKartentext.selbstErstellt }
+                .map { kategorieXKartentext -> kartentext(kartentexteById, kategorieXKartentext.kartentextId) }
+                .toCollection(LinkedHashSet()),
+            inaktive = kategorieXKartentexte
+                .filter { kategorieXKartentext -> kategorieXKartentext.inaktiv }
+                .map { kategorieXKartentext -> kartentext(kartentexteById, kategorieXKartentext.kartentextId) }
+                .toCollection(LinkedHashSet()),
+        )
+    }
 
     private suspend fun KartentextEntity.toDomain(): Kartentext =
         toDomain(lokalisierung = lokalisierung(lokalisierungId))
@@ -68,4 +111,32 @@ class GameRepositoryImpl @Inject constructor(
 
         return lokalisierung.toDomain(translationen)
     }
+
+    private fun kategorie(
+        kategorienById: Map<Int, Kategorie>,
+        kategorieId: Int,
+    ): Kategorie =
+        requireNotNull(kategorienById[kategorieId]) {
+            "Die Kategorie $kategorieId fehlt fuer die Spiel-Verknuepfung."
+        }
+
+    private fun kartentext(
+        kartentexteById: Map<Int, Kartentext>,
+        kartentextId: Int,
+    ): Kartentext =
+        requireNotNull(kartentexteById[kartentextId]) {
+            "Der Kartentext $kartentextId fehlt fuer die Kategorie-Verknuepfung."
+        }
+
+    private data class KategorienSets(
+        val originale: Set<Kategorie>,
+        val hinzugefuegte: Set<Kategorie>,
+        val inaktive: Set<Kategorie>,
+    )
+
+    private data class KartentexteSets(
+        val originale: Set<Kartentext>,
+        val hinzugefuegte: Set<Kartentext>,
+        val inaktive: Set<Kartentext>,
+    )
 }

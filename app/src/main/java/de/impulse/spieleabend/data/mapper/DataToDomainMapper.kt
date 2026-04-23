@@ -13,11 +13,15 @@ import de.impulse.spieleabend.domain.model.Translation
 
 internal fun SpielEntity.toDomain(
     lokalisierung: Lokalisierung,
-    kategorien: Set<Kategorie>,
+    originaleKategorien: Set<Kategorie>,
+    hinzugefuegteKategorien: Set<Kategorie>,
+    inaktiveKategorien: Set<Kategorie>,
 ): Spiel =
     Spiel(
         lokalisierung = lokalisierung,
-        kategorien = kategorien,
+        originaleKategorien = originaleKategorien,
+        hinzugefuegteKategorien = hinzugefuegteKategorien,
+        inaktiveKategorien = inaktiveKategorien,
         inaktiv = inaktiv,
         selbstErstellt = selbstErstellt,
         favorit = favorit,
@@ -27,11 +31,15 @@ internal fun SpielEntity.toDomain(
 
 internal fun KategorieEntity.toDomain(
     lokalisierung: Lokalisierung,
-    kartentexte: Set<Kartentext>,
+    originaleKartentexte: Set<Kartentext>,
+    hinzugefuegteKartentexte: Set<Kartentext>,
+    inaktiveKartentexte: Set<Kartentext>,
 ): Kategorie =
     Kategorie(
         lokalisierung = lokalisierung,
-        kartentexte = kartentexte,
+        originaleKartentexte = originaleKartentexte,
+        hinzugefuegteKartentexte = hinzugefuegteKartentexte,
+        inaktiveKartentexte = inaktiveKartentexte,
         inaktiv = inaktiv,
         selbstErstellt = selbstErstellt,
         favorit = favorit,

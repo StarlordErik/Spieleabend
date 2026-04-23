@@ -35,4 +35,16 @@ interface KategorieDao {
         """,
     )
     suspend fun kartentexteFuerKategorie(kategorieId: Int): List<KartentextEntity>
+
+    @Query(
+        """
+        SELECT *
+        FROM kategorie_x_kartentext
+        WHERE kategorie_id = :kategorieId
+        ORDER BY kartentext_id
+        """,
+    )
+    suspend fun kategorieXKartentexteFuerKategorie(
+        kategorieId: Int,
+    ): List<KategorieXKartentextEntity>
 }

@@ -36,4 +36,14 @@ interface SpielDao {
         """,
     )
     suspend fun kategorienFuerSpiel(spielId: Int): List<KategorieEntity>
+
+    @Query(
+        """
+        SELECT *
+        FROM spiel_x_kategorie
+        WHERE spiel_id = :spielId
+        ORDER BY kategorie_id
+        """,
+    )
+    suspend fun spielXKategorienFuerSpiel(spielId: Int): List<SpielXKategorieEntity>
 }

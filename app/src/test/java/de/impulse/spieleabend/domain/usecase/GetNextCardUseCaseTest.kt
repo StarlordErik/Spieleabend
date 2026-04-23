@@ -67,7 +67,7 @@ class GetNextCardUseCaseTest {
     ): Spiel =
         Spiel(
             lokalisierung = lokalisierung(id = 10),
-            kategorien = kategorien.toCollection(LinkedHashSet()),
+            originaleKategorien = kategorien.toCollection(LinkedHashSet()),
             texteProKarte = texteProKarte,
         )
 
@@ -77,7 +77,7 @@ class GetNextCardUseCaseTest {
     ): Kategorie =
         Kategorie(
             lokalisierung = lokalisierung(id = id),
-            kartentexte = kartentexte.toCollection(LinkedHashSet()),
+            originaleKartentexte = kartentexte.toCollection(LinkedHashSet()),
         )
 
     private fun kartentext(id: Int): Kartentext =

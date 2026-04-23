@@ -56,21 +56,35 @@ internal fun Translation.toEntity(lokalisierungId: Int): TranslationEntity =
     )
 
 internal fun Spiel.toSpielXKategorieEntities(): List<SpielXKategorieEntity> =
-    kategorien.map { kategorie ->
+    originaleKategorien.map { kategorie ->
         SpielXKategorieEntity(
             spielId = id(),
             kategorieId = kategorie.id(),
-            inaktiv = false,
+            inaktiv = kategorie.id() in inaktiveKategorien.map { inaktiveKategorie -> inaktiveKategorie.id() }.toSet(),
             selbstErstellt = false,
+        )
+    } + hinzugefuegteKategorien.map { kategorie ->
+        SpielXKategorieEntity(
+            spielId = id(),
+            kategorieId = kategorie.id(),
+            inaktiv = kategorie.id() in inaktiveKategorien.map { inaktiveKategorie -> inaktiveKategorie.id() }.toSet(),
+            selbstErstellt = true,
         )
     }
 
 internal fun Kategorie.toKategorieXKartentextEntities(): List<KategorieXKartentextEntity> =
-    kartentexte.map { kartentext ->
+    originaleKartentexte.map { kartentext ->
         KategorieXKartentextEntity(
             kategorieId = id(),
             kartentextId = kartentext.id(),
-            inaktiv = false,
+            inaktiv = kartentext.id() in inaktiveKartentexte.map { inaktiverKartentext -> inaktiverKartentext.id() }.toSet(),
             selbstErstellt = false,
+        )
+    } + hinzugefuegteKartentexte.map { kartentext ->
+        KategorieXKartentextEntity(
+            kategorieId = id(),
+            kartentextId = kartentext.id(),
+            inaktiv = kartentext.id() in inaktiveKartentexte.map { inaktiverKartentext -> inaktiverKartentext.id() }.toSet(),
+            selbstErstellt = true,
         )
     }

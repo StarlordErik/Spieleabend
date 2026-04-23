@@ -19,6 +19,21 @@ class SpieleabendDomainModelTest {
     }
 
     @Test
+    fun spielLeitetAktiveKategorienAusJoinZustaendenAb() {
+        val originaleKategorie = kategorie(1)
+        val hinzugefuegteKategorie = kategorie(2)
+
+        val spiel = Spiel(
+            lokalisierung = lokalisierung(10),
+            originaleKategorien = setOf(originaleKategorie),
+            hinzugefuegteKategorien = setOf(hinzugefuegteKategorie),
+            inaktiveKategorien = setOf(hinzugefuegteKategorie),
+        )
+
+        assertEquals(setOf(originaleKategorie), spiel.kategorien)
+    }
+
+    @Test
     fun kategorieEnthaeltKartentexteAlsVieleZuVieleBeziehung() {
         val pantomimeText = kartentext(101)
         val quizText = kartentext(102)
@@ -28,6 +43,21 @@ class SpieleabendDomainModelTest {
 
         assertEquals(setOf(pantomimeText, quizText), aktivKategorie.kartentexte)
         assertEquals(setOf(pantomimeText), partyKategorie.kartentexte)
+    }
+
+    @Test
+    fun kategorieLeitetAktiveKartentexteAusJoinZustaendenAb() {
+        val originalerKartentext = kartentext(101)
+        val hinzugefuegterKartentext = kartentext(102)
+
+        val kategorie = Kategorie(
+            lokalisierung = lokalisierung(20),
+            originaleKartentexte = setOf(originalerKartentext),
+            hinzugefuegteKartentexte = setOf(hinzugefuegterKartentext),
+            inaktiveKartentexte = setOf(hinzugefuegterKartentext),
+        )
+
+        assertEquals(setOf(originalerKartentext), kategorie.kartentexte)
     }
 
     @Test
@@ -81,7 +111,8 @@ class SpieleabendDomainModelTest {
         assertThrows(IllegalArgumentException::class.java) {
             Spiel(
                 lokalisierung = lokalisierung(12),
-                kategorien = linkedSetOf(alteKategorie, neueKategorie),
+                originaleKategorien = linkedSetOf(alteKategorie),
+                hinzugefuegteKategorien = linkedSetOf(neueKategorie),
             )
         }
     }
@@ -98,7 +129,8 @@ class SpieleabendDomainModelTest {
         assertThrows(IllegalArgumentException::class.java) {
             Kategorie(
                 lokalisierung = lokalisierung(30),
-                kartentexte = linkedSetOf(alterKartentext, neuerKartentext),
+                originaleKartentexte = linkedSetOf(alterKartentext),
+                hinzugefuegteKartentexte = linkedSetOf(neuerKartentext),
             )
         }
     }
@@ -107,7 +139,7 @@ class SpieleabendDomainModelTest {
     fun spielErlaubtLeereKategorien() {
         val spiel = Spiel(
             lokalisierung = lokalisierung(13),
-            kategorien = emptySet(),
+            originaleKategorien = emptySet(),
         )
 
         assertEquals(emptySet<Kategorie>(), spiel.kategorien)
@@ -137,7 +169,7 @@ class SpieleabendDomainModelTest {
     ): Spiel =
         Spiel(
             lokalisierung = lokalisierung(id),
-            kategorien = kategorien.toSet(),
+            originaleKategorien = kategorien.toSet(),
         )
 
     private fun kategorie(
@@ -146,7 +178,7 @@ class SpieleabendDomainModelTest {
     ): Kategorie =
         Kategorie(
             lokalisierung = lokalisierung(id),
-            kartentexte = kartentexte.toSet(),
+            originaleKartentexte = kartentexte.toSet(),
         )
 
     private fun kartentext(id: Int): Kartentext =

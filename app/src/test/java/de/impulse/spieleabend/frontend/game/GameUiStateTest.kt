@@ -18,7 +18,7 @@ class GameUiStateTest {
         val hinweis = kartentext(id = 102, text = "Hinweis")
         val spiel = Spiel(
             lokalisierung = lokalisierung(id = 1, text = "Quiz"),
-            kategorien = linkedSetOf(
+            originaleKategorien = linkedSetOf(
                 kategorie(id = 11, name = "Wissen", frage, hinweis),
                 kategorie(id = 12, name = "Finale", frage),
             ),
@@ -68,7 +68,7 @@ class GameUiStateTest {
                 ogSprache = Sprache.EN,
                 Translation(sprache = Sprache.DE, text = "Spiel"),
             ),
-            kategorien = linkedSetOf(
+            originaleKategorien = linkedSetOf(
                 Kategorie(
                     lokalisierung = lokalisierung(
                         id = 21,
@@ -76,7 +76,7 @@ class GameUiStateTest {
                         ogSprache = Sprache.EN,
                         Translation(sprache = Sprache.DE, text = "Kategorie"),
                     ),
-                    kartentexte = linkedSetOf(frage, hinweis),
+                    originaleKartentexte = linkedSetOf(frage, hinweis),
                 ),
             ),
         )
@@ -106,7 +106,7 @@ class GameUiStateTest {
     ): Kategorie =
         Kategorie(
             lokalisierung = lokalisierung(id = id, text = name),
-            kartentexte = kartentexte.toCollection(LinkedHashSet()),
+            originaleKartentexte = kartentexte.toCollection(LinkedHashSet()),
         )
 
     private fun kartentext(
