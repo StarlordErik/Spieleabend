@@ -17,8 +17,7 @@ class GameUiStateTest {
         val frage = kartentext(id = 101, text = "Frage")
         val hinweis = kartentext(id = 102, text = "Hinweis")
         val spiel = Spiel(
-            id = 1,
-            lokalisierung = lokalisierung(id = 10, text = "Quiz"),
+            lokalisierung = lokalisierung(id = 1, text = "Quiz"),
             kategorien = linkedSetOf(
                 kategorie(id = 11, name = "Wissen", frage, hinweis),
                 kategorie(id = 12, name = "Finale", frage),
@@ -48,35 +47,31 @@ class GameUiStateTest {
     @Test
     fun nutztAngeforderteSpracheUndFaelltFuerOriginalspracheAufOgZurueck() {
         val frage = Kartentext(
-            id = 101,
             lokalisierung = lokalisierung(
-                id = 1001,
+                id = 101,
                 ogText = "English text",
                 ogSprache = Sprache.EN,
                 Translation(sprache = Sprache.DE, text = "Deutscher Text"),
             ),
         )
         val hinweis = Kartentext(
-            id = 102,
             lokalisierung = lokalisierung(
-                id = 1002,
+                id = 102,
                 ogText = "English only",
                 ogSprache = Sprache.EN,
             ),
         )
         val spiel = Spiel(
-            id = 2,
             lokalisierung = lokalisierung(
-                id = 2001,
+                id = 2,
                 ogText = "Game",
                 ogSprache = Sprache.EN,
                 Translation(sprache = Sprache.DE, text = "Spiel"),
             ),
             kategorien = linkedSetOf(
                 Kategorie(
-                    id = 21,
                     lokalisierung = lokalisierung(
-                        id = 2002,
+                        id = 21,
                         ogText = "Category",
                         ogSprache = Sprache.EN,
                         Translation(sprache = Sprache.DE, text = "Kategorie"),
@@ -110,8 +105,7 @@ class GameUiStateTest {
         vararg kartentexte: Kartentext,
     ): Kategorie =
         Kategorie(
-            id = id,
-            lokalisierung = lokalisierung(id = id * 10, text = name),
+            lokalisierung = lokalisierung(id = id, text = name),
             kartentexte = kartentexte.toCollection(LinkedHashSet()),
         )
 
@@ -120,8 +114,7 @@ class GameUiStateTest {
         text: String,
     ): Kartentext =
         Kartentext(
-            id = id,
-            lokalisierung = lokalisierung(id = id * 10, text = text),
+            lokalisierung = lokalisierung(id = id, text = text),
         )
 
     private fun lokalisierung(

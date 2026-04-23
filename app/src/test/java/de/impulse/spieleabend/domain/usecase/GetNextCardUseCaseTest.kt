@@ -29,7 +29,7 @@ class GetNextCardUseCaseTest {
         assertEquals(
             setOf(101, 102),
             gezogeneKarte.kartentexte.map { gezogenerKartentext ->
-                gezogenerKartentext.kartentext.id
+                gezogenerKartentext.kartentext.id()
             }.toSet(),
         )
         assertTrue(
@@ -54,7 +54,7 @@ class GetNextCardUseCaseTest {
             gezogeneKarte.kartentexte.size,
         )
         assertTrue(
-            gezogeneKarte.kartentexte.single().kartentext.id in setOf(101, 201),
+            gezogeneKarte.kartentexte.single().kartentext.id() in setOf(101, 201),
         )
         assertTrue(
             gezogeneKarte.kartentexte.single().kategorieId in setOf(1, 2),
@@ -66,8 +66,7 @@ class GetNextCardUseCaseTest {
         vararg kategorien: Kategorie,
     ): Spiel =
         Spiel(
-            id = 10,
-            lokalisierung = lokalisierung(id = 100),
+            lokalisierung = lokalisierung(id = 10),
             kategorien = kategorien.toCollection(LinkedHashSet()),
             texteProKarte = texteProKarte,
         )
@@ -77,15 +76,13 @@ class GetNextCardUseCaseTest {
         vararg kartentexte: Kartentext,
     ): Kategorie =
         Kategorie(
-            id = id,
-            lokalisierung = lokalisierung(id = id * 10),
+            lokalisierung = lokalisierung(id = id),
             kartentexte = kartentexte.toCollection(LinkedHashSet()),
         )
 
     private fun kartentext(id: Int): Kartentext =
         Kartentext(
-            id = id,
-            lokalisierung = lokalisierung(id = id * 10),
+            lokalisierung = lokalisierung(id = id),
         )
 
     private fun lokalisierung(id: Int): Lokalisierung =

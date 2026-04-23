@@ -13,12 +13,12 @@ class GetNextRandomCardUseCase @Inject constructor() {
                     kategorie.kartentexte.map { kartentext ->
                         GezogenerKartentext(
                             kartentext = kartentext,
-                            kategorieId = kategorie.id,
+                            kategorieId = kategorie.id(),
                         )
                     }
                 }
                 .shuffled()
-                .distinctBy { gezogenerKartentext -> gezogenerKartentext.kartentext.id }
+                .distinctBy { gezogenerKartentext -> gezogenerKartentext.kartentext.id() }
                 .take(spiel.texteProKarte),
         )
 }

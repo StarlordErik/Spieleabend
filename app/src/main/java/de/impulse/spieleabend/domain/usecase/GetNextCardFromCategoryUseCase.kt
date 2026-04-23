@@ -11,9 +11,9 @@ class GetNextCardFromCategoryUseCase @Inject constructor() {
         kategorieId: Int,
     ): GezogeneKarte {
         val kategorie = requireNotNull(spiel.kategorien.firstOrNull { kategorie ->
-            kategorie.id == kategorieId
+            kategorie.id() == kategorieId
         }) {
-            "Das Spiel ${spiel.id} enth\u00e4lt keine Kategorie mit der ID $kategorieId."
+            "Das Spiel ${spiel.id()} enth\u00e4lt keine Kategorie mit der ID $kategorieId."
         }
 
         return GezogeneKarte(
@@ -23,7 +23,7 @@ class GetNextCardFromCategoryUseCase @Inject constructor() {
                 .map { kartentext ->
                     GezogenerKartentext(
                         kartentext = kartentext,
-                        kategorieId = kategorie.id,
+                        kategorieId = kategorie.id(),
                     )
                 },
         )

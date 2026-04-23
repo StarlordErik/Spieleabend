@@ -51,7 +51,7 @@ internal fun Spiel.toGameUiState(
         aktuelleKarte = aktuelleKarte.toGameCardUiModel(sprache),
         kategorien = kategorien.map { kategorie ->
             GameKategorieUiModel(
-                id = kategorie.id,
+                id = kategorie.id(),
                 name = kategorie.text(sprache),
             )
         },
@@ -70,7 +70,7 @@ private fun GezogenerKartentext.toGameKartentextUiModel(
     sprache: Sprache,
 ): GameKartentextUiModel =
     GameKartentextUiModel(
-        id = kartentext.id,
+        id = kartentext.id(),
         text = kartentext.text(sprache),
         kategorieId = kategorieId,
     )

@@ -80,8 +80,7 @@ class SpieleabendDomainModelTest {
 
         assertThrows(IllegalArgumentException::class.java) {
             Spiel(
-                id = 12,
-                lokalisierung = lokalisierung(120),
+                lokalisierung = lokalisierung(12),
                 kategorien = linkedSetOf(alteKategorie, neueKategorie),
             )
         }
@@ -89,13 +88,16 @@ class SpieleabendDomainModelTest {
 
     @Test
     fun kategorieErlaubtKeineDoppelteKartentextId() {
-        val alterKartentext = Kartentext(id = 301, lokalisierung = lokalisierung(3010))
-        val neuerKartentext = Kartentext(id = 301, lokalisierung = lokalisierung(3011))
+        val alterKartentext = Kartentext(lokalisierung = lokalisierung(301, ogText = "Alt"))
+        val neuerKartentext =
+            Kartentext(
+                lokalisierung = lokalisierung(301, ogText = "Neu"),
+                gesehen = true,
+            )
 
         assertThrows(IllegalArgumentException::class.java) {
             Kategorie(
-                id = 30,
-                lokalisierung = lokalisierung(300),
+                lokalisierung = lokalisierung(30),
                 kartentexte = linkedSetOf(alterKartentext, neuerKartentext),
             )
         }
@@ -104,8 +106,7 @@ class SpieleabendDomainModelTest {
     @Test
     fun spielErlaubtLeereKategorien() {
         val spiel = Spiel(
-            id = 13,
-            lokalisierung = lokalisierung(3),
+            lokalisierung = lokalisierung(13),
             kategorien = emptySet(),
         )
 
@@ -135,8 +136,7 @@ class SpieleabendDomainModelTest {
         vararg kategorien: Kategorie,
     ): Spiel =
         Spiel(
-            id = id,
-            lokalisierung = lokalisierung(id * 10),
+            lokalisierung = lokalisierung(id),
             kategorien = kategorien.toSet(),
         )
 
@@ -145,15 +145,13 @@ class SpieleabendDomainModelTest {
         vararg kartentexte: Kartentext,
     ): Kategorie =
         Kategorie(
-            id = id,
-            lokalisierung = lokalisierung(id * 10),
+            lokalisierung = lokalisierung(id),
             kartentexte = kartentexte.toSet(),
         )
 
     private fun kartentext(id: Int): Kartentext =
         Kartentext(
-            id = id,
-            lokalisierung = lokalisierung(id * 10),
+            lokalisierung = lokalisierung(id),
         )
 
     private fun lokalisierung(

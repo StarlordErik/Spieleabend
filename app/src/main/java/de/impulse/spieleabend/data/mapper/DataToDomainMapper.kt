@@ -16,7 +16,6 @@ internal fun SpielEntity.toDomain(
     kategorien: Set<Kategorie>,
 ): Spiel =
     Spiel(
-        id = lokalisierungId,
         lokalisierung = lokalisierung,
         kategorien = kategorien,
         inaktiv = inaktiv,
@@ -31,7 +30,6 @@ internal fun KategorieEntity.toDomain(
     kartentexte: Set<Kartentext>,
 ): Kategorie =
     Kategorie(
-        id = lokalisierungId,
         lokalisierung = lokalisierung,
         kartentexte = kartentexte,
         inaktiv = inaktiv,
@@ -41,7 +39,6 @@ internal fun KategorieEntity.toDomain(
 
 internal fun KartentextEntity.toDomain(lokalisierung: Lokalisierung): Kartentext =
     Kartentext(
-        id = lokalisierungId,
         lokalisierung = lokalisierung,
         inaktiv = inaktiv,
         selbstErstellt = selbstErstellt,

@@ -58,8 +58,8 @@ internal fun Translation.toEntity(lokalisierungId: Int): TranslationEntity =
 internal fun Spiel.toSpielXKategorieEntities(): List<SpielXKategorieEntity> =
     kategorien.map { kategorie ->
         SpielXKategorieEntity(
-            spielId = id,
-            kategorieId = kategorie.id,
+            spielId = id(),
+            kategorieId = kategorie.id(),
             inaktiv = false,
             selbstErstellt = false,
         )
@@ -68,8 +68,8 @@ internal fun Spiel.toSpielXKategorieEntities(): List<SpielXKategorieEntity> =
 internal fun Kategorie.toKategorieXKartentextEntities(): List<KategorieXKartentextEntity> =
     kartentexte.map { kartentext ->
         KategorieXKartentextEntity(
-            kategorieId = id,
-            kartentextId = kartentext.id,
+            kategorieId = id(),
+            kartentextId = kartentext.id(),
             inaktiv = false,
             selbstErstellt = false,
         )
