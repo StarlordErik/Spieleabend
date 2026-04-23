@@ -4,12 +4,16 @@ data class Spiel(
     val id: Int,
     val lokalisierung: Lokalisierung,
     val kategorien: Set<Kategorie>,
-    val kartentexteProKarte: Int = 1,
+    val inaktiv: Boolean = false,
+    val selbstErstellt: Boolean = false,
+    val favorit: Boolean = false,
+    val bildDateiname: String? = null,
+    val texteProKarte: Int = 1,
 ) {
     init {
         require(id > 0) { "Die ID eines Spiels muss positiv sein." }
         require(kategorien.isNotEmpty()) { "Ein Spiel muss mindestens eine Kategorie enthalten." }
-        require(kartentexteProKarte > 0) {
+        require(texteProKarte > 0) {
             "Ein Spiel muss mindestens einen Kartentext pro Karte anzeigen."
         }
 

@@ -20,4 +20,9 @@ data class KartentextEntity(
     @PrimaryKey
     @ColumnInfo(name = "lokalisierung_id")
     val lokalisierungId: Int,
+    val inaktiv: Boolean,
+    @ColumnInfo(name = "selbst_erstellt") val selbstErstellt: Boolean,
+    val favorit: Boolean,
+    val gesehen: Boolean,
+    val gespielt: Boolean,
 )

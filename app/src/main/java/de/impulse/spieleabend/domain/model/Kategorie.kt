@@ -4,6 +4,9 @@ data class Kategorie(
     val id: Int,
     val lokalisierung: Lokalisierung,
     val kartentexte: Set<Kartentext> = emptySet(),
+    val inaktiv: Boolean = false,
+    val selbstErstellt: Boolean = false,
+    val favorit: Boolean = false,
 ) {
     init {
         require(id > 0) { "Die ID einer Kategorie muss positiv sein." }

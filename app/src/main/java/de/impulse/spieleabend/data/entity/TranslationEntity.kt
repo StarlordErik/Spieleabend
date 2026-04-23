@@ -21,4 +21,5 @@ data class TranslationEntity(
     @ColumnInfo(name = "lokalisierung_id") val lokalisierungId: Int,
     @ColumnInfo(name = "sprache") val sprache: Sprache,
     val text: String,
+    val bearbeitet: Boolean,
 )

@@ -119,5 +119,6 @@ class SpieleabendDomainModelTest {
         Lokalisierung(
             id = id,
             translationen = translations,
+            ogSprache = translations.first().sprache,
         )
 }

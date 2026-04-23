@@ -136,5 +136,6 @@ class GameUiStateTest {
         Lokalisierung(
             id = id,
             translationen = translationen.toCollection(LinkedHashSet()),
+            ogSprache = translationen.first().sprache,
         )
 }

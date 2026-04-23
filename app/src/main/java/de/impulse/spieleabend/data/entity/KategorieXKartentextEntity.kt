@@ -24,11 +24,11 @@ import androidx.room.Index
     ],
     indices = [
         Index(value = ["kartentext_id"]),
-        Index(value = ["kategorie_id", "position"], unique = true),
     ],
 )
 data class KategorieXKartentextEntity(
     @ColumnInfo(name = "kategorie_id") val kategorieId: Int,
     @ColumnInfo(name = "kartentext_id") val kartentextId: Int,
-    val position: Int,
+    val inaktiv: Boolean,
+    @ColumnInfo(name = "selbst_erstellt") val selbstErstellt: Boolean,
 )

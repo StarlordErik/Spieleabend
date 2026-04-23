@@ -19,6 +19,6 @@ class GetNextRandomCardUseCase @Inject constructor() {
                 }
                 .shuffled()
                 .distinctBy { gezogenerKartentext -> gezogenerKartentext.kartentext.id }
-                .take(spiel.kartentexteProKarte),
+                .take(spiel.texteProKarte),
         )
 }

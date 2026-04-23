@@ -15,7 +15,7 @@ class GetNextCardUseCaseTest {
         val frage = kartentext(id = 101)
         val hinweis = kartentext(id = 102)
         val spiel = spiel(
-            kartentexteProKarte = 2,
+            texteProKarte = 2,
             kategorie(id = 1, frage, hinweis),
             kategorie(id = 2, kartentext(id = 201)),
         )
@@ -41,7 +41,7 @@ class GetNextCardUseCaseTest {
     @Test
     fun ziehtZufaelligeKarteAusAllenKategorien() {
         val spiel = spiel(
-            kartentexteProKarte = 1,
+            texteProKarte = 1,
             kategorie(id = 1, kartentext(id = 101)),
             kategorie(id = 2, kartentext(id = 201)),
         )
@@ -61,14 +61,14 @@ class GetNextCardUseCaseTest {
     }
 
     private fun spiel(
-        kartentexteProKarte: Int,
+        texteProKarte: Int,
         vararg kategorien: Kategorie,
     ): Spiel =
         Spiel(
             id = 10,
             lokalisierung = lokalisierung(id = 100),
             kategorien = kategorien.toCollection(LinkedHashSet()),
-            kartentexteProKarte = kartentexteProKarte,
+            texteProKarte = texteProKarte,
         )
 
     private fun kategorie(
@@ -88,8 +88,11 @@ class GetNextCardUseCaseTest {
         )
 
     private fun lokalisierung(id: Int): Lokalisierung =
-        Lokalisierung(
-            id = id,
-            translationen = setOf(Translation(sprache = "de", text = "lokalisierung-$id")),
-        )
+        Translation(sprache = "de", text = "lokalisierung-$id").let { translation ->
+            Lokalisierung(
+                id = id,
+                translationen = setOf(translation),
+                ogSprache = translation.sprache,
+            )
+        }
 }

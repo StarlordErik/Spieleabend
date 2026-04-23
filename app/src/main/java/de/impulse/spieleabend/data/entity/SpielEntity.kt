@@ -20,5 +20,9 @@ data class SpielEntity(
     @PrimaryKey
     @ColumnInfo(name = "lokalisierung_id")
     val lokalisierungId: Int,
-    @ColumnInfo(name = "kartentexte_pro_karte") val kartentexteProKarte: Int,
+    val inaktiv: Boolean,
+    @ColumnInfo(name = "selbst_erstellt") val selbstErstellt: Boolean,
+    val favorit: Boolean,
+    @ColumnInfo(name = "bild_dateiname") val bildDateiname: String?,
+    @ColumnInfo(name = "texte_pro_karte") val texteProKarte: Int,
 )

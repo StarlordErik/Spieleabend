@@ -19,7 +19,7 @@ class GetNextCardFromCategoryUseCase @Inject constructor() {
         return GezogeneKarte(
             kartentexte = kategorie.kartentexte
                 .shuffled()
-                .take(spiel.kartentexteProKarte)
+                .take(spiel.texteProKarte)
                 .map { kartentext ->
                     GezogenerKartentext(
                         kartentext = kartentext,

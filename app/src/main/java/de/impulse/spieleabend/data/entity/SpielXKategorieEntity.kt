@@ -24,11 +24,11 @@ import androidx.room.Index
     ],
     indices = [
         Index(value = ["kategorie_id"]),
-        Index(value = ["spiel_id", "position"], unique = true),
     ],
 )
 data class SpielXKategorieEntity(
     @ColumnInfo(name = "spiel_id") val spielId: Int,
     @ColumnInfo(name = "kategorie_id") val kategorieId: Int,
-    val position: Int,
+    val inaktiv: Boolean,
+    @ColumnInfo(name = "selbst_erstellt") val selbstErstellt: Boolean,
 )

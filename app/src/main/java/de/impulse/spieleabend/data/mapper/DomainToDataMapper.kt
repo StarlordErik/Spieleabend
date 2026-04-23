@@ -16,43 +16,61 @@ import de.impulse.spieleabend.domain.model.Translation
 internal fun Spiel.toEntity(): SpielEntity =
     SpielEntity(
         lokalisierungId = lokalisierung.id,
-        kartentexteProKarte = kartentexteProKarte,
+        inaktiv = inaktiv,
+        selbstErstellt = selbstErstellt,
+        favorit = favorit,
+        bildDateiname = bildDateiname,
+        texteProKarte = texteProKarte,
     )
 
 internal fun Kategorie.toEntity(): KategorieEntity =
     KategorieEntity(
         lokalisierungId = lokalisierung.id,
+        inaktiv = inaktiv,
+        selbstErstellt = selbstErstellt,
+        favorit = favorit,
     )
 
 internal fun Kartentext.toEntity(): KartentextEntity =
     KartentextEntity(
         lokalisierungId = lokalisierung.id,
+        inaktiv = inaktiv,
+        selbstErstellt = selbstErstellt,
+        favorit = favorit,
+        gesehen = gesehen,
+        gespielt = gespielt,
     )
 
 internal fun Lokalisierung.toEntity(): LokalisierungEntity =
-    LokalisierungEntity(id = id)
+    LokalisierungEntity(
+        id = id,
+        ogSprache = ogSprache,
+    )
 
 internal fun Translation.toEntity(lokalisierungId: Int): TranslationEntity =
     TranslationEntity(
         lokalisierungId = lokalisierungId,
         sprache = sprache,
         text = text,
+        bearbeitet = bearbeitet,
     )
 
 internal fun Spiel.toSpielXKategorieEntities(): List<SpielXKategorieEntity> =
-    kategorien.mapIndexed { index, kategorie ->
+    kategorien.map { kategorie ->
         SpielXKategorieEntity(
             spielId = id,
             kategorieId = kategorie.id,
-            position = index,
+            inaktiv = false,
+            selbstErstellt = false,
         )
     }
 
 internal fun Kategorie.toKategorieXKartentextEntities(): List<KategorieXKartentextEntity> =
-    kartentexte.mapIndexed { index, kartentext ->
+    kartentexte.map { kartentext ->
         KategorieXKartentextEntity(
             kategorieId = id,
             kartentextId = kartentext.id,
-            position = index,
+            inaktiv = false,
+            selbstErstellt = false,
         )
     }

@@ -5,6 +5,7 @@ import de.impulse.spieleabend.common.Sprache
 data class Lokalisierung(
     val id: Int,
     val translationen: Set<Translation>,
+    val ogSprache: Sprache,
 ) {
     init {
         require(id > 0) { "Die ID einer Lokalisierung muss positiv sein." }

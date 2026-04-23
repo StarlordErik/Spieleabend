@@ -31,7 +31,7 @@ interface KategorieDao {
         INNER JOIN kategorie_x_kartentext
             ON kategorie_x_kartentext.kartentext_id = kartentext.lokalisierung_id
         WHERE kategorie_x_kartentext.kategorie_id = :kategorieId
-        ORDER BY kategorie_x_kartentext.position
+        ORDER BY kartentext.lokalisierung_id
         """,
     )
     suspend fun kartentexteFuerKategorie(kategorieId: Int): List<KartentextEntity>

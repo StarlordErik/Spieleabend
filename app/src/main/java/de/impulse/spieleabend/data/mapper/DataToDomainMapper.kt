@@ -19,7 +19,11 @@ internal fun SpielEntity.toDomain(
         id = lokalisierungId,
         lokalisierung = lokalisierung,
         kategorien = kategorien,
-        kartentexteProKarte = kartentexteProKarte,
+        inaktiv = inaktiv,
+        selbstErstellt = selbstErstellt,
+        favorit = favorit,
+        bildDateiname = bildDateiname,
+        texteProKarte = texteProKarte,
     )
 
 internal fun KategorieEntity.toDomain(
@@ -30,12 +34,20 @@ internal fun KategorieEntity.toDomain(
         id = lokalisierungId,
         lokalisierung = lokalisierung,
         kartentexte = kartentexte,
+        inaktiv = inaktiv,
+        selbstErstellt = selbstErstellt,
+        favorit = favorit,
     )
 
 internal fun KartentextEntity.toDomain(lokalisierung: Lokalisierung): Kartentext =
     Kartentext(
         id = lokalisierungId,
         lokalisierung = lokalisierung,
+        inaktiv = inaktiv,
+        selbstErstellt = selbstErstellt,
+        favorit = favorit,
+        gesehen = gesehen,
+        gespielt = gespielt,
     )
 
 internal fun LokalisierungEntity.toDomain(
@@ -44,10 +56,12 @@ internal fun LokalisierungEntity.toDomain(
     Lokalisierung(
         id = id,
         translationen = translationen,
+        ogSprache = ogSprache,
     )
 
 internal fun TranslationEntity.toDomain(): Translation =
     Translation(
         sprache = sprache,
         text = text,
+        bearbeitet = bearbeitet,
     )

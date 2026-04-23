@@ -32,7 +32,7 @@ interface SpielDao {
         INNER JOIN spiel_x_kategorie
             ON spiel_x_kategorie.kategorie_id = kategorie.lokalisierung_id
         WHERE spiel_x_kategorie.spiel_id = :spielId
-        ORDER BY spiel_x_kategorie.position
+        ORDER BY kategorie.lokalisierung_id
         """,
     )
     suspend fun kategorienFuerSpiel(spielId: Int): List<KategorieEntity>
