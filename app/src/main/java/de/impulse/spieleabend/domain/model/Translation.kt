@@ -10,6 +10,4 @@ data class Translation(
     init {
         require(text.isNotBlank()) { "Der Text einer Translation darf nicht leer sein." }
     }
-
-    internal fun istFuer(sprache: Sprache): Boolean = this.sprache == sprache
 }

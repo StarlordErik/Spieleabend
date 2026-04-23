@@ -2,57 +2,49 @@ package de.impulse.spieleabend.domain.model
 
 import de.impulse.spieleabend.common.Sprache
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SpieleabendDomainModelTest {
     @Test
-    fun spielVerwaltetKategorienAlsVieleZuVieleBeziehung() {
+    fun spielEnthaeltKategorienAlsVieleZuVieleBeziehung() {
         val teamKategorie = kategorie(1)
         val wissenKategorie = kategorie(2)
 
-        val spiel = spiel(10, teamKategorie)
-            .mitKategorie(wissenKategorie)
+        val spiel = spiel(10, teamKategorie, wissenKategorie)
         val weiteresSpiel = spiel(11, teamKategorie)
 
-        assertTrue(spiel.enthaeltKategorie(1))
-        assertTrue(spiel.enthaeltKategorie(2))
-        assertTrue(weiteresSpiel.enthaeltKategorie(1))
         assertEquals(setOf(teamKategorie, wissenKategorie), spiel.kategorien)
+        assertEquals(setOf(teamKategorie), weiteresSpiel.kategorien)
     }
 
     @Test
-    fun kategorieVerwaltetKartentexteAlsVieleZuVieleBeziehung() {
+    fun kategorieEnthaeltKartentexteAlsVieleZuVieleBeziehung() {
         val pantomimeText = kartentext(101)
         val quizText = kartentext(102)
 
-        val aktivKategorie = kategorie(20)
-            .mitKartentext(pantomimeText)
-            .mitKartentext(quizText)
-        val partyKategorie = kategorie(21).mitKartentext(pantomimeText)
+        val aktivKategorie = kategorie(20, pantomimeText, quizText)
+        val partyKategorie = kategorie(21, pantomimeText)
 
-        assertTrue(aktivKategorie.enthaeltKartentext(101))
-        assertTrue(aktivKategorie.enthaeltKartentext(102))
-        assertTrue(partyKategorie.enthaeltKartentext(101))
         assertEquals(setOf(pantomimeText, quizText), aktivKategorie.kartentexte)
+        assertEquals(setOf(pantomimeText), partyKategorie.kartentexte)
     }
 
     @Test
-    fun lokalisierungLiefertTextFuerSpracheMitFallback() {
+    fun lokalisierungLiefertTextUndFaelltSonstAufOgZurueck() {
         val lokalisierung = lokalisierung(
             id = 1,
+            ogText = "Game Night",
+            ogSprache = Sprache.EN,
             translations = setOf(
+                Translation(sprache = Sprache.OG, text = "Game Night"),
                 Translation(sprache = Sprache.DE, text = "Spieleabend"),
-                Translation(sprache = Sprache.EN, text = "Game Night"),
             ),
         )
 
-        assertEquals("Spieleabend", lokalisierung.textFuer(Sprache.DE))
-        assertEquals("Game Night", lokalisierung.textFuer(Sprache.OG, fallbackSprache = Sprache.EN))
-        assertNull(lokalisierung.textFuer(Sprache.OG))
+        assertEquals("Spieleabend", lokalisierung.text(Sprache.DE))
+        assertEquals("Game Night", lokalisierung.text(Sprache.EN))
+        assertEquals("Game Night", lokalisierung.text(Sprache.OG))
     }
 
     @Test
@@ -61,6 +53,7 @@ class SpieleabendDomainModelTest {
             lokalisierung(
                 id = 2,
                 translations = setOf(
+                    Translation(sprache = Sprache.OG, text = "Original"),
                     Translation(sprache = Sprache.DE, text = "Erster Text"),
                     Translation(sprache = Sprache.DE, text = "Zweiter Text"),
                 ),
@@ -69,25 +62,71 @@ class SpieleabendDomainModelTest {
     }
 
     @Test
-    fun spielErsetztKategorieMitGleicherId() {
-        val alteKategorie = kategorie(30)
-        val neueKategorie = kategorie(30).mitKartentext(kartentext(301))
+    fun lokalisierungFaelltBeiFehlenderTranslationAufOgZurueck() {
+        val lokalisierung = lokalisierung(
+            id = 3,
+            ogText = "Game Night",
+            ogSprache = Sprache.EN,
+            translations = setOf(Translation(sprache = Sprache.OG, text = "Game Night")),
+        )
 
-        val spiel = spiel(12, alteKategorie)
-            .mitKategorie(neueKategorie)
-
-        assertEquals(setOf(neueKategorie), spiel.kategorien)
-        assertFalse(alteKategorie in spiel.kategorien)
+        assertEquals("Game Night", lokalisierung.text(Sprache.DE))
     }
 
     @Test
-    fun spielBenoetigtMindestensEineKategorie() {
+    fun spielErlaubtKeineDoppelteKategorieId() {
+        val alteKategorie = kategorie(30)
+        val neueKategorie = kategorie(30, kartentext(301))
+
         assertThrows(IllegalArgumentException::class.java) {
             Spiel(
-                id = 13,
-                lokalisierung = lokalisierung(3),
-                kategorien = emptySet(),
+                id = 12,
+                lokalisierung = lokalisierung(120),
+                kategorien = linkedSetOf(alteKategorie, neueKategorie),
             )
+        }
+    }
+
+    @Test
+    fun kategorieErlaubtKeineDoppelteKartentextId() {
+        val alterKartentext = Kartentext(id = 301, lokalisierung = lokalisierung(3010))
+        val neuerKartentext = Kartentext(id = 301, lokalisierung = lokalisierung(3011))
+
+        assertThrows(IllegalArgumentException::class.java) {
+            Kategorie(
+                id = 30,
+                lokalisierung = lokalisierung(300),
+                kartentexte = linkedSetOf(alterKartentext, neuerKartentext),
+            )
+        }
+    }
+
+    @Test
+    fun spielErlaubtLeereKategorien() {
+        val spiel = Spiel(
+            id = 13,
+            lokalisierung = lokalisierung(3),
+            kategorien = emptySet(),
+        )
+
+        assertEquals(emptySet<Kategorie>(), spiel.kategorien)
+    }
+
+    @Test
+    fun lokalisierungBenoetigtOgTranslation() {
+        assertThrows(IllegalArgumentException::class.java) {
+            Lokalisierung(
+                id = 4,
+                translationen = setOf(Translation(sprache = Sprache.DE, text = "Spieleabend")),
+                ogSprache = Sprache.DE,
+            )
+        }
+    }
+
+    @Test
+    fun gezogeneKarteBenoetigtMindestensEinenKartentext() {
+        assertThrows(IllegalArgumentException::class.java) {
+            GezogeneKarte(kartentexte = emptyList())
         }
     }
 
@@ -101,10 +140,14 @@ class SpieleabendDomainModelTest {
             kategorien = kategorien.toSet(),
         )
 
-    private fun kategorie(id: Int): Kategorie =
+    private fun kategorie(
+        id: Int,
+        vararg kartentexte: Kartentext,
+    ): Kategorie =
         Kategorie(
             id = id,
             lokalisierung = lokalisierung(id * 10),
+            kartentexte = kartentexte.toSet(),
         )
 
     private fun kartentext(id: Int): Kartentext =
@@ -115,11 +158,13 @@ class SpieleabendDomainModelTest {
 
     private fun lokalisierung(
         id: Int,
-        translations: Set<Translation> = setOf(Translation(sprache = Sprache.DE, text = "lokalisierung-$id")),
+        ogText: String = "lokalisierung-$id",
+        ogSprache: Sprache = Sprache.DE,
+        translations: Set<Translation> = setOf(Translation(sprache = Sprache.OG, text = ogText)),
     ): Lokalisierung =
         Lokalisierung(
             id = id,
             translationen = translations,
-            ogSprache = translations.first().sprache,
+            ogSprache = ogSprache,
         )
 }

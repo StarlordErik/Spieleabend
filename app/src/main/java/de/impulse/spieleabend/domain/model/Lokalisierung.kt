@@ -8,8 +8,9 @@ data class Lokalisierung(
     val ogSprache: Sprache,
 ) {
     init {
-        require(id > 0) { "Die ID einer Lokalisierung muss positiv sein." }
-        require(translationen.isNotEmpty()) { "Eine Lokalisierung braucht mindestens eine Translation." }
+        require(translationen.any { translation -> translation.sprache == Sprache.OG }) {
+            "Eine Lokalisierung braucht eine OG-Translation."
+        }
 
         val sprachen = translationen.map { it.sprache }
         require(sprachen.distinct().size == sprachen.size) {
@@ -17,11 +18,7 @@ data class Lokalisierung(
         }
     }
 
-    fun textFuer(sprache: Sprache): String? =
-        translationen.firstOrNull { translation -> translation.istFuer(sprache) }?.text
-
-    fun textFuer(
-        sprache: Sprache,
-        fallbackSprache: Sprache,
-    ): String? = textFuer(sprache) ?: textFuer(fallbackSprache)
+    fun text(inSprache: Sprache): String =
+        translationen.firstOrNull { translation -> translation.sprache == inSprache }?.text
+            ?: translationen.first { translation -> translation.sprache == Sprache.OG }.text
 }

@@ -1,5 +1,7 @@
 package de.impulse.spieleabend.domain.model
 
+import de.impulse.spieleabend.common.Sprache
+
 data class Kartentext(
     val id: Int,
     val lokalisierung: Lokalisierung,
@@ -9,7 +11,5 @@ data class Kartentext(
     val gesehen: Boolean = false,
     val gespielt: Boolean = false,
 ) {
-    init {
-        require(id > 0) { "Die ID eines Kartentextes muss positiv sein." }
-    }
+    fun text(inSprache: Sprache): String = lokalisierung.text(inSprache)
 }

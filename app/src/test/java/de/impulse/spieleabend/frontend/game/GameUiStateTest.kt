@@ -46,12 +46,13 @@ class GameUiStateTest {
     }
 
     @Test
-    fun bevorzugtDeutscheAnzeigeUndNutztSonstVorhandeneTranslation() {
+    fun nutztAngeforderteSpracheUndFaelltFuerOriginalspracheAufOgZurueck() {
         val frage = Kartentext(
             id = 101,
             lokalisierung = lokalisierung(
                 id = 1001,
-                Translation(sprache = Sprache.EN, text = "English text"),
+                ogText = "English text",
+                ogSprache = Sprache.EN,
                 Translation(sprache = Sprache.DE, text = "Deutscher Text"),
             ),
         )
@@ -59,14 +60,16 @@ class GameUiStateTest {
             id = 102,
             lokalisierung = lokalisierung(
                 id = 1002,
-                Translation(sprache = Sprache.EN, text = "English only"),
+                ogText = "English only",
+                ogSprache = Sprache.EN,
             ),
         )
         val spiel = Spiel(
             id = 2,
             lokalisierung = lokalisierung(
                 id = 2001,
-                Translation(sprache = Sprache.EN, text = "Game"),
+                ogText = "Game",
+                ogSprache = Sprache.EN,
                 Translation(sprache = Sprache.DE, text = "Spiel"),
             ),
             kategorien = linkedSetOf(
@@ -74,7 +77,8 @@ class GameUiStateTest {
                     id = 21,
                     lokalisierung = lokalisierung(
                         id = 2002,
-                        Translation(sprache = Sprache.EN, text = "Category"),
+                        ogText = "Category",
+                        ogSprache = Sprache.EN,
                         Translation(sprache = Sprache.DE, text = "Kategorie"),
                     ),
                     kartentexte = linkedSetOf(frage, hinweis),
@@ -92,10 +96,10 @@ class GameUiStateTest {
             sprache = Sprache.EN,
         )
 
-        assertEquals("Spiel", uiState.spielName)
-        assertEquals(listOf("Kategorie"), uiState.kategorien.map { kategorie -> kategorie.name })
+        assertEquals("Game", uiState.spielName)
+        assertEquals(listOf("Category"), uiState.kategorien.map { kategorie -> kategorie.name })
         assertEquals(
-            listOf("Deutscher Text", "English only"),
+            listOf("English text", "English only"),
             uiState.aktuelleKarte.kartentexte.map { kartentext -> kartentext.text },
         )
     }
@@ -126,16 +130,22 @@ class GameUiStateTest {
     ): Lokalisierung =
         lokalisierung(
             id = id,
-            Translation(sprache = Sprache.DE, text = text),
+            ogText = text,
+            ogSprache = Sprache.DE,
         )
 
     private fun lokalisierung(
         id: Int,
+        ogText: String = "lokalisierung-$id",
+        ogSprache: Sprache = Sprache.DE,
         vararg translationen: Translation,
     ): Lokalisierung =
         Lokalisierung(
             id = id,
-            translationen = translationen.toCollection(LinkedHashSet()),
-            ogSprache = translationen.first().sprache,
+            translationen =
+                listOf(Translation(sprache = Sprache.OG, text = ogText))
+                    .plus(translationen)
+                    .toCollection(LinkedHashSet()),
+            ogSprache = ogSprache,
         )
 }

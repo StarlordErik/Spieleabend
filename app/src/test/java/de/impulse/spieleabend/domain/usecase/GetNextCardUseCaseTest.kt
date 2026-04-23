@@ -89,11 +89,9 @@ class GetNextCardUseCaseTest {
         )
 
     private fun lokalisierung(id: Int): Lokalisierung =
-        Translation(sprache = Sprache.DE, text = "lokalisierung-$id").let { translation ->
-            Lokalisierung(
-                id = id,
-                translationen = setOf(translation),
-                ogSprache = translation.sprache,
-            )
-        }
+        Lokalisierung(
+            id = id,
+            translationen = setOf(Translation(sprache = Sprache.OG, text = "lokalisierung-$id")),
+            ogSprache = Sprache.DE,
+        )
 }

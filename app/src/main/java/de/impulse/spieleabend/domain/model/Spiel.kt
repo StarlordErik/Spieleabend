@@ -1,5 +1,7 @@
 package de.impulse.spieleabend.domain.model
 
+import de.impulse.spieleabend.common.Sprache
+
 data class Spiel(
     val id: Int,
     val lokalisierung: Lokalisierung,
@@ -11,8 +13,6 @@ data class Spiel(
     val texteProKarte: Int = 1,
 ) {
     init {
-        require(id > 0) { "Die ID eines Spiels muss positiv sein." }
-        require(kategorien.isNotEmpty()) { "Ein Spiel muss mindestens eine Kategorie enthalten." }
         require(texteProKarte > 0) {
             "Ein Spiel muss mindestens einen Kartentext pro Karte anzeigen."
         }
@@ -23,12 +23,5 @@ data class Spiel(
         }
     }
 
-    fun mitKategorie(kategorie: Kategorie): Spiel =
-        copy(kategorien = kategorien.ohneKategorie(kategorie.id) + kategorie)
-
-    fun enthaeltKategorie(kategorieId: Int): Boolean =
-        kategorien.any { kategorie -> kategorie.id == kategorieId }
+    fun text(inSprache: Sprache): String = lokalisierung.text(inSprache)
 }
-
-private fun Set<Kategorie>.ohneKategorie(kategorieId: Int): Set<Kategorie> =
-    filterNot { kategorie -> kategorie.id == kategorieId }.toSet()
