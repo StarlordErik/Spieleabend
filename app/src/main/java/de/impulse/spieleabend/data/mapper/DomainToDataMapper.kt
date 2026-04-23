@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package de.impulse.spieleabend.data.mapper
 
 import de.impulse.spieleabend.data.entity.KartentextEntity

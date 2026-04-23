@@ -42,8 +42,8 @@ import de.impulse.spieleabend.frontend.theme.SpieleabendTheme
 @Composable
 internal fun GameCard(
     kartentexte: List<GameKartentextUiModel>,
-    textPanelColors: List<Color> = emptyList(),
     modifier: Modifier = Modifier,
+    textPanelColors: List<Color> = emptyList(),
 ) {
     Surface(
         modifier = modifier,
@@ -95,8 +95,8 @@ private fun CardTextPanel(
     kartentext: GameKartentextUiModel,
     index: Int,
     kartentextCount: Int,
-    textPanelColor: Color? = null,
     modifier: Modifier = Modifier,
+    textPanelColor: Color? = null,
 ) {
     val textStyle = when (kartentextCount) {
         1 -> MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.SemiBold)

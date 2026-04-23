@@ -11,33 +11,33 @@ import org.junit.Test
 
 class BoardGameShelfItemTest {
     @Test
-    fun verwendetEchteSpielIdsUndErzeugtAuchDasFünfteRegalspiel() {
+    fun verwendetEchteSpielIdsUndErzeugtAuchDasFuenfteRegalspiel() {
         val spiele =
             listOf(
                 spiel(
                     1,
                     "Erzählt euch mehr",
-                    "app/src/main/res/drawable-nodpi/game_box_side_erzaehlt_euch_mehr.png",
+                    "images/game_box_side_erzaehlt_euch_mehr.png",
                 ),
                 spiel(
                     75,
                     "Erzählt euch mehr für Paare",
-                    "app/src/main/res/drawable-nodpi/game_box_side_erzaehlt_euch_mehr_fuer_paare.png",
+                    "images/game_box_side_erzaehlt_euch_mehr_fuer_paare.png",
                 ),
                 spiel(
                     149,
                     "Fun Facts",
-                    "app/src/main/res/drawable-nodpi/game_box_side_fun_facts.png",
+                    "images/game_box_side_fun_facts.png",
                 ),
                 spiel(
                     337,
                     "Privacy",
-                    "app/src/main/res/drawable-nodpi/game_box_side_privacy.png",
+                    "images/game_box_side_privacy.png",
                 ),
                 spiel(
                     699,
                     "We're Not Really Strangers",
-                    "app/src/main/res/drawable-nodpi/game_box_side_were_not_really_strangers.png",
+                    "images/game_box_side_were_not_really_strangers.png",
                 ),
             )
 
@@ -46,11 +46,11 @@ class BoardGameShelfItemTest {
         assertEquals(listOf(1, 75, 149, 337, 699), shelfItems.map { it.id })
         assertEquals(
             listOf(
-                "app/src/main/res/drawable-nodpi/game_box_side_erzaehlt_euch_mehr.png",
-                "app/src/main/res/drawable-nodpi/game_box_side_erzaehlt_euch_mehr_fuer_paare.png",
-                "app/src/main/res/drawable-nodpi/game_box_side_fun_facts.png",
-                "app/src/main/res/drawable-nodpi/game_box_side_privacy.png",
-                "app/src/main/res/drawable-nodpi/game_box_side_were_not_really_strangers.png",
+                "images/game_box_side_erzaehlt_euch_mehr.png",
+                "images/game_box_side_erzaehlt_euch_mehr_fuer_paare.png",
+                "images/game_box_side_fun_facts.png",
+                "images/game_box_side_privacy.png",
+                "images/game_box_side_were_not_really_strangers.png",
             ),
             shelfItems.map { it.imagePath },
         )
@@ -69,20 +69,28 @@ class BoardGameShelfItemTest {
     }
 
     @Test
-    fun leitetRessourcennamenAusBildpfadenAb() {
+    fun leitetAssetPfadeAusBildpfadenAb() {
         assertEquals(
-            "game_box_side_fun_facts",
-            drawableResourceNameFromImagePath("app/src/main/res/drawable-nodpi/game_box_side_fun_facts.png"),
+            "images/game_box_side_fun_facts.png",
+            assetImagePathFromMetadataPath("app/src/main/res/drawable-nodpi/game_box_side_fun_facts.png"),
         )
         assertEquals(
-            "game_box_side_privacy",
-            drawableResourceNameFromImagePath("game_box_side_privacy.png"),
+            "images/game_box_side_privacy.png",
+            assetImagePathFromMetadataPath("game_box_side_privacy.png"),
         )
         assertEquals(
-            "game_box_side_erzaehlt_euch_mehr",
-            drawableResourceNameFromImagePath("game_box_side_erzaehlt_euch_mehr"),
+            "images/game_box_side_erzaehlt_euch_mehr.png",
+            assetImagePathFromMetadataPath("game_box_side_erzaehlt_euch_mehr.png"),
         )
-        assertEquals(null, drawableResourceNameFromImagePath(null))
+        assertEquals(
+            "images/game_box_side_erzaehlt_euch_mehr.png",
+            assetImagePathFromMetadataPath("images/game_box_side_erzaehlt_euch_mehr.png"),
+        )
+        assertEquals(
+            "images/game_box_side_privacy.png",
+            assetImagePathFromMetadataPath("app/src/main/assets/images/game_box_side_privacy.png"),
+        )
+        assertEquals(null, assetImagePathFromMetadataPath(null))
     }
 
     private fun spiel(

@@ -40,7 +40,7 @@ class GetNextCardUseCaseTest {
     }
 
     @Test
-    fun ziehtZufälligeKarteAusAllenKategorien() {
+    fun ziehtZufaelligeKarteAusAllenKategorien() {
         val spiel = spiel(
             texteProKarte = 1,
             kategorie(id = 1, kartentext(id = 101)),
