@@ -15,27 +15,24 @@ import de.impulse.spieleabend.domain.model.Translation
 
 internal fun Spiel.toEntity(): SpielEntity =
     SpielEntity(
-        id = id,
         lokalisierungId = lokalisierung.id,
         kartentexteProKarte = kartentexteProKarte,
     )
 
 internal fun Kategorie.toEntity(): KategorieEntity =
     KategorieEntity(
-        id = id,
         lokalisierungId = lokalisierung.id,
     )
 
 internal fun Kartentext.toEntity(): KartentextEntity =
     KartentextEntity(
-        id = id,
         lokalisierungId = lokalisierung.id,
     )
 
 internal fun Lokalisierung.toEntity(): LokalisierungEntity =
     LokalisierungEntity(id = id)
 
-internal fun Translation.toEntity(lokalisierungId: String): TranslationEntity =
+internal fun Translation.toEntity(lokalisierungId: Int): TranslationEntity =
     TranslationEntity(
         lokalisierungId = lokalisierungId,
         sprache = sprache,

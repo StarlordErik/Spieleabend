@@ -8,7 +8,7 @@ import javax.inject.Inject
 class GetNextCardFromCategoryUseCase @Inject constructor() {
     operator fun invoke(
         spiel: Spiel,
-        kategorieId: String,
+        kategorieId: Int,
     ): GezogeneKarte {
         val kategorie = requireNotNull(spiel.kategorien.firstOrNull { kategorie ->
             kategorie.id == kategorieId

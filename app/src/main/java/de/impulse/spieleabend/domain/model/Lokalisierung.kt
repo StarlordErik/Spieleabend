@@ -3,11 +3,11 @@ package de.impulse.spieleabend.domain.model
 import de.impulse.spieleabend.common.Sprache
 
 data class Lokalisierung(
-    val id: String,
+    val id: Int,
     val translationen: Set<Translation>,
 ) {
     init {
-        require(id.isNotBlank()) { "Die ID einer Lokalisierung darf nicht leer sein." }
+        require(id > 0) { "Die ID einer Lokalisierung muss positiv sein." }
         require(translationen.isNotEmpty()) { "Eine Lokalisierung braucht mindestens eine Translation." }
 
         val sprachen = translationen.map { it.sprache }

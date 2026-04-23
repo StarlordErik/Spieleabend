@@ -2,19 +2,19 @@ package de.impulse.spieleabend.frontend.game
 
 private val PreviewKartentexte = listOf(
     GameKartentextUiModel(
-        id = "frage",
+        id = 101,
         text = "Welche Stadt tr\u00e4gt den Spitznamen Big Apple?",
-        kategorieId = "wissen",
+        kategorieId = 11,
     ),
     GameKartentextUiModel(
-        id = "hinweis",
+        id = 102,
         text = "Tipp: Sie liegt an der Ostk\u00fcste.",
-        kategorieId = "wissen",
+        kategorieId = 11,
     ),
     GameKartentextUiModel(
-        id = "joker",
+        id = 201,
         text = "Ein Team darf eine Zusatzfrage stellen.",
-        kategorieId = "musik",
+        kategorieId = 12,
     ),
 )
 
@@ -23,19 +23,19 @@ internal val PreviewUiState = GameUiState(
     aktuelleKarte = GameCardUiModel(kartentexte = PreviewKartentexte),
     kategorien = listOf(
         GameKategorieUiModel(
-            id = "wissen",
+            id = 11,
             name = "Wissen",
         ),
         GameKategorieUiModel(
-            id = "musik",
+            id = 12,
             name = "Musik",
         ),
         GameKategorieUiModel(
-            id = "film",
+            id = 13,
             name = "Film",
         ),
         GameKategorieUiModel(
-            id = "finale",
+            id = 14,
             name = "Finale",
         ),
     ),

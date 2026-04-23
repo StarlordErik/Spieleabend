@@ -24,7 +24,7 @@ import de.impulse.spieleabend.data.entity.TranslationEntity
         SpielXKategorieEntity::class,
         KategorieXKartentextEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class SpieleabendDatabase : RoomDatabase() {

@@ -32,14 +32,14 @@ data class GameCardUiModel(
 
 @Immutable
 data class GameKartentextUiModel(
-    val id: String,
+    val id: Int,
     val text: String,
-    val kategorieId: String,
+    val kategorieId: Int,
 )
 
 @Immutable
 data class GameKategorieUiModel(
-    val id: String,
+    val id: Int,
     val name: String,
 )
 
@@ -88,4 +88,4 @@ private fun Lokalisierung.textOderId(
     textFuer(fallbackSprache)
         ?: textFuer(sprache)
         ?: translationen.firstOrNull()?.text
-        ?: id
+        ?: id.toString()

@@ -12,28 +12,28 @@ import org.junit.Test
 class GetNextCardUseCaseTest {
     @Test
     fun ziehtKarteAusBestimmterKategorie() {
-        val frage = kartentext(id = "frage")
-        val hinweis = kartentext(id = "hinweis")
+        val frage = kartentext(id = 101)
+        val hinweis = kartentext(id = 102)
         val spiel = spiel(
             kartentexteProKarte = 2,
-            kategorie(id = "wissen", frage, hinweis),
-            kategorie(id = "musik", kartentext(id = "lied")),
+            kategorie(id = 1, frage, hinweis),
+            kategorie(id = 2, kartentext(id = 201)),
         )
 
         val gezogeneKarte = GetNextCardFromCategoryUseCase()(
             spiel = spiel,
-            kategorieId = "wissen",
+            kategorieId = 1,
         )
 
         assertEquals(
-            setOf("frage", "hinweis"),
+            setOf(101, 102),
             gezogeneKarte.kartentexte.map { gezogenerKartentext ->
                 gezogenerKartentext.kartentext.id
             }.toSet(),
         )
         assertTrue(
             gezogeneKarte.kartentexte.all { gezogenerKartentext ->
-                gezogenerKartentext.kategorieId == "wissen"
+                gezogenerKartentext.kategorieId == 1
             },
         )
     }
@@ -42,8 +42,8 @@ class GetNextCardUseCaseTest {
     fun ziehtZufaelligeKarteAusAllenKategorien() {
         val spiel = spiel(
             kartentexteProKarte = 1,
-            kategorie(id = "wissen", kartentext(id = "frage")),
-            kategorie(id = "musik", kartentext(id = "lied")),
+            kategorie(id = 1, kartentext(id = 101)),
+            kategorie(id = 2, kartentext(id = 201)),
         )
 
         val gezogeneKarte = GetNextRandomCardUseCase()(spiel)
@@ -53,10 +53,10 @@ class GetNextCardUseCaseTest {
             gezogeneKarte.kartentexte.size,
         )
         assertTrue(
-            gezogeneKarte.kartentexte.single().kartentext.id in setOf("frage", "lied"),
+            gezogeneKarte.kartentexte.single().kartentext.id in setOf(101, 201),
         )
         assertTrue(
-            gezogeneKarte.kartentexte.single().kategorieId in setOf("wissen", "musik"),
+            gezogeneKarte.kartentexte.single().kategorieId in setOf(1, 2),
         )
     }
 
@@ -65,31 +65,31 @@ class GetNextCardUseCaseTest {
         vararg kategorien: Kategorie,
     ): Spiel =
         Spiel(
-            id = "spiel",
-            lokalisierung = lokalisierung(id = "spiel-name"),
+            id = 10,
+            lokalisierung = lokalisierung(id = 100),
             kategorien = kategorien.toCollection(LinkedHashSet()),
             kartentexteProKarte = kartentexteProKarte,
         )
 
     private fun kategorie(
-        id: String,
+        id: Int,
         vararg kartentexte: Kartentext,
     ): Kategorie =
         Kategorie(
             id = id,
-            lokalisierung = lokalisierung(id = "$id-name"),
+            lokalisierung = lokalisierung(id = id * 10),
             kartentexte = kartentexte.toCollection(LinkedHashSet()),
         )
 
-    private fun kartentext(id: String): Kartentext =
+    private fun kartentext(id: Int): Kartentext =
         Kartentext(
             id = id,
-            lokalisierung = lokalisierung(id = "$id-text"),
+            lokalisierung = lokalisierung(id = id * 10),
         )
 
-    private fun lokalisierung(id: String): Lokalisierung =
+    private fun lokalisierung(id: Int): Lokalisierung =
         Lokalisierung(
             id = id,
-            translationen = setOf(Translation(sprache = "de", text = id)),
+            translationen = setOf(Translation(sprache = "de", text = "lokalisierung-$id")),
         )
 }

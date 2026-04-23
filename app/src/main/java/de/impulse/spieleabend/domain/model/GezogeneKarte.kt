@@ -6,9 +6,9 @@ data class GezogeneKarte(
 
 data class GezogenerKartentext(
     val kartentext: Kartentext,
-    val kategorieId: String,
+    val kategorieId: Int,
 ) {
     init {
-        require(kategorieId.isNotBlank()) { "Die Kategorie-ID eines gezogenen Kartentextes darf nicht leer sein." }
+        require(kategorieId > 0) { "Die Kategorie-ID eines gezogenen Kartentextes muss positiv sein." }
     }
 }

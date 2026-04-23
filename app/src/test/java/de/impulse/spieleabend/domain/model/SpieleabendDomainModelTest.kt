@@ -10,39 +10,39 @@ import org.junit.Test
 class SpieleabendDomainModelTest {
     @Test
     fun spielVerwaltetKategorienAlsVieleZuVieleBeziehung() {
-        val teamKategorie = kategorie("team")
-        val wissenKategorie = kategorie("wissen")
+        val teamKategorie = kategorie(1)
+        val wissenKategorie = kategorie(2)
 
-        val spiel = spiel("party", teamKategorie)
+        val spiel = spiel(10, teamKategorie)
             .mitKategorie(wissenKategorie)
-        val weiteresSpiel = spiel("quiz", teamKategorie)
+        val weiteresSpiel = spiel(11, teamKategorie)
 
-        assertTrue(spiel.enthaeltKategorie("team"))
-        assertTrue(spiel.enthaeltKategorie("wissen"))
-        assertTrue(weiteresSpiel.enthaeltKategorie("team"))
+        assertTrue(spiel.enthaeltKategorie(1))
+        assertTrue(spiel.enthaeltKategorie(2))
+        assertTrue(weiteresSpiel.enthaeltKategorie(1))
         assertEquals(setOf(teamKategorie, wissenKategorie), spiel.kategorien)
     }
 
     @Test
     fun kategorieVerwaltetKartentexteAlsVieleZuVieleBeziehung() {
-        val pantomimeText = kartentext("pantomime")
-        val quizText = kartentext("quiz")
+        val pantomimeText = kartentext(101)
+        val quizText = kartentext(102)
 
-        val aktivKategorie = kategorie("aktiv")
+        val aktivKategorie = kategorie(20)
             .mitKartentext(pantomimeText)
             .mitKartentext(quizText)
-        val partyKategorie = kategorie("party").mitKartentext(pantomimeText)
+        val partyKategorie = kategorie(21).mitKartentext(pantomimeText)
 
-        assertTrue(aktivKategorie.enthaeltKartentext("pantomime"))
-        assertTrue(aktivKategorie.enthaeltKartentext("quiz"))
-        assertTrue(partyKategorie.enthaeltKartentext("pantomime"))
+        assertTrue(aktivKategorie.enthaeltKartentext(101))
+        assertTrue(aktivKategorie.enthaeltKartentext(102))
+        assertTrue(partyKategorie.enthaeltKartentext(101))
         assertEquals(setOf(pantomimeText, quizText), aktivKategorie.kartentexte)
     }
 
     @Test
     fun lokalisierungLiefertTextFuerSpracheMitFallback() {
         val lokalisierung = lokalisierung(
-            id = "spiel-name",
+            id = 1,
             translations = setOf(
                 Translation(sprache = "de", text = "Spieleabend"),
                 Translation(sprache = "en", text = "Game Night"),
@@ -58,7 +58,7 @@ class SpieleabendDomainModelTest {
     fun lokalisierungErlaubtProSpracheNurEineTranslation() {
         assertThrows(IllegalArgumentException::class.java) {
             lokalisierung(
-                id = "doppelt",
+                id = 2,
                 translations = setOf(
                     Translation(sprache = "de", text = "Erster Text"),
                     Translation(sprache = "DE", text = "Zweiter Text"),
@@ -69,10 +69,10 @@ class SpieleabendDomainModelTest {
 
     @Test
     fun spielErsetztKategorieMitGleicherId() {
-        val alteKategorie = kategorie("aktion")
-        val neueKategorie = kategorie("aktion").mitKartentext(kartentext("rennen"))
+        val alteKategorie = kategorie(30)
+        val neueKategorie = kategorie(30).mitKartentext(kartentext(301))
 
-        val spiel = spiel("party", alteKategorie)
+        val spiel = spiel(12, alteKategorie)
             .mitKategorie(neueKategorie)
 
         assertEquals(setOf(neueKategorie), spiel.kategorien)
@@ -83,38 +83,38 @@ class SpieleabendDomainModelTest {
     fun spielBenoetigtMindestensEineKategorie() {
         assertThrows(IllegalArgumentException::class.java) {
             Spiel(
-                id = "leer",
-                lokalisierung = lokalisierung("leer-lokalisierung"),
+                id = 13,
+                lokalisierung = lokalisierung(3),
                 kategorien = emptySet(),
             )
         }
     }
 
     private fun spiel(
-        id: String,
+        id: Int,
         vararg kategorien: Kategorie,
     ): Spiel =
         Spiel(
             id = id,
-            lokalisierung = lokalisierung("$id-lokalisierung"),
+            lokalisierung = lokalisierung(id * 10),
             kategorien = kategorien.toSet(),
         )
 
-    private fun kategorie(id: String): Kategorie =
+    private fun kategorie(id: Int): Kategorie =
         Kategorie(
             id = id,
-            lokalisierung = lokalisierung("$id-lokalisierung"),
+            lokalisierung = lokalisierung(id * 10),
         )
 
-    private fun kartentext(id: String): Kartentext =
+    private fun kartentext(id: Int): Kartentext =
         Kartentext(
             id = id,
-            lokalisierung = lokalisierung("$id-lokalisierung"),
+            lokalisierung = lokalisierung(id * 10),
         )
 
     private fun lokalisierung(
-        id: String,
-        translations: Set<Translation> = setOf(Translation(sprache = "de", text = id)),
+        id: Int,
+        translations: Set<Translation> = setOf(Translation(sprache = "de", text = "lokalisierung-$id")),
     ): Lokalisierung =
         Lokalisierung(
             id = id,

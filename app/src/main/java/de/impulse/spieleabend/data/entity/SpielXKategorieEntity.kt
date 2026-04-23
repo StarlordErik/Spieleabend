@@ -11,13 +11,13 @@ import androidx.room.Index
     foreignKeys = [
         ForeignKey(
             entity = SpielEntity::class,
-            parentColumns = ["id"],
+            parentColumns = ["lokalisierung_id"],
             childColumns = ["spiel_id"],
             onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
             entity = KategorieEntity::class,
-            parentColumns = ["id"],
+            parentColumns = ["lokalisierung_id"],
             childColumns = ["kategorie_id"],
             onDelete = ForeignKey.CASCADE,
         ),
@@ -28,7 +28,7 @@ import androidx.room.Index
     ],
 )
 data class SpielXKategorieEntity(
-    @ColumnInfo(name = "spiel_id") val spielId: String,
-    @ColumnInfo(name = "kategorie_id") val kategorieId: String,
+    @ColumnInfo(name = "spiel_id") val spielId: Int,
+    @ColumnInfo(name = "kategorie_id") val kategorieId: Int,
     val position: Int,
 )

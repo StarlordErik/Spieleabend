@@ -1,12 +1,12 @@
 package de.impulse.spieleabend.domain.model
 
 data class Kategorie(
-    val id: String,
+    val id: Int,
     val lokalisierung: Lokalisierung,
     val kartentexte: Set<Kartentext> = emptySet(),
 ) {
     init {
-        require(id.isNotBlank()) { "Die ID einer Kategorie darf nicht leer sein." }
+        require(id > 0) { "Die ID einer Kategorie muss positiv sein." }
 
         val kartentextIds = kartentexte.map { kartentext -> kartentext.id }
         require(kartentextIds.distinct().size == kartentextIds.size) {
@@ -17,12 +17,12 @@ data class Kategorie(
     fun mitKartentext(kartentext: Kartentext): Kategorie =
         copy(kartentexte = kartentexte.ohneKartentext(kartentext.id) + kartentext)
 
-    fun ohneKartentext(kartentextId: String): Kategorie =
+    fun ohneKartentext(kartentextId: Int): Kategorie =
         copy(kartentexte = kartentexte.ohneKartentext(kartentextId))
 
-    fun enthaeltKartentext(kartentextId: String): Boolean =
+    fun enthaeltKartentext(kartentextId: Int): Boolean =
         kartentexte.any { kartentext -> kartentext.id == kartentextId }
 }
 
-private fun Set<Kartentext>.ohneKartentext(kartentextId: String): Set<Kartentext> =
+private fun Set<Kartentext>.ohneKartentext(kartentextId: Int): Set<Kartentext> =
     filterNot { kartentext -> kartentext.id == kartentextId }.toSet()

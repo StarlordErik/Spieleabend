@@ -16,7 +16,7 @@ internal fun SpielEntity.toDomain(
     kategorien: Set<Kategorie>,
 ): Spiel =
     Spiel(
-        id = id,
+        id = lokalisierungId,
         lokalisierung = lokalisierung,
         kategorien = kategorien,
         kartentexteProKarte = kartentexteProKarte,
@@ -27,14 +27,14 @@ internal fun KategorieEntity.toDomain(
     kartentexte: Set<Kartentext>,
 ): Kategorie =
     Kategorie(
-        id = id,
+        id = lokalisierungId,
         lokalisierung = lokalisierung,
         kartentexte = kartentexte,
     )
 
 internal fun KartentextEntity.toDomain(lokalisierung: Lokalisierung): Kartentext =
     Kartentext(
-        id = id,
+        id = lokalisierungId,
         lokalisierung = lokalisierung,
     )
 

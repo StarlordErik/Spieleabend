@@ -11,13 +11,13 @@ import androidx.room.Index
     foreignKeys = [
         ForeignKey(
             entity = KategorieEntity::class,
-            parentColumns = ["id"],
+            parentColumns = ["lokalisierung_id"],
             childColumns = ["kategorie_id"],
             onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
             entity = KartentextEntity::class,
-            parentColumns = ["id"],
+            parentColumns = ["lokalisierung_id"],
             childColumns = ["kartentext_id"],
             onDelete = ForeignKey.CASCADE,
         ),
@@ -28,7 +28,7 @@ import androidx.room.Index
     ],
 )
 data class KategorieXKartentextEntity(
-    @ColumnInfo(name = "kategorie_id") val kategorieId: String,
-    @ColumnInfo(name = "kartentext_id") val kartentextId: String,
+    @ColumnInfo(name = "kategorie_id") val kategorieId: Int,
+    @ColumnInfo(name = "kartentext_id") val kartentextId: Int,
     val position: Int,
 )

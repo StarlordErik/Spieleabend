@@ -86,7 +86,7 @@ private fun GameLoadingContent(
 private fun GameScreenContent(
     uiState: GameUiState,
     modifier: Modifier = Modifier,
-    onKategorieSelected: (String) -> Unit = {},
+    onKategorieSelected: (Int) -> Unit = {},
     onRandomSelected: () -> Unit = {},
 ) {
     Surface(

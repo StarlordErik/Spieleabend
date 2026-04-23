@@ -14,22 +14,22 @@ import org.junit.Test
 class GameUiStateTest {
     @Test
     fun lokalisiertGezogeneKarteUndKategorien() {
-        val frage = kartentext(id = "frage", text = "Frage")
-        val hinweis = kartentext(id = "hinweis", text = "Hinweis")
+        val frage = kartentext(id = 101, text = "Frage")
+        val hinweis = kartentext(id = 102, text = "Hinweis")
         val spiel = Spiel(
-            id = "quiz",
-            lokalisierung = lokalisierung(id = "quiz-name", text = "Quiz"),
+            id = 1,
+            lokalisierung = lokalisierung(id = 10, text = "Quiz"),
             kategorien = linkedSetOf(
-                kategorie(id = "wissen", name = "Wissen", frage, hinweis),
-                kategorie(id = "finale", name = "Finale", frage),
+                kategorie(id = 11, name = "Wissen", frage, hinweis),
+                kategorie(id = 12, name = "Finale", frage),
             ),
         )
 
         val uiState = spiel.toGameUiState(
             aktuelleKarte = GezogeneKarte(
                 kartentexte = listOf(
-                    GezogenerKartentext(kartentext = frage, kategorieId = "wissen"),
-                    GezogenerKartentext(kartentext = hinweis, kategorieId = "wissen"),
+                    GezogenerKartentext(kartentext = frage, kategorieId = 11),
+                    GezogenerKartentext(kartentext = hinweis, kategorieId = 11),
                 ),
             ),
             sprache = Sprache.DE,
@@ -37,10 +37,10 @@ class GameUiStateTest {
 
         assertEquals("Quiz", uiState.spielName)
         assertEquals(listOf("Wissen", "Finale"), uiState.kategorien.map { it.name })
-        assertEquals(listOf("frage", "hinweis"), uiState.aktuelleKarte.kartentexte.map { it.id })
+        assertEquals(listOf(101, 102), uiState.aktuelleKarte.kartentexte.map { it.id })
         assertEquals(listOf("Frage", "Hinweis"), uiState.aktuelleKarte.kartentexte.map { it.text })
         assertEquals(
-            listOf("wissen", "wissen"),
+            listOf(11, 11),
             uiState.aktuelleKarte.kartentexte.map { it.kategorieId },
         )
     }
@@ -48,32 +48,32 @@ class GameUiStateTest {
     @Test
     fun bevorzugtDeutscheAnzeigeUndNutztSonstVorhandeneTranslation() {
         val frage = Kartentext(
-            id = "frage",
+            id = 101,
             lokalisierung = lokalisierung(
-                id = "frage-text",
+                id = 1001,
                 Translation(sprache = "en", text = "English text"),
                 Translation(sprache = "de", text = "Deutscher Text"),
             ),
         )
         val hinweis = Kartentext(
-            id = "hinweis",
+            id = 102,
             lokalisierung = lokalisierung(
-                id = "hinweis-text",
+                id = 1002,
                 Translation(sprache = "en", text = "English only"),
             ),
         )
         val spiel = Spiel(
-            id = "spiel",
+            id = 2,
             lokalisierung = lokalisierung(
-                id = "spiel-name",
+                id = 2001,
                 Translation(sprache = "en", text = "Game"),
                 Translation(sprache = "de", text = "Spiel"),
             ),
             kategorien = linkedSetOf(
                 Kategorie(
-                    id = "kategorie",
+                    id = 21,
                     lokalisierung = lokalisierung(
-                        id = "kategorie-name",
+                        id = 2002,
                         Translation(sprache = "en", text = "Category"),
                         Translation(sprache = "de", text = "Kategorie"),
                     ),
@@ -85,8 +85,8 @@ class GameUiStateTest {
         val uiState = spiel.toGameUiState(
             aktuelleKarte = GezogeneKarte(
                 kartentexte = listOf(
-                    GezogenerKartentext(kartentext = frage, kategorieId = "kategorie"),
-                    GezogenerKartentext(kartentext = hinweis, kategorieId = "kategorie"),
+                    GezogenerKartentext(kartentext = frage, kategorieId = 21),
+                    GezogenerKartentext(kartentext = hinweis, kategorieId = 21),
                 ),
             ),
             sprache = Sprache.EN,
@@ -101,27 +101,27 @@ class GameUiStateTest {
     }
 
     private fun kategorie(
-        id: String,
+        id: Int,
         name: String,
         vararg kartentexte: Kartentext,
     ): Kategorie =
         Kategorie(
             id = id,
-            lokalisierung = lokalisierung(id = "$id-name", text = name),
+            lokalisierung = lokalisierung(id = id * 10, text = name),
             kartentexte = kartentexte.toCollection(LinkedHashSet()),
         )
 
     private fun kartentext(
-        id: String,
+        id: Int,
         text: String,
     ): Kartentext =
         Kartentext(
             id = id,
-            lokalisierung = lokalisierung(id = "$id-text", text = text),
+            lokalisierung = lokalisierung(id = id * 10, text = text),
         )
 
     private fun lokalisierung(
-        id: String,
+        id: Int,
         text: String,
     ): Lokalisierung =
         lokalisierung(
@@ -130,7 +130,7 @@ class GameUiStateTest {
         )
 
     private fun lokalisierung(
-        id: String,
+        id: Int,
         vararg translationen: Translation,
     ): Lokalisierung =
         Lokalisierung(

@@ -19,7 +19,7 @@ interface LokalisierungDao {
     suspend fun upsertTranslationen(translationen: List<TranslationEntity>)
 
     @Query("SELECT * FROM lokalisierung WHERE id = :lokalisierungId LIMIT 1")
-    suspend fun lokalisierung(lokalisierungId: String): LokalisierungEntity?
+    suspend fun lokalisierung(lokalisierungId: Int): LokalisierungEntity?
 
     @Query(
         """
@@ -30,6 +30,6 @@ interface LokalisierungDao {
         """,
     )
     suspend fun translationenFuerLokalisierung(
-        lokalisierungId: String,
+        lokalisierungId: Int,
     ): List<TranslationEntity>
 }

@@ -56,6 +56,6 @@ private sealed interface AppDestination {
     data object Game : AppDestination {
         override val route = "game/{$GAME_ID_ARG}"
 
-        fun createRoute(gameId: String): String = "game/${Uri.encode(gameId)}"
+        fun createRoute(gameId: Int): String = "game/${Uri.encode(gameId.toString())}"
     }
 }

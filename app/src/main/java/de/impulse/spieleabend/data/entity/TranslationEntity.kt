@@ -18,7 +18,7 @@ import de.impulse.spieleabend.common.Sprache
     ],
 )
 data class TranslationEntity(
-    @ColumnInfo(name = "lokalisierung_id") val lokalisierungId: String,
+    @ColumnInfo(name = "lokalisierung_id") val lokalisierungId: Int,
     @ColumnInfo(name = "sprache") val sprache: Sprache,
     val text: String,
 )

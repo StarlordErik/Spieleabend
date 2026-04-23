@@ -29,7 +29,7 @@ import de.impulse.spieleabend.frontend.theme.SpieleabendTheme
 @Composable
 fun StartScreen(
     games: List<BoardGameShelfItem>,
-    onGameClick: (String) -> Unit,
+    onGameClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -78,7 +78,7 @@ private fun ShelfBackgroundPreview() {
 @Composable
 private fun StackedGameImages(
     games: List<BoardGameShelfItem>,
-    onGameClick: (String) -> Unit,
+    onGameClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
@@ -155,7 +155,7 @@ private fun StackedGameImagesPreview() {
 @Composable
 private fun GameSideImage(
     game: BoardGameShelfItem,
-    onClick: (String) -> Unit,
+    onClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Image(

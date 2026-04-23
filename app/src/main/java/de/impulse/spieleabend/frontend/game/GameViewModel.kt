@@ -24,7 +24,8 @@ class GameViewModel @Inject constructor(
     private val getNextCardFromCategory: GetNextCardFromCategoryUseCase,
     private val getNextRandomCard: GetNextRandomCardUseCase,
 ) : ViewModel() {
-    private val gameId: String = savedStateHandle[GAME_ID_ARG] ?: DefaultGameId
+    private val gameIdArg: String? = savedStateHandle[GAME_ID_ARG]
+    private val gameId: Int = gameIdArg?.toIntOrNull() ?: DefaultGameId
     private val sprache: Sprache = Sprache.fromLocale(Locale.getDefault()) ?: Sprache.DE
     private var spiel: Spiel? = null
 
@@ -40,7 +41,7 @@ class GameViewModel @Inject constructor(
         }
     }
 
-    fun selectKategorie(kategorieId: String) {
+    fun selectKategorie(kategorieId: Int) {
         val loadedSpiel = spiel ?: return
 
         showCard(
@@ -72,6 +73,6 @@ class GameViewModel @Inject constructor(
         )
 
     private companion object {
-        const val DefaultGameId = "erzaehlt-euch-mehr"
+        const val DefaultGameId = 1
     }
 }

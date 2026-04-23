@@ -21,18 +21,18 @@ interface KategorieDao {
         kategorieXKartentexte: List<KategorieXKartentextEntity>,
     )
 
-    @Query("SELECT * FROM kategorie WHERE id = :kategorieId LIMIT 1")
-    suspend fun kategorie(kategorieId: String): KategorieEntity?
+    @Query("SELECT * FROM kategorie WHERE lokalisierung_id = :kategorieId LIMIT 1")
+    suspend fun kategorie(kategorieId: Int): KategorieEntity?
 
     @Query(
         """
         SELECT kartentext.*
         FROM kartentext
         INNER JOIN kategorie_x_kartentext
-            ON kategorie_x_kartentext.kartentext_id = kartentext.id
+            ON kategorie_x_kartentext.kartentext_id = kartentext.lokalisierung_id
         WHERE kategorie_x_kartentext.kategorie_id = :kategorieId
         ORDER BY kategorie_x_kartentext.position
         """,
     )
-    suspend fun kartentexteFuerKategorie(kategorieId: String): List<KartentextEntity>
+    suspend fun kartentexteFuerKategorie(kategorieId: Int): List<KartentextEntity>
 }

@@ -6,25 +6,25 @@ import de.impulse.spieleabend.R
 
 @Immutable
 data class BoardGameShelfItem(
-    val id: String,
+    val id: Int,
     @param:DrawableRes val imageResId: Int,
 )
 
 val boardGameShelfItems = listOf(
     BoardGameShelfItem(
-        id = "erzaehlt-euch-mehr",
+        id = 1,
         imageResId = R.drawable.placeholder_game_box_side_1,
     ),
     BoardGameShelfItem(
-        id = "erzaehlt-euch-mehr-fuer-paare",
+        id = 2,
         imageResId = R.drawable.placeholder_game_box_side_2,
     ),
     BoardGameShelfItem(
-        id = "fun-facts",
+        id = 3,
         imageResId = R.drawable.placeholder_game_box_side_3,
     ),
     BoardGameShelfItem(
-        id = "were-not-really-strangers",
+        id = 4,
         imageResId = R.drawable.placeholder_game_box_side_4,
     ),
 )

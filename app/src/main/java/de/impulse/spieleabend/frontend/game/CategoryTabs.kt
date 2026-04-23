@@ -46,7 +46,7 @@ import kotlin.math.roundToInt
 internal fun CategoryTabs(
     kategorien: List<GameKategorieUiModel>,
     modifier: Modifier = Modifier,
-    onKategorieSelected: (String) -> Unit = {},
+    onKategorieSelected: (Int) -> Unit = {},
     onRandomSelected: () -> Unit = {},
 ) {
     SubcomposeLayout(modifier = modifier) { constraints ->
@@ -198,7 +198,7 @@ private fun CategoryTabPreview() {
             )
             CategoryTab(
                 tab = GameKategorieUiModel(
-                    id = "vorherige-karte",
+                    id = -1,
                     name = "Vorherige Karte",
                 ),
                 side = CategoryTabSide.Right,
@@ -263,7 +263,7 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
     constraints: Constraints,
     randomTabHeight: Dp,
     normalTabHeight: Dp,
-    onKategorieSelected: (String) -> Unit,
+    onKategorieSelected: (Int) -> Unit,
     onRandomSelected: () -> Unit,
 ): MeasuredCategoryTabs {
     val measureConstraints = constraints.copy(minWidth = 0, minHeight = 0)
@@ -327,7 +327,7 @@ private enum class CategoryTabSlot {
 
 private data class NormalCategoryTabSlot(
     val index: Int,
-    val id: String,
+    val id: Int,
 )
 
 private data class MeasuredCategoryTabs(
@@ -355,11 +355,11 @@ private val CategoryTabTextExtraWidth = 4.dp
 private const val RANDOM_CATEGORY_TAB_HEIGHT_FRACTION = 1f / 3f
 
 private val RandomTab = GameKategorieUiModel(
-    id = "random",
+    id = -2,
     name = "Zuf\u00e4llig",
 )
 private val PreviousCardTab = GameKategorieUiModel(
-    id = "previous-card",
+    id = -1,
     name = "Vorherige Karte",
 )
 private val RandomTabColor = Color(0xFF1F2937)

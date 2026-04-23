@@ -15,16 +15,16 @@ import javax.inject.Inject
 class GameRepositoryImpl @Inject constructor(
     private val database: SpieleabendDatabase,
 ) : GameRepository {
-    override suspend fun getGame(gameId: String): Spiel =
+    override suspend fun getGame(gameId: Int): Spiel =
         database.withTransaction {
             val spiel = spielEntity(gameId)
             spiel.toDomain(
                 lokalisierung = lokalisierung(spiel.lokalisierungId),
-                kategorien = kategorien(spiel.id),
+                kategorien = kategorien(spiel.lokalisierungId),
             )
         }
 
-    private suspend fun spielEntity(gameId: String): SpielEntity {
+    private suspend fun spielEntity(gameId: Int): SpielEntity {
         val spielDao = database.spielDao()
 
         return spielDao.spiel(gameId)
@@ -33,7 +33,7 @@ class GameRepositoryImpl @Inject constructor(
             }
     }
 
-    private suspend fun kategorien(spielId: String): Set<Kategorie> =
+    private suspend fun kategorien(spielId: Int): Set<Kategorie> =
         database
             .spielDao()
             .kategorienFuerSpiel(spielId)
@@ -43,10 +43,10 @@ class GameRepositoryImpl @Inject constructor(
     private suspend fun KategorieEntity.toDomain(): Kategorie =
         toDomain(
             lokalisierung = lokalisierung(lokalisierungId),
-            kartentexte = kartentexte(id),
+            kartentexte = kartentexte(lokalisierungId),
         )
 
-    private suspend fun kartentexte(kategorieId: String): Set<Kartentext> =
+    private suspend fun kartentexte(kategorieId: Int): Set<Kartentext> =
         database
             .kategorieDao()
             .kartentexteFuerKategorie(kategorieId)
@@ -56,7 +56,7 @@ class GameRepositoryImpl @Inject constructor(
     private suspend fun KartentextEntity.toDomain(): Kartentext =
         toDomain(lokalisierung = lokalisierung(lokalisierungId))
 
-    private suspend fun lokalisierung(lokalisierungId: String): Lokalisierung {
+    private suspend fun lokalisierung(lokalisierungId: Int): Lokalisierung {
         val lokalisierungDao = database.lokalisierungDao()
         val lokalisierung = requireNotNull(lokalisierungDao.lokalisierung(lokalisierungId)) {
             "Die Lokalisierung $lokalisierungId fehlt in der Datenbank."
