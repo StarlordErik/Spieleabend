@@ -28,8 +28,10 @@ object DatabaseModule {
             DATABASE_NAME,
         )
             .createFromAsset(DATABASE_ASSET_PATH)
-            .fallbackToDestructiveMigration(true)
-            .fallbackToDestructiveMigrationOnDowngrade(true)
+            // `fallbackToDestructiveMigration()` already covers downgrades.
+            // Chaining `fallbackToDestructiveMigrationOnDowngrade()` afterwards would
+            // re-enable required migrations for upgrades and break 1 -> 2 installs.
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
     @Provides
