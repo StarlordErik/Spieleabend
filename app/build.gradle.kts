@@ -77,11 +77,7 @@ kover {
 }
 
 room {
-    /*
-    Für jetzt ist das eine Wegwerf-Datenbank. Beim Live-Gehen muss folgendes eingesetzt werden:
     schemaDirectory("$projectDir/schemas")
-     */
-    schemaDirectory(layout.buildDirectory.dir("room-schemas").get().asFile.path)
 }
 
 dependencies {
