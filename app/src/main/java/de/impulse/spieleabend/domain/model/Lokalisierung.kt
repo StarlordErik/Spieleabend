@@ -20,15 +20,8 @@ data class Lokalisierung(
     fun textFuer(sprache: Sprache): String? =
         translationen.firstOrNull { translation -> translation.istFuer(sprache) }?.text
 
-    fun textFuer(sprache: String): String? = Sprache.fromCode(sprache)?.let(::textFuer)
-
     fun textFuer(
         sprache: Sprache,
         fallbackSprache: Sprache,
-    ): String? = textFuer(sprache) ?: textFuer(fallbackSprache)
-
-    fun textFuer(
-        sprache: String,
-        fallbackSprache: String,
     ): String? = textFuer(sprache) ?: textFuer(fallbackSprache)
 }

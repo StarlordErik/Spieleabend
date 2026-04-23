@@ -51,31 +51,31 @@ class GameUiStateTest {
             id = 101,
             lokalisierung = lokalisierung(
                 id = 1001,
-                Translation(sprache = "en", text = "English text"),
-                Translation(sprache = "de", text = "Deutscher Text"),
+                Translation(sprache = Sprache.EN, text = "English text"),
+                Translation(sprache = Sprache.DE, text = "Deutscher Text"),
             ),
         )
         val hinweis = Kartentext(
             id = 102,
             lokalisierung = lokalisierung(
                 id = 1002,
-                Translation(sprache = "en", text = "English only"),
+                Translation(sprache = Sprache.EN, text = "English only"),
             ),
         )
         val spiel = Spiel(
             id = 2,
             lokalisierung = lokalisierung(
                 id = 2001,
-                Translation(sprache = "en", text = "Game"),
-                Translation(sprache = "de", text = "Spiel"),
+                Translation(sprache = Sprache.EN, text = "Game"),
+                Translation(sprache = Sprache.DE, text = "Spiel"),
             ),
             kategorien = linkedSetOf(
                 Kategorie(
                     id = 21,
                     lokalisierung = lokalisierung(
                         id = 2002,
-                        Translation(sprache = "en", text = "Category"),
-                        Translation(sprache = "de", text = "Kategorie"),
+                        Translation(sprache = Sprache.EN, text = "Category"),
+                        Translation(sprache = Sprache.DE, text = "Kategorie"),
                     ),
                     kartentexte = linkedSetOf(frage, hinweis),
                 ),
@@ -126,7 +126,7 @@ class GameUiStateTest {
     ): Lokalisierung =
         lokalisierung(
             id = id,
-            Translation(sprache = "de", text = text),
+            Translation(sprache = Sprache.DE, text = text),
         )
 
     private fun lokalisierung(

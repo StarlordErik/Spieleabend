@@ -1,5 +1,6 @@
 package de.impulse.spieleabend.domain.model
 
+import de.impulse.spieleabend.common.Sprache
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -44,14 +45,14 @@ class SpieleabendDomainModelTest {
         val lokalisierung = lokalisierung(
             id = 1,
             translations = setOf(
-                Translation(sprache = "de", text = "Spieleabend"),
-                Translation(sprache = "en", text = "Game Night"),
+                Translation(sprache = Sprache.DE, text = "Spieleabend"),
+                Translation(sprache = Sprache.EN, text = "Game Night"),
             ),
         )
 
-        assertEquals("Spieleabend", lokalisierung.textFuer("DE"))
-        assertEquals("Game Night", lokalisierung.textFuer("fr", fallbackSprache = "en"))
-        assertNull(lokalisierung.textFuer("fr"))
+        assertEquals("Spieleabend", lokalisierung.textFuer(Sprache.DE))
+        assertEquals("Game Night", lokalisierung.textFuer(Sprache.OG, fallbackSprache = Sprache.EN))
+        assertNull(lokalisierung.textFuer(Sprache.OG))
     }
 
     @Test
@@ -60,8 +61,8 @@ class SpieleabendDomainModelTest {
             lokalisierung(
                 id = 2,
                 translations = setOf(
-                    Translation(sprache = "de", text = "Erster Text"),
-                    Translation(sprache = "DE", text = "Zweiter Text"),
+                    Translation(sprache = Sprache.DE, text = "Erster Text"),
+                    Translation(sprache = Sprache.DE, text = "Zweiter Text"),
                 ),
             )
         }
@@ -114,7 +115,7 @@ class SpieleabendDomainModelTest {
 
     private fun lokalisierung(
         id: Int,
-        translations: Set<Translation> = setOf(Translation(sprache = "de", text = "lokalisierung-$id")),
+        translations: Set<Translation> = setOf(Translation(sprache = Sprache.DE, text = "lokalisierung-$id")),
     ): Lokalisierung =
         Lokalisierung(
             id = id,

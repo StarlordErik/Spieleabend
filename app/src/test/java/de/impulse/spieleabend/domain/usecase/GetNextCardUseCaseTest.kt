@@ -1,5 +1,6 @@
 package de.impulse.spieleabend.domain.usecase
 
+import de.impulse.spieleabend.common.Sprache
 import de.impulse.spieleabend.domain.model.Kartentext
 import de.impulse.spieleabend.domain.model.Kategorie
 import de.impulse.spieleabend.domain.model.Lokalisierung
@@ -88,7 +89,7 @@ class GetNextCardUseCaseTest {
         )
 
     private fun lokalisierung(id: Int): Lokalisierung =
-        Translation(sprache = "de", text = "lokalisierung-$id").let { translation ->
+        Translation(sprache = Sprache.DE, text = "lokalisierung-$id").let { translation ->
             Lokalisierung(
                 id = id,
                 translationen = setOf(translation),

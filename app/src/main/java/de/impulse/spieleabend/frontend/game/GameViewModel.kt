@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.Locale
+import java.util.Locale.ROOT
 import javax.inject.Inject
 
 @HiltViewModel
@@ -26,7 +27,7 @@ class GameViewModel @Inject constructor(
 ) : ViewModel() {
     private val gameIdArg: String? = savedStateHandle[GAME_ID_ARG]
     private val gameId: Int = gameIdArg?.toIntOrNull() ?: DefaultGameId
-    private val sprache: Sprache = Sprache.fromLocale(Locale.getDefault()) ?: Sprache.DE
+    private val sprache: Sprache = spracheAusLocale(Locale.getDefault())
     private var spiel: Spiel? = null
 
     private val _uiState = MutableStateFlow<GameScreenUiState>(GameScreenUiState.Loading)
@@ -71,6 +72,11 @@ class GameViewModel @Inject constructor(
             aktuelleKarte = aktuelleKarte,
             sprache = sprache,
         )
+
+    private fun spracheAusLocale(locale: Locale): Sprache =
+        Sprache.entries.firstOrNull { sprache ->
+            sprache.name == locale.language.uppercase(ROOT)
+        } ?: Sprache.DE
 
     private companion object {
         const val DefaultGameId = 1
