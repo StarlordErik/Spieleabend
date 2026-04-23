@@ -5,7 +5,6 @@ import de.impulse.spieleabend.data.entity.KartentextEntity
 import de.impulse.spieleabend.data.entity.KategorieEntity
 import de.impulse.spieleabend.data.entity.SpielEntity
 import de.impulse.spieleabend.data.mapper.toDomain
-import de.impulse.spieleabend.data.seed.InitialGameData
 import de.impulse.spieleabend.domain.model.Kartentext
 import de.impulse.spieleabend.domain.model.Kategorie
 import de.impulse.spieleabend.domain.model.Lokalisierung
@@ -29,9 +28,8 @@ class GameRepositoryImpl @Inject constructor(
         val spielDao = database.spielDao()
 
         return spielDao.spiel(gameId)
-            ?: spielDao.spiel(InitialGameData.DEFAULT_GAME_ID)
             ?: requireNotNull(spielDao.erstesSpiel()) {
-                "Die Spieleabend-Datenbank enthält kein Spiel."
+                "Die Spieleabend-Datenbank enthaelt kein Spiel."
             }
     }
 

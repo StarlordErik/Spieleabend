@@ -1,11 +1,7 @@
 package de.impulse.spieleabend.data
 
-import androidx.room.AutoMigration
 import androidx.room.Database
-import androidx.room.RenameColumn
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
-import androidx.room.migration.AutoMigrationSpec
 import de.impulse.spieleabend.data.dao.KartentextDao
 import de.impulse.spieleabend.data.dao.KategorieDao
 import de.impulse.spieleabend.data.dao.LokalisierungDao
@@ -28,17 +24,9 @@ import de.impulse.spieleabend.data.entity.TranslationEntity
         SpielXKategorieEntity::class,
         KategorieXKartentextEntity::class,
     ],
-    version = 2,
-    autoMigrations = [
-        AutoMigration(
-            from = 1,
-            to = 2,
-            spec = SpieleabendDatabase.RenameTranslationSpracheColumnMigration::class,
-        ),
-    ],
-    exportSchema = true,
+    version = 1,
+    exportSchema = false,
 )
-@TypeConverters(SpracheRoomConverter::class)
 abstract class SpieleabendDatabase : RoomDatabase() {
     abstract fun spielDao(): SpielDao
 
@@ -47,11 +35,4 @@ abstract class SpieleabendDatabase : RoomDatabase() {
     abstract fun kartentextDao(): KartentextDao
 
     abstract fun lokalisierungDao(): LokalisierungDao
-
-    @RenameColumn(
-        tableName = "translation",
-        fromColumnName = "sprach_code",
-        toColumnName = "sprache",
-    )
-    class RenameTranslationSpracheColumnMigration : AutoMigrationSpec
 }

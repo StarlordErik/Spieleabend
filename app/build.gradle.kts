@@ -77,24 +77,11 @@ kover {
 }
 
 room {
+    /*
+    Für jetzt ist das eine Wegwerf-Datenbank. Beim Live-Gehen muss folgendes eingesetzt werden:
     schemaDirectory("$projectDir/schemas")
-}
-
-tasks.register<Exec>("generateInitialGameData") {
-    group = "spieleabend"
-    description = "Generates InitialGameData.kt from raw seed text files."
-    workingDir = rootProject.projectDir
-    commandLine(
-        "powershell.exe",
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        rootProject.layout.projectDirectory
-            .file("scripts/generate-initial-game-data.ps1")
-            .asFile
-            .absolutePath,
-    )
+     */
+    schemaDirectory(layout.buildDirectory.dir("room-schemas").get().asFile.path)
 }
 
 dependencies {

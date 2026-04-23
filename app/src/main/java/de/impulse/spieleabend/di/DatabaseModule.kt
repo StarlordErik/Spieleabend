@@ -29,6 +29,8 @@ object DatabaseModule {
             DATABASE_NAME,
         )
             .addCallback(InitialDatabaseSeedCallback())
+            .fallbackToDestructiveMigration(true)
+            .fallbackToDestructiveMigrationOnDowngrade(true)
             .build()
 
     @Provides
