@@ -7,9 +7,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.impulse.spieleabend.common.Sprache
 import de.impulse.spieleabend.domain.model.GezogeneKarte
 import de.impulse.spieleabend.domain.model.Spiel
-import de.impulse.spieleabend.domain.usecase.GetGameUseCase
-import de.impulse.spieleabend.domain.usecase.GetNextCardFromCategoryUseCase
-import de.impulse.spieleabend.domain.usecase.GetNextRandomCardUseCase
+import de.impulse.spieleabend.domain.usecase.DrawCardResult
+import de.impulse.spieleabend.domain.usecase.DrawNextCardFromCategoryUseCase
+import de.impulse.spieleabend.domain.usecase.DrawNextRandomCardUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,14 +21,12 @@ import javax.inject.Inject
 @HiltViewModel
 class GameViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    getGame: GetGameUseCase,
-    private val getNextCardFromCategory: GetNextCardFromCategoryUseCase,
-    private val getNextRandomCard: GetNextRandomCardUseCase,
+    private val drawNextCardFromCategory: DrawNextCardFromCategoryUseCase,
+    private val drawNextRandomCard: DrawNextRandomCardUseCase,
 ) : ViewModel() {
     private val gameIdArg: String? = savedStateHandle[GAME_ID_ARG]
     private val gameId: Int = gameIdArg?.toIntOrNull() ?: DefaultGameId
     private val sprache: Sprache = spracheAusLocale(Locale.getDefault())
-    private var spiel: Spiel? = null
 
     private val _uiState = MutableStateFlow<GameScreenUiState>(GameScreenUiState.Loading)
 
@@ -36,34 +34,31 @@ class GameViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val loadedSpiel = getGame(gameId)
-            spiel = loadedSpiel
-            showCard(getNextRandomCard(loadedSpiel))
+            showCard(drawNextRandomCard(gameId))
         }
     }
 
     fun selectKategorie(kategorieId: Int) {
-        val loadedSpiel = spiel ?: return
-
-        showCard(
-            aktuelleKarte = getNextCardFromCategory(
-                spiel = loadedSpiel,
-                kategorieId = kategorieId,
-            ),
-        )
+        viewModelScope.launch {
+            showCard(
+                drawNextCardFromCategory(
+                    gameId = gameId,
+                    kategorieId = kategorieId,
+                ),
+            )
+        }
     }
 
     fun selectRandom() {
-        val loadedSpiel = spiel ?: return
-
-        showCard(aktuelleKarte = getNextRandomCard(loadedSpiel))
+        viewModelScope.launch {
+            showCard(drawNextRandomCard(gameId))
+        }
     }
 
-    private fun showCard(aktuelleKarte: GezogeneKarte) {
-        val loadedSpiel = spiel ?: return
-
+    private fun showCard(drawCardResult: DrawCardResult) {
+        val loadedSpiel = drawCardResult.spiel
         _uiState.value = GameScreenUiState.Loaded(
-            game = loadedSpiel.toUiState(aktuelleKarte = aktuelleKarte),
+            game = loadedSpiel.toUiState(aktuelleKarte = drawCardResult.karte),
         )
     }
 

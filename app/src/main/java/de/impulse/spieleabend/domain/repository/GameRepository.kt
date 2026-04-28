@@ -7,4 +7,9 @@ interface GameRepository {
     suspend fun getGames(): List<Spiel>
 
     suspend fun getGame(gameId: Int): Spiel
+
+    suspend fun updateSeenStates(
+        resetCategoryIds: Set<Int>,
+        seenCardTextIds: Set<Int>,
+    )
 }

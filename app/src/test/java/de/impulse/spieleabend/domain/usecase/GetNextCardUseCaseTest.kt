@@ -40,6 +40,55 @@ class GetNextCardUseCaseTest {
     }
 
     @Test
+    fun ziehtAusKategorieNurUngeseheneKartentexteWennGenugVorhandenSind() {
+        val spiel = spiel(
+            texteProKarte = 2,
+            kategorie(
+                id = 1,
+                kartentext(id = 101, gesehen = false),
+                kartentext(id = 102, gesehen = true),
+                kartentext(id = 103, gesehen = false),
+            ),
+        )
+
+        val gezogeneKarte = GetNextCardFromCategoryUseCase()(
+            spiel = spiel,
+            kategorieId = 1,
+        )
+
+        assertEquals(
+            setOf(101, 103),
+            gezogeneKarte.kartentexte.map { gezogenerKartentext ->
+                gezogenerKartentext.kartentext.id()
+            }.toSet(),
+        )
+    }
+
+    @Test
+    fun ziehtAusKategorieNachResetAuchBereitsGeseheneKartentexte() {
+        val spiel = spiel(
+            texteProKarte = 2,
+            kategorie(
+                id = 1,
+                kartentext(id = 101, gesehen = false),
+                kartentext(id = 102, gesehen = true),
+            ),
+        )
+
+        val gezogeneKarte = GetNextCardFromCategoryUseCase()(
+            spiel = spiel,
+            kategorieId = 1,
+        )
+
+        assertEquals(
+            setOf(101, 102),
+            gezogeneKarte.kartentexte.map { gezogenerKartentext ->
+                gezogenerKartentext.kartentext.id()
+            }.toSet(),
+        )
+    }
+
+    @Test
     fun ziehtZufaelligeKarteAusAllenKategorien() {
         val spiel = spiel(
             texteProKarte = 1,
@@ -58,6 +107,55 @@ class GetNextCardUseCaseTest {
         )
         assertTrue(
             gezogeneKarte.kartentexte.single().kategorieId in setOf(1, 2),
+        )
+    }
+
+    @Test
+    fun ziehtZufaelligNurUngeseheneKartentexteWennGenugVorhandenSind() {
+        val spiel = spiel(
+            texteProKarte = 2,
+            kategorie(
+                id = 1,
+                kartentext(id = 101, gesehen = false),
+                kartentext(id = 102, gesehen = true),
+            ),
+            kategorie(
+                id = 2,
+                kartentext(id = 201, gesehen = false),
+            ),
+        )
+
+        val gezogeneKarte = GetNextRandomCardUseCase()(spiel)
+
+        assertEquals(
+            setOf(101, 201),
+            gezogeneKarte.kartentexte.map { gezogenerKartentext ->
+                gezogenerKartentext.kartentext.id()
+            }.toSet(),
+        )
+    }
+
+    @Test
+    fun ziehtZufaelligNachResetAuchBereitsGeseheneKartentexte() {
+        val spiel = spiel(
+            texteProKarte = 2,
+            kategorie(
+                id = 1,
+                kartentext(id = 101, gesehen = true),
+            ),
+            kategorie(
+                id = 2,
+                kartentext(id = 201, gesehen = false),
+            ),
+        )
+
+        val gezogeneKarte = GetNextRandomCardUseCase()(spiel)
+
+        assertEquals(
+            setOf(101, 201),
+            gezogeneKarte.kartentexte.map { gezogenerKartentext ->
+                gezogenerKartentext.kartentext.id()
+            }.toSet(),
         )
     }
 
@@ -80,9 +178,13 @@ class GetNextCardUseCaseTest {
             originaleKartentexte = kartentexte.toCollection(LinkedHashSet()),
         )
 
-    private fun kartentext(id: Int): Kartentext =
+    private fun kartentext(
+        id: Int,
+        gesehen: Boolean = false,
+    ): Kartentext =
         Kartentext(
             lokalisierung = lokalisierung(id = id),
+            gesehen = gesehen,
         )
 
     private fun lokalisierung(id: Int): Lokalisierung =

@@ -12,6 +12,7 @@ import de.impulse.spieleabend.domain.model.Spiel
 import de.impulse.spieleabend.domain.repository.GameRepository
 import javax.inject.Inject
 
+@Suppress("TooManyFunctions")
 class GameRepositoryImpl @Inject constructor(
     private val database: SpieleabendDatabase,
 ) : GameRepository {
@@ -26,6 +27,29 @@ class GameRepositoryImpl @Inject constructor(
         database.withTransaction {
             spielEntity(gameId).toDomain()
         }
+
+    override suspend fun updateSeenStates(
+        resetCategoryIds: Set<Int>,
+        seenCardTextIds: Set<Int>,
+    ) {
+        database.withTransaction {
+            val kartentextDao = database.kartentextDao()
+
+            if (resetCategoryIds.isNotEmpty()) {
+                kartentextDao.updateGesehenForKategorien(
+                    kategorieIds = resetCategoryIds.toList(),
+                    gesehen = false,
+                )
+            }
+
+            if (seenCardTextIds.isNotEmpty()) {
+                kartentextDao.updateGesehenForKartentexte(
+                    kartentextIds = seenCardTextIds.toList(),
+                    gesehen = true,
+                )
+            }
+        }
+    }
 
     private suspend fun spielEntity(gameId: Int): SpielEntity {
         val spielDao = database.spielDao()
