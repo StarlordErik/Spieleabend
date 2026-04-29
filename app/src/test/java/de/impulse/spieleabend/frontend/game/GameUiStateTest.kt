@@ -32,12 +32,15 @@ class GameUiStateTest {
                 ),
             ),
             sprache = Sprache.DE,
+            cardInstanceId = 7,
         )
 
         assertEquals("Quiz", uiState.spielName)
+        assertEquals(7L, uiState.aktuelleKarte.instanceId)
         assertEquals(listOf("Wissen", "Finale"), uiState.kategorien.map { it.name })
         assertEquals(listOf(101, 102), uiState.aktuelleKarte.kartentexte.map { it.id })
         assertEquals(listOf("Frage", "Hinweis"), uiState.aktuelleKarte.kartentexte.map { it.text })
+        assertEquals(listOf(false, false), uiState.aktuelleKarte.kartentexte.map { it.gespielt })
         assertEquals(
             listOf(11, 11),
             uiState.aktuelleKarte.kartentexte.map { it.kategorieId },
@@ -89,6 +92,7 @@ class GameUiStateTest {
                 ),
             ),
             sprache = Sprache.EN,
+            cardInstanceId = 9,
         )
 
         assertEquals("Game", uiState.spielName)
@@ -97,6 +101,55 @@ class GameUiStateTest {
             listOf("English text", "English only"),
             uiState.aktuelleKarte.kartentexte.map { kartentext -> kartentext.text },
         )
+    }
+
+    @Test
+    fun markiertKartentextImUiStateAlsGespielt() {
+        val frage = kartentext(id = 101, text = "Frage")
+        val hinweis = kartentext(id = 102, text = "Hinweis", gespielt = true)
+        val spiel = Spiel(
+            lokalisierung = lokalisierung(id = 1, text = "Quiz"),
+            originaleKategorien = linkedSetOf(kategorie(id = 11, name = "Wissen", frage, hinweis)),
+        )
+
+        val uiState =
+            spiel.toGameUiState(
+                aktuelleKarte = GezogeneKarte(
+                    kartentexte = listOf(
+                        GezogenerKartentext(kartentext = frage, kategorieId = 11),
+                        GezogenerKartentext(kartentext = hinweis, kategorieId = 11),
+                    ),
+                ),
+                sprache = Sprache.DE,
+                cardInstanceId = 3,
+            ).withPlayedCardText(101)
+
+        assertEquals(listOf(true, true), uiState.aktuelleKarte.kartentexte.map { kartentext -> kartentext.gespielt })
+        assertEquals(3L, uiState.aktuelleKarte.instanceId)
+    }
+
+    @Test
+    fun hebtGespieltMarkierungImUiStateWiederAuf() {
+        val frage = kartentext(id = 101, text = "Frage", gespielt = true)
+        val spiel = Spiel(
+            lokalisierung = lokalisierung(id = 1, text = "Quiz"),
+            originaleKategorien = linkedSetOf(kategorie(id = 11, name = "Wissen", frage)),
+        )
+
+        val uiState =
+            spiel.toGameUiState(
+                aktuelleKarte = GezogeneKarte(
+                    kartentexte = listOf(GezogenerKartentext(kartentext = frage, kategorieId = 11)),
+                ),
+                sprache = Sprache.DE,
+                cardInstanceId = 4,
+            ).withCardTextPlayedState(
+                cardTextId = 101,
+                gespielt = false,
+            )
+
+        assertEquals(listOf(false), uiState.aktuelleKarte.kartentexte.map { kartentext -> kartentext.gespielt })
+        assertEquals(4L, uiState.aktuelleKarte.instanceId)
     }
 
     private fun kategorie(
@@ -112,9 +165,11 @@ class GameUiStateTest {
     private fun kartentext(
         id: Int,
         text: String,
+        gespielt: Boolean = false,
     ): Kartentext =
         Kartentext(
             lokalisierung = lokalisierung(id = id, text = text),
+            gespielt = gespielt,
         )
 
     private fun lokalisierung(

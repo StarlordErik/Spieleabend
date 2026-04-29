@@ -8,8 +8,14 @@ interface GameRepository {
 
     suspend fun getGame(gameId: Int): Spiel
 
-    suspend fun updateSeenStates(
-        resetCategoryIds: Set<Int>,
+    suspend fun applyCardDrawStateChanges(
+        resetSeenCategoryIds: Set<Int>,
+        resetSeenAndPlayedCategoryIds: Set<Int>,
         seenCardTextIds: Set<Int>,
+    )
+
+    suspend fun setCardTextsPlayedState(
+        cardTextIds: Set<Int>,
+        gespielt: Boolean,
     )
 }

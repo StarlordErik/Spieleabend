@@ -10,8 +10,9 @@ class DrawNextRandomCardUseCase @Inject constructor(
         val spiel = repository.getGame(gameId)
         val plannedCardDraw = planNextRandomCard(spiel)
 
-        repository.updateSeenStates(
-            resetCategoryIds = plannedCardDraw.resetKategorieIds,
+        repository.applyCardDrawStateChanges(
+            resetSeenCategoryIds = plannedCardDraw.resetSeenKategorieIds,
+            resetSeenAndPlayedCategoryIds = plannedCardDraw.resetSeenUndGespieltKategorieIds,
             seenCardTextIds =
                 plannedCardDraw.karte.kartentexte
                     .map { gezogenerKartentext -> gezogenerKartentext.kartentext.id() }

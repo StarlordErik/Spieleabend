@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Spieleabend</string>
+    <string name="card_text_marked_as_played">Kartentext als gespielt markiert</string>
 </resources>

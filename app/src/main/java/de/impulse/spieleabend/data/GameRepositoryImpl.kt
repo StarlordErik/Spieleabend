@@ -28,16 +28,26 @@ class GameRepositoryImpl @Inject constructor(
             spielEntity(gameId).toDomain()
         }
 
-    override suspend fun updateSeenStates(
-        resetCategoryIds: Set<Int>,
+    override suspend fun applyCardDrawStateChanges(
+        resetSeenCategoryIds: Set<Int>,
+        resetSeenAndPlayedCategoryIds: Set<Int>,
         seenCardTextIds: Set<Int>,
     ) {
         database.withTransaction {
             val kartentextDao = database.kartentextDao()
+            val seenOnlyResetCategoryIds = resetSeenCategoryIds - resetSeenAndPlayedCategoryIds
 
-            if (resetCategoryIds.isNotEmpty()) {
+            if (resetSeenAndPlayedCategoryIds.isNotEmpty()) {
+                kartentextDao.updateGesehenUndGespieltForKategorien(
+                    kategorieIds = resetSeenAndPlayedCategoryIds.toList(),
+                    gesehen = false,
+                    gespielt = false,
+                )
+            }
+
+            if (seenOnlyResetCategoryIds.isNotEmpty()) {
                 kartentextDao.updateGesehenForKategorien(
-                    kategorieIds = resetCategoryIds.toList(),
+                    kategorieIds = seenOnlyResetCategoryIds.toList(),
                     gesehen = false,
                 )
             }
@@ -48,6 +58,22 @@ class GameRepositoryImpl @Inject constructor(
                     gesehen = true,
                 )
             }
+        }
+    }
+
+    override suspend fun setCardTextsPlayedState(
+        cardTextIds: Set<Int>,
+        gespielt: Boolean,
+    ) {
+        if (cardTextIds.isEmpty()) {
+            return
+        }
+
+        database.withTransaction {
+            database.kartentextDao().updateGespieltForKartentexte(
+                kartentextIds = cardTextIds.toList(),
+                gespielt = gespielt,
+            )
         }
     }
 

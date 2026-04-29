@@ -89,6 +89,34 @@ class GetNextCardUseCaseTest {
     }
 
     @Test
+    fun ziehtAusKategorieNachPlayedResetMitUngelesenenUndUngespieltenKartentexten() {
+        val spiel = spiel(
+            texteProKarte = 2,
+            kategorie(
+                id = 1,
+                kartentext(id = 101, gesehen = true, gespielt = true),
+                kartentext(id = 102, gesehen = false, gespielt = true),
+            ),
+        )
+
+        val gezogeneKarte = GetNextCardFromCategoryUseCase()(
+            spiel = spiel,
+            kategorieId = 1,
+        )
+
+        assertTrue(
+            gezogeneKarte.kartentexte.all { gezogenerKartentext ->
+                !gezogenerKartentext.kartentext.gespielt
+            },
+        )
+        assertTrue(
+            gezogeneKarte.kartentexte.any { gezogenerKartentext ->
+                !gezogenerKartentext.kartentext.gesehen
+            },
+        )
+    }
+
+    @Test
     fun ziehtZufaelligeKarteAusAllenKategorien() {
         val spiel = spiel(
             texteProKarte = 1,
@@ -132,6 +160,34 @@ class GetNextCardUseCaseTest {
             gezogeneKarte.kartentexte.map { gezogenerKartentext ->
                 gezogenerKartentext.kartentext.id()
             }.toSet(),
+        )
+    }
+
+    @Test
+    fun ziehtZufaelligNachPlayedResetMitUngelesenenUndUngespieltenKartentexten() {
+        val spiel = spiel(
+            texteProKarte = 2,
+            kategorie(
+                id = 1,
+                kartentext(id = 101, gesehen = true, gespielt = true),
+            ),
+            kategorie(
+                id = 2,
+                kartentext(id = 201, gesehen = false, gespielt = true),
+            ),
+        )
+
+        val gezogeneKarte = GetNextRandomCardUseCase()(spiel)
+
+        assertTrue(
+            gezogeneKarte.kartentexte.all { gezogenerKartentext ->
+                !gezogenerKartentext.kartentext.gespielt
+            },
+        )
+        assertTrue(
+            gezogeneKarte.kartentexte.any { gezogenerKartentext ->
+                !gezogenerKartentext.kartentext.gesehen
+            },
         )
     }
 
@@ -181,10 +237,12 @@ class GetNextCardUseCaseTest {
     private fun kartentext(
         id: Int,
         gesehen: Boolean = false,
+        gespielt: Boolean = false,
     ): Kartentext =
         Kartentext(
             lokalisierung = lokalisierung(id = id),
             gesehen = gesehen,
+            gespielt = gespielt,
         )
 
     private fun lokalisierung(id: Int): Lokalisierung =

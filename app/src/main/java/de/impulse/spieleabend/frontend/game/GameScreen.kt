@@ -44,6 +44,7 @@ fun GameScreen(
                 modifier = modifier,
                 onKategorieSelected = viewModel::selectKategorie,
                 onRandomSelected = viewModel::selectRandom,
+                onKartentextPlayedStateChanged = viewModel::setKartentextGespielt,
             )
         }
     }
@@ -88,6 +89,7 @@ private fun GameScreenContent(
     modifier: Modifier = Modifier,
     onKategorieSelected: (Int) -> Unit = {},
     onRandomSelected: () -> Unit = {},
+    onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -104,6 +106,7 @@ private fun GameScreenContent(
                 spielName = uiState.spielName,
                 aktuelleKarte = uiState.aktuelleKarte,
                 kategorien = uiState.kategorien,
+                onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(
@@ -143,6 +146,7 @@ private fun GamePlayArea(
     aktuelleKarte: GameCardUiModel,
     kategorien: List<GameKategorieUiModel>,
     modifier: Modifier = Modifier,
+    onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
     Column(
         modifier = modifier,
@@ -170,7 +174,9 @@ private fun GamePlayArea(
         ) {
             GameCard(
                 kartentexte = aktuelleKarte.kartentexte,
+                cardInstanceId = aktuelleKarte.instanceId,
                 textPanelColors = aktuelleKarte.textPanelColors(kategorien),
+                onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
                 modifier = Modifier
                     .widthIn(max = 560.dp)
                     .heightIn(max = 720.dp)

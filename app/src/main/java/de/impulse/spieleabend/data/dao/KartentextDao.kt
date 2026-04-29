@@ -44,4 +44,34 @@ interface KartentextDao {
         kategorieIds: List<Int>,
         gesehen: Boolean,
     )
+
+    @Query(
+        """
+        UPDATE kartentext
+        SET gespielt = :gespielt
+        WHERE lokalisierung_id IN (:kartentextIds)
+        """,
+    )
+    suspend fun updateGespieltForKartentexte(
+        kartentextIds: List<Int>,
+        gespielt: Boolean,
+    )
+
+    @Query(
+        """
+        UPDATE kartentext
+        SET gesehen = :gesehen,
+            gespielt = :gespielt
+        WHERE lokalisierung_id IN (
+            SELECT kartentext_id
+            FROM kategorie_x_kartentext
+            WHERE kategorie_id IN (:kategorieIds)
+        )
+        """,
+    )
+    suspend fun updateGesehenUndGespieltForKategorien(
+        kategorieIds: List<Int>,
+        gesehen: Boolean,
+        gespielt: Boolean,
+    )
 }
