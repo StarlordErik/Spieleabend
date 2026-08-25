@@ -38,9 +38,10 @@ interface KartentextDao {
             FROM kategorie_x_kartentext
             WHERE kategorie_id IN (:kategorieIds)
         )
+          AND gespielt = 0
         """,
     )
-    suspend fun updateGesehenForKategorien(
+    suspend fun updateGesehenForNichtGespielteKategorien(
         kategorieIds: List<Int>,
         gesehen: Boolean,
     )

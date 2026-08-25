@@ -15,7 +15,49 @@ import org.junit.Test
 
 class DrawNextCardUseCaseTest {
     @Test
-    fun drawFromCategoryResetetKategorieUndMarkiertGezogeneKartentexteAlsGesehen() = runBlocking {
+    fun drawFromCategoryZiehtNurUngeseheneUndUngespielteKartentexte() = runBlocking {
+        val repository =
+            FakeGameRepository(
+                spiel(
+                    kategorie(
+                        id = 1,
+                        kartentext(id = 101, gesehen = false),
+                        kartentext(id = 102, gesehen = true),
+                        kartentext(id = 103, gesehen = false, gespielt = true),
+                        kartentext(id = 104, gesehen = false),
+                    ),
+                ),
+            )
+
+        val result =
+            DrawNextCardFromCategoryUseCase(repository)(
+                gameId = 10,
+                kategorieId = 1,
+            )
+
+        assertEquals(emptySet<Int>(), repository.lastResetSeenCategoryIds)
+        assertEquals(emptySet<Int>(), repository.lastResetSeenAndPlayedCategoryIds)
+        assertEquals(setOf(101, 104), repository.lastSeenCardTextIds)
+        assertEquals(
+            setOf(101, 104),
+            result.karte.kartentexte.map { gezogenerKartentext ->
+                gezogenerKartentext.kartentext.id()
+            }.toSet(),
+        )
+        val kartentexte =
+            result.spiel.kategorien
+                .single { kategorie -> kategorie.id() == 1 }
+                .kartentexte
+                .associateBy { kartentext -> kartentext.id() }
+        assertTrue(kartentexte.getValue(101).gesehen)
+        assertTrue(kartentexte.getValue(102).gesehen)
+        assertFalse(kartentexte.getValue(103).gesehen)
+        assertTrue(kartentexte.getValue(103).gespielt)
+        assertTrue(kartentexte.getValue(104).gesehen)
+    }
+
+    @Test
+    fun drawFromCategoryZiehtMitWenigerAlsTexteProKarteWennNochUngeseheneUngespielteVorhandenSind() = runBlocking {
         val repository =
             FakeGameRepository(
                 spiel(
@@ -33,21 +75,48 @@ class DrawNextCardUseCaseTest {
                 kategorieId = 1,
             )
 
-        assertEquals(setOf(1), repository.lastResetSeenCategoryIds)
+        assertEquals(emptySet<Int>(), repository.lastResetSeenCategoryIds)
         assertEquals(emptySet<Int>(), repository.lastResetSeenAndPlayedCategoryIds)
-        assertEquals(setOf(101, 102), repository.lastSeenCardTextIds)
+        assertEquals(setOf(101), repository.lastSeenCardTextIds)
         assertEquals(
-            setOf(101, 102),
+            setOf(101),
             result.karte.kartentexte.map { gezogenerKartentext ->
                 gezogenerKartentext.kartentext.id()
             }.toSet(),
         )
-        assertTrue(
+    }
+
+    @Test
+    fun drawFromCategoryResetetNurGesehenWennKeineUngesehenenUngespieltenKartentexteMehrVorhandenSind() = runBlocking {
+        val repository =
+            FakeGameRepository(
+                spiel(
+                    kategorie(
+                        id = 1,
+                        kartentext(id = 101, gesehen = true, gespielt = false),
+                        kartentext(id = 102, gesehen = false, gespielt = true),
+                    ),
+                ),
+            )
+
+        val result =
+            DrawNextCardFromCategoryUseCase(repository)(
+                gameId = 10,
+                kategorieId = 1,
+            )
+
+        assertEquals(setOf(1), repository.lastResetSeenCategoryIds)
+        assertEquals(emptySet<Int>(), repository.lastResetSeenAndPlayedCategoryIds)
+        assertEquals(setOf(101), repository.lastSeenCardTextIds)
+        val kartentexte =
             result.spiel.kategorien
                 .single { kategorie -> kategorie.id() == 1 }
                 .kartentexte
-                .all { kartentext -> kartentext.gesehen },
-        )
+                .associateBy { kartentext -> kartentext.id() }
+        assertTrue(kartentexte.getValue(101).gesehen)
+        assertFalse(kartentexte.getValue(101).gespielt)
+        assertFalse(kartentexte.getValue(102).gesehen)
+        assertTrue(kartentexte.getValue(102).gespielt)
     }
 
     @Test
@@ -77,6 +146,11 @@ class DrawNextCardUseCaseTest {
             },
         )
         assertTrue(
+            result.karte.kartentexte.all { gezogenerKartentext ->
+                !gezogenerKartentext.kartentext.gesehen
+            },
+        )
+        assertTrue(
             result.spiel.kategorien
                 .single { kategorie -> kategorie.id() == 1 }
                 .kartentexte
@@ -85,17 +159,46 @@ class DrawNextCardUseCaseTest {
     }
 
     @Test
-    fun drawRandomResetetAlleAktivenKategorienWennUngeseheneKartentexteNichtReichen() = runBlocking {
+    fun drawRandomZiehtMitWenigerAlsTexteProKarteWennNochUngeseheneUngespielteVorhandenSind() = runBlocking {
         val repository =
             FakeGameRepository(
                 spiel(
                     kategorie(
                         id = 1,
-                        kartentext(id = 101, gesehen = true),
+                        kartentext(id = 101, gesehen = true, gespielt = false),
                     ),
                     kategorie(
                         id = 2,
-                        kartentext(id = 201, gesehen = false),
+                        kartentext(id = 201, gesehen = false, gespielt = false),
+                    ),
+                ),
+            )
+
+        val result = DrawNextRandomCardUseCase(repository)(gameId = 10)
+
+        assertEquals(emptySet<Int>(), repository.lastResetSeenCategoryIds)
+        assertEquals(emptySet<Int>(), repository.lastResetSeenAndPlayedCategoryIds)
+        assertEquals(setOf(201), repository.lastSeenCardTextIds)
+        assertEquals(
+            setOf(201),
+            result.karte.kartentexte.map { gezogenerKartentext ->
+                gezogenerKartentext.kartentext.id()
+            }.toSet(),
+        )
+    }
+
+    @Test
+    fun drawRandomResetetNurGesehenWennKeineUngesehenenUngespieltenKartentexteMehrVorhandenSind() = runBlocking {
+        val repository =
+            FakeGameRepository(
+                spiel(
+                    kategorie(
+                        id = 1,
+                        kartentext(id = 101, gesehen = true, gespielt = false),
+                    ),
+                    kategorie(
+                        id = 2,
+                        kartentext(id = 201, gesehen = false, gespielt = true),
                     ),
                 ),
             )
@@ -104,11 +207,15 @@ class DrawNextCardUseCaseTest {
 
         assertEquals(setOf(1, 2), repository.lastResetSeenCategoryIds)
         assertEquals(emptySet<Int>(), repository.lastResetSeenAndPlayedCategoryIds)
-        assertEquals(setOf(101, 201), repository.lastSeenCardTextIds)
-        assertTrue(
-            result.spiel.kategorien.flatMap { kategorie -> kategorie.kartentexte }
-                .all { kartentext -> kartentext.gesehen },
-        )
+        assertEquals(setOf(101), repository.lastSeenCardTextIds)
+        val kartentexte =
+            result.spiel.kategorien
+                .flatMap { kategorie -> kategorie.kartentexte }
+                .associateBy { kartentext -> kartentext.id() }
+        assertTrue(kartentexte.getValue(101).gesehen)
+        assertFalse(kartentexte.getValue(101).gespielt)
+        assertFalse(kartentexte.getValue(201).gesehen)
+        assertTrue(kartentexte.getValue(201).gespielt)
     }
 
     @Test
@@ -134,6 +241,11 @@ class DrawNextCardUseCaseTest {
         assertTrue(
             result.karte.kartentexte.all { gezogenerKartentext ->
                 !gezogenerKartentext.kartentext.gespielt
+            },
+        )
+        assertTrue(
+            result.karte.kartentexte.all { gezogenerKartentext ->
+                !gezogenerKartentext.kartentext.gesehen
             },
         )
         assertTrue(
@@ -274,7 +386,7 @@ class DrawNextCardUseCaseTest {
         resetSeenAndPlayedCategoryIds: Set<Int>,
         seenCardTextIds: Set<Int>,
     ): Spiel {
-        val resetSeenCardTextIds = categoryCardTextIds(resetSeenCategoryIds)
+        val resetSeenCardTextIds = categoryCardTextIds(resetSeenCategoryIds, onlyUnplayed = true)
         val resetSeenAndPlayedCardTextIds = categoryCardTextIds(resetSeenAndPlayedCategoryIds)
 
         return copy(
@@ -327,13 +439,16 @@ class DrawNextCardUseCaseTest {
             },
         )
 
-    private fun Spiel.categoryCardTextIds(categoryIds: Set<Int>): Set<Int> =
+    private fun Spiel.categoryCardTextIds(
+        categoryIds: Set<Int>,
+        onlyUnplayed: Boolean = false,
+    ): Set<Int> =
         (originaleKategorien + hinzugefuegteKategorien + inaktiveKategorien)
             .filter { kategorie -> kategorie.id() in categoryIds }
             .flatMap { kategorie ->
-                (kategorie.originaleKartentexte + kategorie.hinzugefuegteKartentexte).map { kartentext ->
-                    kartentext.id()
-                }
+                (kategorie.originaleKartentexte + kategorie.hinzugefuegteKartentexte)
+                    .filter { kartentext -> !onlyUnplayed || !kartentext.gespielt }
+                    .map { kartentext -> kartentext.id() }
             }
             .toSet()
 

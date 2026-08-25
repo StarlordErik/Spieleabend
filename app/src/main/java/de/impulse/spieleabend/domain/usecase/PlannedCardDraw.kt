@@ -22,85 +22,77 @@ internal fun planNextCardFromCategory(
     }
 
     val playedResetKategorieIds =
-        if (kategorie.kartentexte.isNotEmpty() && kategorie.kartentexte.all { kartentext -> kartentext.gespielt }) {
+        if (kategorie.ziehbareKartentexte(unseenOnly = false).isEmpty()) {
             setOf(kategorie.id())
         } else {
             emptySet()
         }
-    val effektiveKategorie =
+    val effektiveKategorieNachPlayedReset =
         if (playedResetKategorieIds.isEmpty()) {
             kategorie
         } else {
             kategorie.resetSeenUndGespielt()
         }
-    val ungeseheneKartentexte =
-        effektiveKategorie.kartentexte.filterNot { kartentext ->
-            kartentext.gesehen
-        }
+    val ungeseheneKartentexte = effektiveKategorieNachPlayedReset.ziehbareKartentexte(unseenOnly = true)
 
     val resetSeenKategorieIds =
-        if (ungeseheneKartentexte.size < spiel.texteProKarte && playedResetKategorieIds.isEmpty()) {
+        if (ungeseheneKartentexte.isEmpty() && playedResetKategorieIds.isEmpty()) {
             setOf(kategorie.id())
         } else {
             emptySet()
         }
+    val effektiveKategorie =
+        if (resetSeenKategorieIds.isEmpty()) {
+            effektiveKategorieNachPlayedReset
+        } else {
+            effektiveKategorieNachPlayedReset.resetSeenForNichtGespielte()
+        }
+    val ziehbareKartentexte = effektiveKategorie.ziehbareKartentexte(unseenOnly = true)
 
-    return if (resetSeenKategorieIds.isNotEmpty()) {
-        PlannedCardDraw(
-            karte = effektiveKategorie.gezogeneKarte(spiel.texteProKarte),
-            resetSeenKategorieIds = resetSeenKategorieIds,
-            resetSeenUndGespieltKategorieIds = playedResetKategorieIds,
-        )
-    } else {
-        PlannedCardDraw(
-            karte = effektiveKategorie.gezogeneKarte(
-                texteProKarte = spiel.texteProKarte,
-                kartentexte = ungeseheneKartentexte,
-            ),
-            resetSeenUndGespieltKategorieIds = playedResetKategorieIds,
-        )
-    }
+    return PlannedCardDraw(
+        karte = effektiveKategorie.gezogeneKarte(
+            texteProKarte = spiel.texteProKarte,
+            kartentexte = ziehbareKartentexte,
+        ),
+        resetSeenKategorieIds = resetSeenKategorieIds,
+        resetSeenUndGespieltKategorieIds = playedResetKategorieIds,
+    )
 }
 
 internal fun planNextRandomCard(spiel: Spiel): PlannedCardDraw {
     val kategorien = spiel.kategorien.toList()
     val playedResetKategorieIds =
-        if (
-            kategorien.isNotEmpty() &&
-            randomKartentexte(kategorien, unseenOnly = false).all { kartentext ->
-                kartentext.kartentext.gespielt
-            }
-        ) {
+        if (kategorien.isNotEmpty() && randomKartentexte(kategorien, unseenOnly = false).isEmpty()) {
             kategorien.map { kategorie -> kategorie.id() }.toSet()
         } else {
             emptySet()
         }
-    val effektiveKategorien =
+    val effektiveKategorienNachPlayedReset =
         if (playedResetKategorieIds.isEmpty()) {
             kategorien
         } else {
             kategorien.map { kategorie -> kategorie.resetSeenUndGespielt() }
         }
-    val ungeseheneKartentexte = randomKartentexte(effektiveKategorien, unseenOnly = true)
+    val ungeseheneKartentexte = randomKartentexte(effektiveKategorienNachPlayedReset, unseenOnly = true)
     val resetSeenKategorieIds =
-        if (ungeseheneKartentexte.size < spiel.texteProKarte && playedResetKategorieIds.isEmpty()) {
-            effektiveKategorien.map { kategorie -> kategorie.id() }.toSet()
+        if (ungeseheneKartentexte.isEmpty() && playedResetKategorieIds.isEmpty()) {
+            effektiveKategorienNachPlayedReset.map { kategorie -> kategorie.id() }.toSet()
         } else {
             emptySet()
         }
+    val effektiveKategorien =
+        if (resetSeenKategorieIds.isEmpty()) {
+            effektiveKategorienNachPlayedReset
+        } else {
+            effektiveKategorienNachPlayedReset.map { kategorie -> kategorie.resetSeenForNichtGespielte() }
+        }
+    val ziehbareKartentexte = randomKartentexte(effektiveKategorien, unseenOnly = true)
 
-    return if (resetSeenKategorieIds.isNotEmpty()) {
-        PlannedCardDraw(
-            karte = GezogeneKarte(randomKartentexte(effektiveKategorien, unseenOnly = false).take(spiel.texteProKarte)),
-            resetSeenKategorieIds = resetSeenKategorieIds,
-            resetSeenUndGespieltKategorieIds = playedResetKategorieIds,
-        )
-    } else {
-        PlannedCardDraw(
-            karte = GezogeneKarte(ungeseheneKartentexte.take(spiel.texteProKarte)),
-            resetSeenUndGespieltKategorieIds = playedResetKategorieIds,
-        )
-    }
+    return PlannedCardDraw(
+        karte = GezogeneKarte(ziehbareKartentexte.take(spiel.texteProKarte)),
+        resetSeenKategorieIds = resetSeenKategorieIds,
+        resetSeenUndGespieltKategorieIds = playedResetKategorieIds,
+    )
 }
 
 private fun Kategorie.gezogeneKarte(
@@ -126,10 +118,7 @@ private fun randomKartentexte(
 ): List<GezogenerKartentext> =
     kategorien
         .flatMap { kategorie ->
-            kategorie.kartentexte
-                .filterNot { kartentext ->
-                    unseenOnly && kartentext.gesehen
-                }
+            kategorie.ziehbareKartentexte(unseenOnly)
                 .map { kartentext ->
                     GezogenerKartentext(
                         kartentext = kartentext,
@@ -141,6 +130,36 @@ private fun randomKartentexte(
         .distinctBy { gezogenerKartentext ->
             gezogenerKartentext.kartentext.id()
         }
+
+private fun Kategorie.ziehbareKartentexte(unseenOnly: Boolean): List<de.impulse.spieleabend.domain.model.Kartentext> =
+    kartentexte.filterNot { kartentext ->
+        kartentext.gespielt || (unseenOnly && kartentext.gesehen)
+    }
+
+private fun Kategorie.resetSeenForNichtGespielte(): Kategorie =
+    copy(
+        originaleKartentexte = originaleKartentexte.mapToLinkedHashSet { kartentext ->
+            if (kartentext.gespielt) {
+                kartentext
+            } else {
+                kartentext.copy(gesehen = false)
+            }
+        },
+        hinzugefuegteKartentexte = hinzugefuegteKartentexte.mapToLinkedHashSet { kartentext ->
+            if (kartentext.gespielt) {
+                kartentext
+            } else {
+                kartentext.copy(gesehen = false)
+            }
+        },
+        inaktiveKartentexte = inaktiveKartentexte.mapToLinkedHashSet { kartentext ->
+            if (kartentext.gespielt) {
+                kartentext
+            } else {
+                kartentext.copy(gesehen = false)
+            }
+        },
+    )
 
 private fun Kategorie.resetSeenUndGespielt(): Kategorie =
     copy(

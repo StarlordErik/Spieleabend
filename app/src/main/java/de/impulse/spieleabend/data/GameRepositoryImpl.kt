@@ -46,7 +46,7 @@ class GameRepositoryImpl @Inject constructor(
             }
 
             if (seenOnlyResetCategoryIds.isNotEmpty()) {
-                kartentextDao.updateGesehenForKategorien(
+                kartentextDao.updateGesehenForNichtGespielteKategorien(
                     kategorieIds = seenOnlyResetCategoryIds.toList(),
                     gesehen = false,
                 )
