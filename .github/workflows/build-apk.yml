@@ -13,12 +13,13 @@ jobs:
   build-apk:
     name: Build ${{ github.ref_name }} APK
     runs-on: ubuntu-latest
-    env:
-      LOCALAPPDATA: ${{ runner.temp }}/gradle-state
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Configure local Gradle state
+        run: echo "LOCALAPPDATA=${RUNNER_TEMP}/gradle-state" >> "${GITHUB_ENV}"
 
       - name: Set up Java
         uses: actions/setup-java@v6
