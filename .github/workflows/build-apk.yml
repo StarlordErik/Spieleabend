@@ -1,0 +1,59 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    name: Build ${{ github.ref_name }} APK
+    runs-on: ubuntu-latest
+    env:
+      LOCALAPPDATA: ${{ runner.temp }}/gradle-state
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Install Android SDK platform
+        run: sdkmanager "platforms;android-36.1"
+
+      - name: Build debug APK
+        if: github.ref_name == 'dev'
+        run: ./gradlew :app:assembleDebug --no-daemon
+
+      - name: Build release APK
+        if: github.ref_name == 'main'
+        run: ./gradlew :app:assembleRelease --no-daemon
+
+      - name: Upload debug APK
+        if: github.ref_name == 'dev'
+        uses: actions/upload-artifact@v7
+        with:
+          name: Spieleabend-dev-debug-${{ github.sha }}
+          path: ${{ runner.temp }}/gradle-state/GradleWorkspaces/Spieleabend-*/build/app/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Upload release APK
+        if: github.ref_name == 'main'
+        uses: actions/upload-artifact@v7
+        with:
+          name: Spieleabend-main-release-${{ github.sha }}
+          path: ${{ runner.temp }}/gradle-state/GradleWorkspaces/Spieleabend-*/build/app/outputs/apk/release/*.apk
+          if-no-files-found: error
+          compression-level: 0
