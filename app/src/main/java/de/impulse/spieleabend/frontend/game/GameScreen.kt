@@ -12,14 +12,23 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,10 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.impulse.spieleabend.frontend.theme.SpieleabendTheme
+import de.impulse.spieleabend.frontend.settings.GameSettingsDialog
 
 @Composable
 fun GameScreen(
     modifier: Modifier = Modifier,
+    developerMode: Boolean = false,
+    onShowCards: () -> Unit = {},
     viewModel: GameViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -42,8 +54,15 @@ fun GameScreen(
             GameScreenContent(
                 uiState = state.game,
                 modifier = modifier,
+                developerMode = developerMode,
+                onShowCards = onShowCards,
                 onKategorieSelected = viewModel::selectKategorie,
                 onRandomSelected = viewModel::selectRandom,
+                onPreviousSelected = viewModel::selectPrevious,
+                onResetSeenCards = viewModel::resetSeenCards,
+                onResetAllCards = viewModel::resetAllCards,
+                onTextsPerCardChanged = viewModel::setTextsPerCard,
+                onResetTextsPerCard = viewModel::resetTextsPerCard,
                 onKartentextPlayedStateChanged = viewModel::setKartentextGespielt,
             )
         }
@@ -84,13 +103,26 @@ private fun GameLoadingContent(
 }
 
 @Composable
+@Suppress("LongMethod")
 private fun GameScreenContent(
     uiState: GameUiState,
     modifier: Modifier = Modifier,
+    developerMode: Boolean = false,
+    onShowCards: () -> Unit = {},
     onKategorieSelected: (Int) -> Unit = {},
     onRandomSelected: () -> Unit = {},
+    onPreviousSelected: () -> Unit = {},
+    onResetSeenCards: () -> Unit = {},
+    onResetAllCards: () -> Unit = {},
+    onTextsPerCardChanged: (Int) -> Unit = {},
+    onResetTextsPerCard: () -> Unit = {},
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+    var highlightedTarget by remember { mutableStateOf<CardSwipeTarget?>(null) }
+    var swipeInteractionLocked by remember { mutableStateOf(false) }
+    val tabBounds = remember { mutableStateMapOf<CardSwipeTarget, Rect>() }
+
     Surface(
         modifier = modifier.fillMaxSize(),
         color = TableBackground,
@@ -106,6 +138,17 @@ private fun GameScreenContent(
                 spielName = uiState.spielName,
                 aktuelleKarte = uiState.aktuelleKarte,
                 kategorien = uiState.kategorien,
+                swipeRegions = tabBounds.map { (target, bounds) -> SwipeRegion(target, bounds) },
+                previousEnabled = uiState.hasPreviousCard,
+                onHighlightedTargetChanged = { highlightedTarget = it },
+                onInteractionStateChanged = { swipeInteractionLocked = it },
+                onSwipeTargetSelected = { target ->
+                    when (target) {
+                        CardSwipeTarget.Random -> onRandomSelected()
+                        CardSwipeTarget.Previous -> onPreviousSelected()
+                        is CardSwipeTarget.Category -> onKategorieSelected(target.id)
+                    }
+                },
                 onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
                 modifier = Modifier
                     .fillMaxSize()
@@ -120,10 +163,44 @@ private fun GameScreenContent(
             CategoryTabs(
                 kategorien = uiState.kategorien,
                 modifier = Modifier.fillMaxSize(),
+                highlightedTarget = highlightedTarget,
+                previousEnabled = uiState.hasPreviousCard,
+                interactionsEnabled = !swipeInteractionLocked,
                 onKategorieSelected = { kategorieId -> onKategorieSelected(kategorieId) },
                 onRandomSelected = onRandomSelected,
+                onPreviousSelected = onPreviousSelected,
+                onTabBoundsChanged = { target, bounds ->
+                    if (tabBounds[target] != bounds) tabBounds[target] = bounds
+                },
             )
+
+            IconButton(
+                onClick = { showSettings = true },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(6.dp)
+                    .semantics { contentDescription = "Spieleinstellungen" },
+            ) {
+                Text(text = "\u2699", color = TitleColor, style = MaterialTheme.typography.headlineMedium)
+            }
         }
+    }
+
+    if (showSettings) {
+        GameSettingsDialog(
+            textsPerCard = uiState.texteProKarte,
+            defaultTextsPerCard = uiState.standardTexteProKarte,
+            developerMode = developerMode,
+            onResetSeenCards = onResetSeenCards,
+            onResetAllCards = onResetAllCards,
+            onTextsPerCardChanged = onTextsPerCardChanged,
+            onResetTextsPerCard = onResetTextsPerCard,
+            onShowCards = {
+                showSettings = false
+                onShowCards()
+            },
+            onDismiss = { showSettings = false },
+        )
     }
 }
 
@@ -146,6 +223,11 @@ private fun GamePlayArea(
     aktuelleKarte: GameCardUiModel,
     kategorien: List<GameKategorieUiModel>,
     modifier: Modifier = Modifier,
+    swipeRegions: Collection<SwipeRegion> = emptyList(),
+    previousEnabled: Boolean = false,
+    onHighlightedTargetChanged: (CardSwipeTarget?) -> Unit = {},
+    onInteractionStateChanged: (Boolean) -> Unit = {},
+    onSwipeTargetSelected: (CardSwipeTarget) -> Unit = {},
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
     Column(
@@ -172,18 +254,29 @@ private fun GamePlayArea(
                 .weight(1f),
             contentAlignment = Alignment.Center,
         ) {
-            GameCard(
-                kartentexte = aktuelleKarte.kartentexte,
+            SwipeableGameCard(
                 cardInstanceId = aktuelleKarte.instanceId,
-                textPanelColors = aktuelleKarte.textPanelColors(kategorien),
-                onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
+                swipeRegions = swipeRegions,
+                previousEnabled = previousEnabled,
+                onHighlightedTargetChanged = onHighlightedTargetChanged,
+                onInteractionStateChanged = onInteractionStateChanged,
+                onTargetSelected = onSwipeTargetSelected,
                 modifier = Modifier
                     .widthIn(max = 560.dp)
                     .heightIn(max = 720.dp)
                     .fillMaxWidth()
                     .fillMaxHeight()
                     .padding(vertical = 12.dp),
-            )
+            ) { idleEffectsEnabled ->
+                GameCard(
+                    kartentexte = aktuelleKarte.kartentexte,
+                    cardInstanceId = aktuelleKarte.instanceId,
+                    textPanelColors = aktuelleKarte.textPanelColors(kategorien),
+                    idleEffectsEnabled = idleEffectsEnabled,
+                    onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }

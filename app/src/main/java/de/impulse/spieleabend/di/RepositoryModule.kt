@@ -5,6 +5,8 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import de.impulse.spieleabend.data.GameRepositoryImpl
+import de.impulse.spieleabend.data.SharedPreferencesAppSettingsRepository
+import de.impulse.spieleabend.domain.repository.AppSettingsRepository
 import de.impulse.spieleabend.domain.repository.GameRepository
 import javax.inject.Singleton
 
@@ -17,4 +19,10 @@ interface RepositoryModule {
     fun bindGameRepository(
         implementation: GameRepositoryImpl,
     ): GameRepository
+
+    @Binds
+    @Singleton
+    fun bindAppSettingsRepository(
+        implementation: SharedPreferencesAppSettingsRepository,
+    ): AppSettingsRepository
 }

@@ -42,4 +42,7 @@ internal val PreviewUiState = GameUiState(
             name = "Finale",
         ),
     ),
+    texteProKarte = 3,
+    standardTexteProKarte = 2,
+    hasPreviousCard = true,
 )

@@ -1,10 +1,16 @@
 package de.impulse.spieleabend.data
 
 import androidx.room.withTransaction
+import de.impulse.spieleabend.data.entity.GezogeneKarteEntity
+import de.impulse.spieleabend.data.entity.GezogenerKartentextEntity
 import de.impulse.spieleabend.data.entity.KartentextEntity
 import de.impulse.spieleabend.data.entity.KategorieEntity
 import de.impulse.spieleabend.data.entity.SpielEntity
+import de.impulse.spieleabend.data.entity.SpielEinstellungEntity
 import de.impulse.spieleabend.data.mapper.toDomain
+import de.impulse.spieleabend.domain.model.CardHistoryState
+import de.impulse.spieleabend.domain.model.GezogeneKarte
+import de.impulse.spieleabend.domain.model.GezogenerKartentext
 import de.impulse.spieleabend.domain.model.Kartentext
 import de.impulse.spieleabend.domain.model.Kategorie
 import de.impulse.spieleabend.domain.model.Lokalisierung
@@ -28,11 +34,12 @@ class GameRepositoryImpl @Inject constructor(
             spielEntity(gameId).toDomain()
         }
 
-    override suspend fun applyCardDrawStateChanges(
+    override suspend fun commitCardDraw(
+        gameId: Int,
         resetSeenCategoryIds: Set<Int>,
         resetSeenAndPlayedCategoryIds: Set<Int>,
-        seenCardTextIds: Set<Int>,
-    ) {
+        card: GezogeneKarte,
+    ): CardHistoryState =
         database.withTransaction {
             val kartentextDao = database.kartentextDao()
             val seenOnlyResetCategoryIds = resetSeenCategoryIds - resetSeenAndPlayedCategoryIds
@@ -52,14 +59,62 @@ class GameRepositoryImpl @Inject constructor(
                 )
             }
 
+            val seenCardTextIds = card.kartentexte
+                .map { gezogenerKartentext -> gezogenerKartentext.kartentext.id() }
+                .toSet()
             if (seenCardTextIds.isNotEmpty()) {
                 kartentextDao.updateGesehenForKartentexte(
                     kartentextIds = seenCardTextIds.toList(),
                     gesehen = true,
                 )
             }
+
+            val kartenverlaufDao = database.kartenverlaufDao()
+            val cardInstanceId = kartenverlaufDao.insertKarte(GezogeneKarteEntity(spielId = gameId))
+            kartenverlaufDao.insertKartentexte(
+                card.kartentexte.mapIndexed { position, gezogenerKartentext ->
+                    GezogenerKartentextEntity(
+                        karteId = cardInstanceId,
+                        position = position,
+                        kartentextId = gezogenerKartentext.kartentext.id(),
+                        kategorieId = gezogenerKartentext.kategorieId,
+                    )
+                },
+            )
+            trimCardHistory(gameId)
+
+            CardHistoryState(
+                card = card,
+                instanceId = cardInstanceId,
+                hasPrevious = kartenverlaufDao.neuesteKarten(gameId, PreviousCheckLimit).size > 1,
+            )
         }
-    }
+
+    override suspend fun getCurrentCard(gameId: Int): CardHistoryState? =
+        database.withTransaction {
+            val cards = database.kartenverlaufDao().neuesteKarten(gameId, PreviousCheckLimit)
+            val currentCard = cards.firstOrNull() ?: return@withTransaction null
+            currentCard.toHistoryState(
+                spiel = spielEntity(gameId).toDomain(),
+                hasPrevious = cards.size > 1,
+            )
+        }
+
+    override suspend fun popCurrentCard(gameId: Int): CardHistoryState? =
+        database.withTransaction {
+            val kartenverlaufDao = database.kartenverlaufDao()
+            val cards = kartenverlaufDao.neuesteKarten(gameId, PreviousCheckLimit)
+            if (cards.size < PreviousCheckLimit) {
+                return@withTransaction null
+            }
+
+            kartenverlaufDao.deleteKarte(cards.first().id)
+            val remainingCards = kartenverlaufDao.neuesteKarten(gameId, PreviousCheckLimit)
+            remainingCards.first().toHistoryState(
+                spiel = spielEntity(gameId).toDomain(),
+                hasPrevious = remainingCards.size > 1,
+            )
+        }
 
     override suspend fun setCardTextsPlayedState(
         cardTextIds: Set<Int>,
@@ -77,6 +132,49 @@ class GameRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun resetSeenCards(gameId: Int) {
+        database.withTransaction {
+            spielEntity(gameId)
+            database.kartentextDao().resetGesehenFuerSpiel(gameId)
+        }
+    }
+
+    override suspend fun resetAllCards(gameId: Int) {
+        database.withTransaction {
+            spielEntity(gameId)
+            database.kartentextDao().resetAlleFuerSpiel(gameId)
+        }
+    }
+
+    override suspend fun resetAllCardsForAllGames() {
+        database.withTransaction {
+            database.kartentextDao().resetAlle()
+        }
+    }
+
+    override suspend fun setTextsPerCardOverride(
+        gameId: Int,
+        value: Int?,
+    ) {
+        require(value == null || value in AllowedTextsPerCard) {
+            "Die Anzahl der Kartentexte pro Karte muss zwischen 1 und 5 liegen."
+        }
+
+        database.withTransaction {
+            spielEntity(gameId)
+            if (value == null) {
+                database.spielEinstellungDao().delete(gameId)
+            } else {
+                database.spielEinstellungDao().upsert(
+                    SpielEinstellungEntity(
+                        spielId = gameId,
+                        texteProKarteOverride = value,
+                    ),
+                )
+            }
+        }
+    }
+
     private suspend fun spielEntity(gameId: Int): SpielEntity {
         val spielDao = database.spielDao()
 
@@ -87,13 +185,62 @@ class GameRepositoryImpl @Inject constructor(
 
     private suspend fun SpielEntity.toDomain(): Spiel {
         val kategorien = kategorien(lokalisierungId)
+        val texteProKarteOverride = database.spielEinstellungDao()
+            .einstellung(lokalisierungId)
+            ?.texteProKarteOverride
 
         return toDomain(
             lokalisierung = lokalisierung(lokalisierungId),
             originaleKategorien = kategorien.originale,
             hinzugefuegteKategorien = kategorien.hinzugefuegte,
             inaktiveKategorien = kategorien.inaktive,
+            texteProKarteOverride = texteProKarteOverride,
         )
+    }
+
+    private suspend fun GezogeneKarteEntity.toHistoryState(
+        spiel: Spiel,
+        hasPrevious: Boolean,
+    ): CardHistoryState {
+        val kategorienById =
+            (spiel.originaleKategorien + spiel.hinzugefuegteKategorien)
+                .associateBy { kategorie -> kategorie.id() }
+        val card =
+            GezogeneKarte(
+                database.kartenverlaufDao().kartentexte(id).map { cardTextEntity ->
+                    val kategorie = requireNotNull(kategorienById[cardTextEntity.kategorieId]) {
+                        "Die Kategorie ${cardTextEntity.kategorieId} fehlt für die gespeicherte Karte $id."
+                    }
+                    val kartentext = requireNotNull(
+                        (kategorie.originaleKartentexte + kategorie.hinzugefuegteKartentexte)
+                            .firstOrNull { kartentext -> kartentext.id() == cardTextEntity.kartentextId },
+                    ) {
+                        "Der Kartentext ${cardTextEntity.kartentextId} fehlt für die gespeicherte Karte $id."
+                    }
+
+                    GezogenerKartentext(
+                        kartentext = kartentext,
+                        kategorieId = cardTextEntity.kategorieId,
+                    )
+                },
+            )
+
+        return CardHistoryState(
+            card = card,
+            instanceId = id,
+            hasPrevious = hasPrevious,
+        )
+    }
+
+    private suspend fun trimCardHistory(gameId: Int) {
+        val kartenverlaufDao = database.kartenverlaufDao()
+        val oldCardIds = kartenverlaufDao.aeltereKartenIds(
+            spielId = gameId,
+            behalten = MaxStoredCards,
+        )
+        if (oldCardIds.isNotEmpty()) {
+            kartenverlaufDao.deleteKarten(oldCardIds)
+        }
     }
 
     private suspend fun kategorien(spielId: Int): KategorienSets {
@@ -199,4 +346,10 @@ class GameRepositoryImpl @Inject constructor(
         val hinzugefuegte: Set<Kartentext>,
         val inaktive: Set<Kartentext>,
     )
+
+    private companion object {
+        const val MaxStoredCards = 11
+        const val PreviousCheckLimit = 2
+        val AllowedTextsPerCard = 1..5
+    }
 }

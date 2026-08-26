@@ -6,4 +6,6 @@ import de.impulse.spieleabend.domain.model.Spiel
 data class DrawCardResult(
     val spiel: Spiel,
     val karte: GezogeneKarte,
+    val instanceId: Long,
+    val hasPrevious: Boolean,
 )

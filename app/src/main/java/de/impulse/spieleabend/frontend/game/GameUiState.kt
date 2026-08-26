@@ -22,6 +22,9 @@ data class GameUiState(
     val spielName: String,
     val aktuelleKarte: GameCardUiModel,
     val kategorien: List<GameKategorieUiModel>,
+    val texteProKarte: Int,
+    val standardTexteProKarte: Int,
+    val hasPreviousCard: Boolean,
 )
 
 @Immutable
@@ -48,6 +51,7 @@ internal fun Spiel.toGameUiState(
     aktuelleKarte: GezogeneKarte,
     sprache: Sprache,
     cardInstanceId: Long,
+    hasPreviousCard: Boolean = false,
 ): GameUiState =
     GameUiState(
         spielName = text(sprache),
@@ -58,6 +62,9 @@ internal fun Spiel.toGameUiState(
                 name = kategorie.text(sprache),
             )
         },
+        texteProKarte = texteProKarte,
+        standardTexteProKarte = standardTexteProKarte,
+        hasPreviousCard = hasPreviousCard,
     )
 
 private fun GezogeneKarte.toGameCardUiModel(
@@ -103,4 +110,11 @@ internal fun GameUiState.withCardTextPlayedState(
                         }
                     },
             ),
+    )
+
+internal fun GameUiState.withAllCardTextsUnplayed(): GameUiState =
+    copy(
+        aktuelleKarte = aktuelleKarte.copy(
+            kartentexte = aktuelleKarte.kartentexte.map { it.copy(gespielt = false) },
+        ),
     )

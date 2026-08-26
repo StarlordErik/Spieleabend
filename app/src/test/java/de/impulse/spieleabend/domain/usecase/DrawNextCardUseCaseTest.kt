@@ -1,6 +1,9 @@
 package de.impulse.spieleabend.domain.usecase
 
 import de.impulse.spieleabend.common.Sprache
+import de.impulse.spieleabend.domain.model.CardHistoryState
+import de.impulse.spieleabend.domain.model.GezogeneKarte
+import de.impulse.spieleabend.domain.model.GezogenerKartentext
 import de.impulse.spieleabend.domain.model.Kartentext
 import de.impulse.spieleabend.domain.model.Kategorie
 import de.impulse.spieleabend.domain.model.Lokalisierung
@@ -14,6 +17,47 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DrawNextCardUseCaseTest {
+    @Test
+    fun previousPopsCurrentCardsAndANewDrawCreatesANewBranch() = runBlocking {
+        val repository = FakeGameRepository(spiel(kategorie(id = 1, kartentext(id = 101))))
+        listOf(1, 2, 3, 4, 5).forEach { id -> repository.commit(card(id)) }
+
+        assertEquals(4, repository.popCurrentCard(10)?.card?.singleId())
+        assertEquals(3, repository.popCurrentCard(10)?.card?.singleId())
+
+        repository.commit(card(6))
+        repository.commit(card(7))
+
+        assertEquals(7, repository.getCurrentCard(10)?.card?.singleId())
+        assertEquals(
+            listOf(6, 3, 2, 1),
+            buildList {
+                while (true) {
+                    val previous = repository.popCurrentCard(10) ?: break
+                    add(previous.card.singleId())
+                }
+            },
+        )
+    }
+
+    @Test
+    fun historyKeepsCurrentAndTenPreviousCards() = runBlocking {
+        val repository = FakeGameRepository(spiel(kategorie(id = 1, kartentext(id = 101))))
+        (1..12).forEach { id -> repository.commit(card(id)) }
+
+        assertEquals(12, repository.getCurrentCard(10)?.card?.singleId())
+        assertEquals(
+            (11 downTo 2).toList(),
+            buildList {
+                while (true) {
+                    val previous = repository.popCurrentCard(10) ?: break
+                    add(previous.card.singleId())
+                }
+            },
+        )
+        assertFalse(repository.getCurrentCard(10)?.hasPrevious ?: true)
+    }
+
     @Test
     fun drawFromCategoryZiehtNurUngeseheneUndUngespielteKartentexte() = runBlocking {
         val repository =
@@ -332,10 +376,25 @@ class DrawNextCardUseCaseTest {
             ogSprache = Sprache.DE,
         )
 
+    private fun card(id: Int): GezogeneKarte =
+        GezogeneKarte(
+            kartentexte =
+                listOf(
+                    GezogenerKartentext(
+                        kartentext = kartentext(id),
+                        kategorieId = 1,
+                    ),
+                ),
+        )
+
+    private fun GezogeneKarte.singleId(): Int = kartentexte.single().kartentext.id()
+
     private inner class FakeGameRepository(
         initialSpiel: Spiel,
     ) : GameRepository {
         private var spiel: Spiel = initialSpiel
+        private val history = mutableListOf<CardHistoryState>()
+        private var nextInstanceId = 1L
 
         var lastResetSeenCategoryIds: Set<Int> = emptySet()
             private set
@@ -353,11 +412,13 @@ class DrawNextCardUseCaseTest {
 
         override suspend fun getGame(gameId: Int): Spiel = spiel
 
-        override suspend fun applyCardDrawStateChanges(
+        override suspend fun commitCardDraw(
+            gameId: Int,
             resetSeenCategoryIds: Set<Int>,
             resetSeenAndPlayedCategoryIds: Set<Int>,
-            seenCardTextIds: Set<Int>,
-        ) {
+            card: GezogeneKarte,
+        ): CardHistoryState {
+            val seenCardTextIds = card.kartentexte.map { it.kartentext.id() }.toSet()
             lastResetSeenCategoryIds = resetSeenCategoryIds
             lastResetSeenAndPlayedCategoryIds = resetSeenAndPlayedCategoryIds
             lastSeenCardTextIds = seenCardTextIds
@@ -367,6 +428,31 @@ class DrawNextCardUseCaseTest {
                     resetSeenAndPlayedCategoryIds = resetSeenAndPlayedCategoryIds,
                     seenCardTextIds = seenCardTextIds,
                 )
+            val state = CardHistoryState(
+                card = card,
+                instanceId = nextInstanceId++,
+                hasPrevious = history.isNotEmpty(),
+            )
+            history.add(0, state)
+            while (history.size > 11) history.removeLast()
+            return state
+        }
+
+        suspend fun commit(card: GezogeneKarte): CardHistoryState =
+            commitCardDraw(
+                gameId = 10,
+                resetSeenCategoryIds = emptySet(),
+                resetSeenAndPlayedCategoryIds = emptySet(),
+                card = card,
+            )
+
+        override suspend fun getCurrentCard(gameId: Int): CardHistoryState? =
+            history.firstOrNull()?.copy(hasPrevious = history.size > 1)
+
+        override suspend fun popCurrentCard(gameId: Int): CardHistoryState? {
+            if (history.size < 2) return null
+            history.removeAt(0)
+            return history.first().copy(hasPrevious = history.size > 1)
         }
 
         override suspend fun setCardTextsPlayedState(
@@ -378,6 +464,16 @@ class DrawNextCardUseCaseTest {
                 cardTextIds = cardTextIds,
                 gespielt = gespielt,
             )
+        }
+
+        override suspend fun resetSeenCards(gameId: Int) = Unit
+
+        override suspend fun resetAllCards(gameId: Int) = Unit
+
+        override suspend fun resetAllCardsForAllGames() = Unit
+
+        override suspend fun setTextsPerCardOverride(gameId: Int, value: Int?) {
+            spiel = spiel.copy(texteProKarte = value ?: spiel.standardTexteProKarte)
         }
     }
 

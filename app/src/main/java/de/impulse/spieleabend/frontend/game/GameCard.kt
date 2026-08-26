@@ -57,22 +57,25 @@ internal fun GameCard(
     cardInstanceId: Long,
     modifier: Modifier = Modifier,
     textPanelColors: List<Color> = emptyList(),
+    idleEffectsEnabled: Boolean = true,
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
     val tooltipState = rememberPlayedTooltipState(cardInstanceId)
     val einzelnerKartentext = kartentexte.singleOrNull()
 
-    CardIdlePlayedEffect(
-        cardInstanceId = cardInstanceId,
-        kartentext = einzelnerKartentext,
-        onKartentextPlayed = { kartentextId ->
-            tooltipState.show()
-            onKartentextPlayedStateChanged(
-                kartentextId,
-                true,
-            )
-        },
-    )
+    if (idleEffectsEnabled) {
+        CardIdlePlayedEffect(
+            cardInstanceId = cardInstanceId,
+            kartentext = einzelnerKartentext,
+            onKartentextPlayed = { kartentextId ->
+                tooltipState.show()
+                onKartentextPlayedStateChanged(
+                    kartentextId,
+                    true,
+                )
+            },
+        )
+    }
 
     Surface(
         modifier = modifier,

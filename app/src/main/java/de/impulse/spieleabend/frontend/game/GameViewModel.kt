@@ -10,26 +10,41 @@ import de.impulse.spieleabend.domain.model.Spiel
 import de.impulse.spieleabend.domain.usecase.DrawCardResult
 import de.impulse.spieleabend.domain.usecase.DrawNextCardFromCategoryUseCase
 import de.impulse.spieleabend.domain.usecase.DrawNextRandomCardUseCase
+import de.impulse.spieleabend.domain.usecase.GetOrDrawInitialCardUseCase
+import de.impulse.spieleabend.domain.usecase.ResetAllCardsForGameUseCase
+import de.impulse.spieleabend.domain.usecase.ResetSeenCardsUseCase
+import de.impulse.spieleabend.domain.usecase.ResetTextsPerCardUseCase
 import de.impulse.spieleabend.domain.usecase.SetCardTextPlayedStateUseCase
+import de.impulse.spieleabend.domain.usecase.SetTextsPerCardUseCase
+import de.impulse.spieleabend.domain.usecase.ShowPreviousCardUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.Locale
 import java.util.Locale.ROOT
 import javax.inject.Inject
 
 @HiltViewModel
+@Suppress("TooManyFunctions")
 class GameViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val drawNextCardFromCategory: DrawNextCardFromCategoryUseCase,
     private val drawNextRandomCard: DrawNextRandomCardUseCase,
+    private val getOrDrawInitialCard: GetOrDrawInitialCardUseCase,
+    private val showPreviousCard: ShowPreviousCardUseCase,
     private val setCardTextPlayedState: SetCardTextPlayedStateUseCase,
+    private val resetSeenCardsUseCase: ResetSeenCardsUseCase,
+    private val resetAllCardsUseCase: ResetAllCardsForGameUseCase,
+    private val setTextsPerCardUseCase: SetTextsPerCardUseCase,
+    private val resetTextsPerCardUseCase: ResetTextsPerCardUseCase,
 ) : ViewModel() {
     private val gameIdArg: String? = savedStateHandle[GAME_ID_ARG]
     private val gameId: Int = gameIdArg?.toIntOrNull() ?: DefaultGameId
     private val sprache: Sprache = spracheAusLocale(Locale.getDefault())
-    private var nextCardInstanceId: Long = 0
+    private val cardChangeMutex = Mutex()
 
     private val _uiState = MutableStateFlow<GameScreenUiState>(GameScreenUiState.Loading)
 
@@ -37,25 +52,62 @@ class GameViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            showCard(drawNextRandomCard(gameId))
+            cardChangeMutex.withLock {
+                showCard(getOrDrawInitialCard(gameId))
+            }
         }
     }
 
     fun selectKategorie(kategorieId: Int) {
         viewModelScope.launch {
-            showCard(
-                drawNextCardFromCategory(
-                    gameId = gameId,
-                    kategorieId = kategorieId,
-                ),
-            )
+            cardChangeMutex.withLock {
+                showCard(
+                    drawNextCardFromCategory(
+                        gameId = gameId,
+                        kategorieId = kategorieId,
+                    ),
+                )
+            }
         }
     }
 
     fun selectRandom() {
         viewModelScope.launch {
-            showCard(drawNextRandomCard(gameId))
+            cardChangeMutex.withLock {
+                showCard(drawNextRandomCard(gameId))
+            }
         }
+    }
+
+    fun selectPrevious() {
+        viewModelScope.launch {
+            cardChangeMutex.withLock {
+                showPreviousCard(gameId)?.let(::showCard)
+            }
+        }
+    }
+
+    fun resetSeenCards() {
+        viewModelScope.launch { resetSeenCardsUseCase(gameId) }
+    }
+
+    fun resetAllCards() {
+        val currentState = _uiState.value as? GameScreenUiState.Loaded
+        if (currentState != null) {
+            _uiState.value = GameScreenUiState.Loaded(currentState.game.withAllCardTextsUnplayed())
+        }
+        viewModelScope.launch { resetAllCardsUseCase(gameId) }
+    }
+
+    fun setTextsPerCard(value: Int) {
+        updateTextCount(value)
+        viewModelScope.launch { setTextsPerCardUseCase(gameId, value) }
+    }
+
+    fun resetTextsPerCard() {
+        val state = _uiState.value as? GameScreenUiState.Loaded ?: return
+        updateTextCount(state.game.standardTexteProKarte)
+        viewModelScope.launch { resetTextsPerCardUseCase(gameId) }
     }
 
     fun setKartentextGespielt(
@@ -89,15 +141,31 @@ class GameViewModel @Inject constructor(
     private fun showCard(drawCardResult: DrawCardResult) {
         val loadedSpiel = drawCardResult.spiel
         _uiState.value = GameScreenUiState.Loaded(
-            game = loadedSpiel.toUiState(aktuelleKarte = drawCardResult.karte),
+            game = loadedSpiel.toUiState(
+                aktuelleKarte = drawCardResult.karte,
+                cardInstanceId = drawCardResult.instanceId,
+                hasPreviousCard = drawCardResult.hasPrevious,
+            ),
         )
     }
 
-    private fun Spiel.toUiState(aktuelleKarte: GezogeneKarte): GameUiState =
+    private fun updateTextCount(value: Int) {
+        val state = _uiState.value as? GameScreenUiState.Loaded ?: return
+        _uiState.value = GameScreenUiState.Loaded(
+            state.game.copy(texteProKarte = value.coerceIn(MIN_TEXTS_PER_CARD, MAX_TEXTS_PER_CARD)),
+        )
+    }
+
+    private fun Spiel.toUiState(
+        aktuelleKarte: GezogeneKarte,
+        cardInstanceId: Long,
+        hasPreviousCard: Boolean,
+    ): GameUiState =
         toGameUiState(
             aktuelleKarte = aktuelleKarte,
             sprache = sprache,
-            cardInstanceId = nextCardInstanceId++,
+            cardInstanceId = cardInstanceId,
+            hasPreviousCard = hasPreviousCard,
         )
 
     private fun spracheAusLocale(locale: Locale): Sprache =
@@ -107,5 +175,7 @@ class GameViewModel @Inject constructor(
 
     private companion object {
         const val DefaultGameId = 1
+        const val MIN_TEXTS_PER_CARD = 1
+        const val MAX_TEXTS_PER_CARD = 5
     }
 }

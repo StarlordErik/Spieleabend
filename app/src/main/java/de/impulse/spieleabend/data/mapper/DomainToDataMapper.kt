@@ -22,7 +22,7 @@ internal fun Spiel.toEntity(): SpielEntity =
         selbstErstellt = selbstErstellt,
         favorit = favorit,
         bildDateiname = bildDateiname,
-        texteProKarte = texteProKarte,
+        texteProKarte = standardTexteProKarte,
     )
 
 internal fun Kategorie.toEntity(): KategorieEntity =

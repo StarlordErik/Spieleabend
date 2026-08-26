@@ -3,14 +3,19 @@ package de.impulse.spieleabend.data
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import de.impulse.spieleabend.data.dao.KartentextDao
+import de.impulse.spieleabend.data.dao.KartenverlaufDao
 import de.impulse.spieleabend.data.dao.KategorieDao
 import de.impulse.spieleabend.data.dao.LokalisierungDao
 import de.impulse.spieleabend.data.dao.SpielDao
+import de.impulse.spieleabend.data.dao.SpielEinstellungDao
+import de.impulse.spieleabend.data.entity.GezogeneKarteEntity
+import de.impulse.spieleabend.data.entity.GezogenerKartentextEntity
 import de.impulse.spieleabend.data.entity.KartentextEntity
 import de.impulse.spieleabend.data.entity.KategorieEntity
 import de.impulse.spieleabend.data.entity.KategorieXKartentextEntity
 import de.impulse.spieleabend.data.entity.LokalisierungEntity
 import de.impulse.spieleabend.data.entity.SpielEntity
+import de.impulse.spieleabend.data.entity.SpielEinstellungEntity
 import de.impulse.spieleabend.data.entity.SpielXKategorieEntity
 import de.impulse.spieleabend.data.entity.TranslationEntity
 
@@ -23,9 +28,12 @@ import de.impulse.spieleabend.data.entity.TranslationEntity
         TranslationEntity::class,
         SpielXKategorieEntity::class,
         KategorieXKartentextEntity::class,
+        GezogeneKarteEntity::class,
+        GezogenerKartentextEntity::class,
+        SpielEinstellungEntity::class,
     ],
-    version = 2,
-    exportSchema = false,
+    version = 3,
+    exportSchema = true,
 )
 abstract class SpieleabendDatabase : RoomDatabase() {
     abstract fun spielDao(): SpielDao
@@ -35,4 +43,8 @@ abstract class SpieleabendDatabase : RoomDatabase() {
     abstract fun kartentextDao(): KartentextDao
 
     abstract fun lokalisierungDao(): LokalisierungDao
+
+    abstract fun kartenverlaufDao(): KartenverlaufDao
+
+    abstract fun spielEinstellungDao(): SpielEinstellungDao
 }

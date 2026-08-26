@@ -9,9 +9,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.impulse.spieleabend.data.SpieleabendDatabase
 import de.impulse.spieleabend.data.dao.KartentextDao
+import de.impulse.spieleabend.data.dao.KartenverlaufDao
 import de.impulse.spieleabend.data.dao.KategorieDao
 import de.impulse.spieleabend.data.dao.LokalisierungDao
 import de.impulse.spieleabend.data.dao.SpielDao
+import de.impulse.spieleabend.data.dao.SpielEinstellungDao
+import de.impulse.spieleabend.data.migration.Migration2To3
 import javax.inject.Singleton
 
 @Module
@@ -28,6 +31,7 @@ object DatabaseModule {
             DATABASE_NAME,
         )
             .createFromAsset(DATABASE_ASSET_PATH)
+            .addMigrations(Migration2To3)
             // `fallbackToDestructiveMigration()` already covers downgrades.
             // Chaining `fallbackToDestructiveMigrationOnDowngrade()` afterwards would
             // re-enable required migrations for upgrades and break 1 -> 2 installs.
@@ -49,6 +53,14 @@ object DatabaseModule {
     @Provides
     fun provideLokalisierungDao(database: SpieleabendDatabase): LokalisierungDao =
         database.lokalisierungDao()
+
+    @Provides
+    fun provideKartenverlaufDao(database: SpieleabendDatabase): KartenverlaufDao =
+        database.kartenverlaufDao()
+
+    @Provides
+    fun provideSpielEinstellungDao(database: SpieleabendDatabase): SpielEinstellungDao =
+        database.spielEinstellungDao()
 
     private const val DATABASE_NAME = "spieleabend.db"
     private const val DATABASE_ASSET_PATH = "spieleabend.db"

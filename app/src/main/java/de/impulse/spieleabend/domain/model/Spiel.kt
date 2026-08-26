@@ -10,6 +10,7 @@ data class Spiel(
     override val favorit: Boolean = false,
     val bildDateiname: String? = null,
     val texteProKarte: Int = 1,
+    val standardTexteProKarte: Int = texteProKarte,
 ) : Spielelement(lokalisierung, inaktiv, selbstErstellt, favorit) {
     val kategorien: Set<Kategorie>
         get() {
@@ -23,6 +24,9 @@ data class Spiel(
     init {
         require(texteProKarte > 0) {
             "Ein Spiel muss mindestens einen Kartentext pro Karte anzeigen."
+        }
+        require(standardTexteProKarte > 0) {
+            "Der Standard eines Spiels muss mindestens einen Kartentext pro Karte anzeigen."
         }
 
         val originaleKategorieIds = originaleKategorien.map { kategorie -> kategorie.id() }

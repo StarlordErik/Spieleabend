@@ -16,6 +16,7 @@ internal fun SpielEntity.toDomain(
     originaleKategorien: Set<Kategorie>,
     hinzugefuegteKategorien: Set<Kategorie>,
     inaktiveKategorien: Set<Kategorie>,
+    texteProKarteOverride: Int? = null,
 ): Spiel =
     Spiel(
         lokalisierung = lokalisierung,
@@ -26,7 +27,8 @@ internal fun SpielEntity.toDomain(
         selbstErstellt = selbstErstellt,
         favorit = favorit,
         bildDateiname = bildDateiname,
-        texteProKarte = texteProKarte,
+        texteProKarte = texteProKarteOverride ?: texteProKarte,
+        standardTexteProKarte = texteProKarte,
     )
 
 internal fun KategorieEntity.toDomain(

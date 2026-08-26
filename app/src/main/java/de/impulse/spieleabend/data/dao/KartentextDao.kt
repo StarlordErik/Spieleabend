@@ -75,4 +75,45 @@ interface KartentextDao {
         gesehen: Boolean,
         gespielt: Boolean,
     )
+
+    @Query(
+        """
+        UPDATE kartentext
+        SET gesehen = 0
+        WHERE gespielt = 0
+          AND lokalisierung_id IN (
+              SELECT kategorie_x_kartentext.kartentext_id
+              FROM kategorie_x_kartentext
+              INNER JOIN spiel_x_kategorie
+                  ON spiel_x_kategorie.kategorie_id = kategorie_x_kartentext.kategorie_id
+              WHERE spiel_x_kategorie.spiel_id = :spielId
+          )
+        """,
+    )
+    suspend fun resetGesehenFuerSpiel(spielId: Int)
+
+    @Query(
+        """
+        UPDATE kartentext
+        SET gesehen = 0,
+            gespielt = 0
+        WHERE lokalisierung_id IN (
+              SELECT kategorie_x_kartentext.kartentext_id
+              FROM kategorie_x_kartentext
+              INNER JOIN spiel_x_kategorie
+                  ON spiel_x_kategorie.kategorie_id = kategorie_x_kartentext.kategorie_id
+              WHERE spiel_x_kategorie.spiel_id = :spielId
+          )
+        """,
+    )
+    suspend fun resetAlleFuerSpiel(spielId: Int)
+
+    @Query(
+        """
+        UPDATE kartentext
+        SET gesehen = 0,
+            gespielt = 0
+        """,
+    )
+    suspend fun resetAlle()
 }

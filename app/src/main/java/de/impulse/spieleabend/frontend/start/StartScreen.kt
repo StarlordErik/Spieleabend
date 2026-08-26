@@ -13,8 +13,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -28,6 +32,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -43,6 +49,7 @@ fun StartScreen(
     games: List<BoardGameShelfItem>,
     onGameClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    onSettingsClick: () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         ShelfBackground(modifier = Modifier.fillMaxSize())
@@ -55,6 +62,20 @@ fun StartScreen(
                 .fillMaxSize()
                 .padding(horizontal = 28.dp),
         )
+        IconButton(
+            onClick = onSettingsClick,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(8.dp)
+                .semantics { contentDescription = "Einstellungen" },
+        ) {
+            Text(
+                text = "\u2699",
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.headlineMedium,
+            )
+        }
     }
 }
 
