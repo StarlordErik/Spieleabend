@@ -90,6 +90,9 @@ fun GameSettingsDialog(
     textsPerCard: Int,
     defaultTextsPerCard: Int,
     developerMode: Boolean,
+    supportsFunFactsMode: Boolean = false,
+    funFactsModeEnabled: Boolean = false,
+    onFunFactsModeChanged: (Boolean) -> Unit = {},
     onResetSeenCards: () -> Unit,
     onResetAllCards: () -> Unit,
     onTextsPerCardChanged: (Int) -> Unit,
@@ -109,6 +112,25 @@ fun GameSettingsDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                if (supportsFunFactsMode) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Spielmodus", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                if (funFactsModeEnabled) "Fun Facts" else "Basic (Swipe-Karten)",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        Switch(
+                            checked = funFactsModeEnabled,
+                            onCheckedChange = onFunFactsModeChanged,
+                        )
+                    }
+                    HorizontalDivider()
+                }
                 SettingsActionRow(
                     label = "Gesehene Karten zurücksetzen",
                     onClick = onResetSeenCards,

@@ -32,12 +32,41 @@ class SharedPreferencesAppSettingsRepository @Inject constructor(
             }
         }.distinctUntilChanged()
 
+    override val funFactsModeEnabled: Flow<Boolean> =
+        booleanPreferenceFlow(FunFactsModeKey, defaultValue = true)
+
     override suspend fun setDeveloperMode(enabled: Boolean) {
         preferences.edit { putBoolean(DeveloperModeKey, enabled) }
     }
 
+    override suspend fun setFunFactsModeEnabled(enabled: Boolean) {
+        preferences.edit { putBoolean(FunFactsModeKey, enabled) }
+    }
+
+    override fun getFunFactsSession(): String? =
+        preferences.getString(FunFactsSessionKey, null)
+
+    override fun setFunFactsSession(serializedSession: String) {
+        preferences.edit { putString(FunFactsSessionKey, serializedSession) }
+    }
+
+    private fun booleanPreferenceFlow(
+        key: String,
+        defaultValue: Boolean,
+    ): Flow<Boolean> =
+        callbackFlow {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, changedKey ->
+                if (changedKey == key) trySend(sharedPreferences.getBoolean(key, defaultValue))
+            }
+            trySend(preferences.getBoolean(key, defaultValue))
+            preferences.registerOnSharedPreferenceChangeListener(listener)
+            awaitClose { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
+
     private companion object {
         const val PreferencesName = "app_settings"
         const val DeveloperModeKey = "developer_mode"
+        const val FunFactsModeKey = "fun_facts_mode_enabled"
+        const val FunFactsSessionKey = "fun_facts_session"
     }
 }

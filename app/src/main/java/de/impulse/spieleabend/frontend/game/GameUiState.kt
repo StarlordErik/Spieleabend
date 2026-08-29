@@ -19,12 +19,14 @@ sealed interface GameScreenUiState {
 
 @Immutable
 data class GameUiState(
+    val spielId: Int,
     val spielName: String,
     val aktuelleKarte: GameCardUiModel,
     val kategorien: List<GameKategorieUiModel>,
     val texteProKarte: Int,
     val standardTexteProKarte: Int,
     val hasPreviousCard: Boolean,
+    val funFactsModeEnabled: Boolean = true,
 )
 
 @Immutable
@@ -54,6 +56,7 @@ internal fun Spiel.toGameUiState(
     hasPreviousCard: Boolean = false,
 ): GameUiState =
     GameUiState(
+        spielId = id(),
         spielName = text(sprache),
         aktuelleKarte = aktuelleKarte.toGameCardUiModel(sprache, cardInstanceId),
         kategorien = kategorien.map { kategorie ->

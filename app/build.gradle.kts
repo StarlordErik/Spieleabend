@@ -11,9 +11,7 @@ plugins {
 android {
     namespace = "de.impulse.spieleabend"
     compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
+        version = release(37)
     }
 
     defaultConfig {
@@ -36,6 +34,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -51,8 +50,10 @@ android {
     lint {
         abortOnError = true
         checkDependencies = true
-        htmlReport = true
-        xmlReport = true
+    }
+
+    packaging {
+        jniLibs.keepDebugSymbols += "**/libandroidx.graphics.path.so"
     }
 }
 

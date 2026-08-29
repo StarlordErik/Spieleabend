@@ -64,6 +64,8 @@ fun GameScreen(
                 onTextsPerCardChanged = viewModel::setTextsPerCard,
                 onResetTextsPerCard = viewModel::resetTextsPerCard,
                 onKartentextPlayedStateChanged = viewModel::setKartentextGespielt,
+                onFunFactsModeChanged = viewModel::setFunFactsModeEnabled,
+                funFactsSession = viewModel.funFactsSession,
             )
         }
     }
@@ -103,7 +105,7 @@ private fun GameLoadingContent(
 }
 
 @Composable
-@Suppress("LongMethod")
+@Suppress("CyclomaticComplexMethod", "LongMethod")
 private fun GameScreenContent(
     uiState: GameUiState,
     modifier: Modifier = Modifier,
@@ -117,6 +119,8 @@ private fun GameScreenContent(
     onTextsPerCardChanged: (Int) -> Unit = {},
     onResetTextsPerCard: () -> Unit = {},
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
+    onFunFactsModeChanged: (Boolean) -> Unit = {},
+    funFactsSession: FunFactsSession? = null,
 ) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var highlightedTarget by remember { mutableStateOf<CardSwipeTarget?>(null) }
@@ -134,45 +138,80 @@ private fun GameScreenContent(
                 ExpandedHorizontalPadding
             }
 
-            GamePlayArea(
-                spielName = uiState.spielName,
-                aktuelleKarte = uiState.aktuelleKarte,
-                kategorien = uiState.kategorien,
-                swipeRegions = tabBounds.map { (target, bounds) -> SwipeRegion(target, bounds) },
-                previousEnabled = uiState.hasPreviousCard,
-                onHighlightedTargetChanged = { highlightedTarget = it },
-                onInteractionStateChanged = { swipeInteractionLocked = it },
-                onSwipeTargetSelected = { target ->
-                    when (target) {
-                        CardSwipeTarget.Random -> onRandomSelected()
-                        CardSwipeTarget.Previous -> onPreviousSelected()
-                        is CardSwipeTarget.Category -> onKategorieSelected(target.id)
-                    }
-                },
-                onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = horizontalPadding,
-                        top = 24.dp,
-                        end = horizontalPadding,
-                        bottom = 24.dp,
-                    ),
-            )
+            val funFactsActive = uiState.spielId == FUN_FACTS_GAME_ID && uiState.funFactsModeEnabled
+            val activeFunFactsSession = funFactsSession ?: remember { FunFactsSession() }
+            val funFactsHorizontalPadding =
+                if (activeFunFactsSession.selectingQuestion) horizontalPadding else 8.dp
 
-            CategoryTabs(
-                kategorien = uiState.kategorien,
-                modifier = Modifier.fillMaxSize(),
-                highlightedTarget = highlightedTarget,
-                previousEnabled = uiState.hasPreviousCard,
-                interactionsEnabled = !swipeInteractionLocked,
-                onKategorieSelected = { kategorieId -> onKategorieSelected(kategorieId) },
-                onRandomSelected = onRandomSelected,
-                onPreviousSelected = onPreviousSelected,
-                onTabBoundsChanged = { target, bounds ->
-                    if (tabBounds[target] != bounds) tabBounds[target] = bounds
-                },
-            )
+            if (funFactsActive) {
+                FunFactsPlayArea(
+                    uiState = uiState,
+                    session = activeFunFactsSession,
+                    swipeRegions = tabBounds.map { (target, bounds) -> SwipeRegion(target, bounds) },
+                    previousEnabled = uiState.hasPreviousCard,
+                    onHighlightedTargetChanged = { highlightedTarget = it },
+                    onInteractionStateChanged = { swipeInteractionLocked = it },
+                    onSwipeTargetSelected = { target ->
+                        when (target) {
+                            CardSwipeTarget.Random -> onRandomSelected()
+                            CardSwipeTarget.Previous -> onPreviousSelected()
+                            is CardSwipeTarget.Category -> onKategorieSelected(target.id)
+                        }
+                    },
+                    onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
+                    onNextCard = onRandomSelected,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            start = funFactsHorizontalPadding,
+                            top = 24.dp,
+                            end = funFactsHorizontalPadding,
+                            bottom = 24.dp,
+                        ),
+                )
+            } else {
+                GamePlayArea(
+                    spielName = uiState.spielName,
+                    aktuelleKarte = uiState.aktuelleKarte,
+                    kategorien = uiState.kategorien,
+                    swipeRegions = tabBounds.map { (target, bounds) -> SwipeRegion(target, bounds) },
+                    previousEnabled = uiState.hasPreviousCard,
+                    onHighlightedTargetChanged = { highlightedTarget = it },
+                    onInteractionStateChanged = { swipeInteractionLocked = it },
+                    onSwipeTargetSelected = { target ->
+                        when (target) {
+                            CardSwipeTarget.Random -> onRandomSelected()
+                            CardSwipeTarget.Previous -> onPreviousSelected()
+                            is CardSwipeTarget.Category -> onKategorieSelected(target.id)
+                        }
+                    },
+                    onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            start = horizontalPadding,
+                            top = 24.dp,
+                            end = horizontalPadding,
+                            bottom = 24.dp,
+                        ),
+                )
+            }
+
+            if (!funFactsActive || activeFunFactsSession.selectingQuestion) {
+                CategoryTabs(
+                    kategorien = uiState.kategorien,
+                    modifier = Modifier.fillMaxSize(),
+                    highlightedTarget = highlightedTarget,
+                    previousEnabled = uiState.hasPreviousCard,
+                    interactionsEnabled = !swipeInteractionLocked,
+                    onKategorieSelected = { kategorieId -> onKategorieSelected(kategorieId) },
+                    onRandomSelected = onRandomSelected,
+                    onPreviousSelected = onPreviousSelected,
+                    onTabBoundsChanged = { target, bounds ->
+                        if (tabBounds[target] != bounds) tabBounds[target] = bounds
+                    },
+                )
+            }
 
             IconButton(
                 onClick = { showSettings = true },
@@ -191,6 +230,9 @@ private fun GameScreenContent(
             textsPerCard = uiState.texteProKarte,
             defaultTextsPerCard = uiState.standardTexteProKarte,
             developerMode = developerMode,
+            supportsFunFactsMode = uiState.spielId == FUN_FACTS_GAME_ID,
+            funFactsModeEnabled = uiState.funFactsModeEnabled,
+            onFunFactsModeChanged = onFunFactsModeChanged,
             onResetSeenCards = onResetSeenCards,
             onResetAllCards = onResetAllCards,
             onTextsPerCardChanged = onTextsPerCardChanged,
@@ -218,7 +260,7 @@ private fun GamePlayAreaPreview() {
 }
 
 @Composable
-private fun GamePlayArea(
+internal fun GamePlayArea(
     spielName: String,
     aktuelleKarte: GameCardUiModel,
     kategorien: List<GameKategorieUiModel>,
@@ -295,7 +337,7 @@ private val CompactWidthBreakpoint = 420.dp
 private val CompactHorizontalPadding = 52.dp
 private val ExpandedHorizontalPadding = 76.dp
 
-private fun GameCardUiModel.textPanelColors(kategorien: List<GameKategorieUiModel>): List<Color> =
+internal fun GameCardUiModel.textPanelColors(kategorien: List<GameKategorieUiModel>): List<Color> =
     kartentexte.map { kartentext ->
         val kategorieIndex = kategorien.indexOfFirst { kategorie ->
             kategorie.id == kartentext.kategorieId
@@ -309,3 +351,4 @@ private fun GameCardUiModel.textPanelColors(kategorien: List<GameKategorieUiMode
     }
 
 private val FallbackTextPanelColor = Color(0xFFE8E0FF)
+internal const val FUN_FACTS_GAME_ID = 149

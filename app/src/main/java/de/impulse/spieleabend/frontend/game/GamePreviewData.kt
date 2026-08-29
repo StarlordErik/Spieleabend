@@ -22,6 +22,7 @@ private val PreviewKartentexte = listOf(
 )
 
 internal val PreviewUiState = GameUiState(
+    spielId = 1,
     spielName = "Kneipenquiz",
     aktuelleKarte = GameCardUiModel(instanceId = 0, kartentexte = PreviewKartentexte),
     kategorien = listOf(
