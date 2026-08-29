@@ -125,6 +125,7 @@ private fun GameScreenContent(
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var highlightedTarget by remember { mutableStateOf<CardSwipeTarget?>(null) }
     var swipeInteractionLocked by remember { mutableStateOf(false) }
+    var funFactsQuestionTransitionActive by remember { mutableStateOf(false) }
     val tabBounds = remember { mutableStateMapOf<CardSwipeTarget, Rect>() }
 
     Surface(
@@ -140,9 +141,6 @@ private fun GameScreenContent(
 
             val funFactsActive = uiState.spielId == FUN_FACTS_GAME_ID && uiState.funFactsModeEnabled
             val activeFunFactsSession = funFactsSession ?: remember { FunFactsSession() }
-            val funFactsHorizontalPadding =
-                if (activeFunFactsSession.selectingQuestion) horizontalPadding else 8.dp
-
             if (funFactsActive) {
                 FunFactsPlayArea(
                     uiState = uiState,
@@ -159,13 +157,15 @@ private fun GameScreenContent(
                         }
                     },
                     onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
+                    onQuestionTransitionStateChanged = { active ->
+                        funFactsQuestionTransitionActive = active
+                    },
                     onNextCard = onRandomSelected,
+                    gameContentHorizontalPadding = horizontalPadding,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(
-                            start = funFactsHorizontalPadding,
                             top = 24.dp,
-                            end = funFactsHorizontalPadding,
                             bottom = 24.dp,
                         ),
                 )
@@ -197,7 +197,11 @@ private fun GameScreenContent(
                 )
             }
 
-            if (!funFactsActive || activeFunFactsSession.selectingQuestion) {
+            if (
+                !funFactsActive ||
+                activeFunFactsSession.selectingQuestion ||
+                funFactsQuestionTransitionActive
+            ) {
                 CategoryTabs(
                     kategorien = uiState.kategorien,
                     modifier = Modifier.fillMaxSize(),
@@ -270,6 +274,8 @@ internal fun GamePlayArea(
     onHighlightedTargetChanged: (CardSwipeTarget?) -> Unit = {},
     onInteractionStateChanged: (Boolean) -> Unit = {},
     onSwipeTargetSelected: (CardSwipeTarget) -> Unit = {},
+    interactionsEnabled: Boolean = true,
+    onKartentextBoundsChanged: (Int, Rect) -> Unit = { _, _ -> },
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
     Column(
@@ -315,6 +321,8 @@ internal fun GamePlayArea(
                     cardInstanceId = aktuelleKarte.instanceId,
                     textPanelColors = aktuelleKarte.textPanelColors(kategorien),
                     idleEffectsEnabled = idleEffectsEnabled,
+                    interactionsEnabled = interactionsEnabled,
+                    onKartentextBoundsChanged = onKartentextBoundsChanged,
                     onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
                     modifier = Modifier.fillMaxSize(),
                 )

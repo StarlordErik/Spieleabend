@@ -34,8 +34,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.Hyphens
@@ -58,6 +61,8 @@ internal fun GameCard(
     modifier: Modifier = Modifier,
     textPanelColors: List<Color> = emptyList(),
     idleEffectsEnabled: Boolean = true,
+    interactionsEnabled: Boolean = true,
+    onKartentextBoundsChanged: (Int, Rect) -> Unit = { _, _ -> },
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
     val tooltipState = rememberPlayedTooltipState(cardInstanceId)
@@ -87,6 +92,8 @@ internal fun GameCard(
             kartentexte = kartentexte,
             textPanelColors = textPanelColors,
             tooltipVisible = tooltipState.visible,
+            interactionsEnabled = interactionsEnabled,
+            onKartentextBoundsChanged = onKartentextBoundsChanged,
             onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
             onKartentextMarkedAsPlayed = tooltipState::show,
         )
@@ -113,6 +120,8 @@ private fun GameCardContent(
     kartentexte: List<GameKartentextUiModel>,
     textPanelColors: List<Color>,
     tooltipVisible: Boolean,
+    interactionsEnabled: Boolean = true,
+    onKartentextBoundsChanged: (Int, Rect) -> Unit = { _, _ -> },
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit,
     onKartentextMarkedAsPlayed: () -> Unit,
 ) {
@@ -132,6 +141,8 @@ private fun GameCardContent(
                         index = index,
                         kartentextCount = kartentexte.size,
                         textPanelColor = textPanelColors.getOrNull(index),
+                        interactionsEnabled = interactionsEnabled,
+                        onBoundsChanged = { bounds -> onKartentextBoundsChanged(kartentext.id, bounds) },
                         onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
                         onKartentextMarkedAsPlayed = onKartentextMarkedAsPlayed,
                         modifier = Modifier
@@ -277,12 +288,14 @@ private class PlayedTooltipState {
 }
 
 @Composable
-private fun CardTextPanel(
+internal fun CardTextPanel(
     kartentext: GameKartentextUiModel,
     index: Int,
     kartentextCount: Int,
     modifier: Modifier = Modifier,
     textPanelColor: Color? = null,
+    interactionsEnabled: Boolean = true,
+    onBoundsChanged: (Rect) -> Unit = {},
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
     onKartentextMarkedAsPlayed: () -> Unit = {},
 ) {
@@ -298,9 +311,10 @@ private fun CardTextPanel(
 
     Box(
         modifier = modifier
+            .onGloballyPositioned { coordinates -> onBoundsChanged(coordinates.boundsInRoot()) }
             .clip(RoundedCornerShape(18.dp))
             .background(backgroundColor)
-            .clickable {
+            .clickable(enabled = interactionsEnabled) {
                 val nextPlayedState = !kartentext.gespielt
                 if (nextPlayedState) {
                     onKartentextMarkedAsPlayed()

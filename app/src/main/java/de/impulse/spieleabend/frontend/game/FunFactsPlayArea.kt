@@ -2,18 +2,20 @@
 
 package de.impulse.spieleabend.frontend.game
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -24,8 +26,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,30 +38,34 @@ import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import de.impulse.spieleabend.frontend.theme.SpieleabendTheme
 import kotlin.math.abs
@@ -74,9 +82,18 @@ internal fun FunFactsPlayArea(
     onInteractionStateChanged: (Boolean) -> Unit = {},
     onSwipeTargetSelected: (CardSwipeTarget) -> Unit = {},
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
+    onQuestionTransitionStateChanged: (Boolean) -> Unit = {},
     onNextCard: () -> Unit = {},
+    gameContentHorizontalPadding: Dp = 0.dp,
 ) {
-    var fadingPreviousContent by remember { mutableStateOf(false) }
+    var playAreaBounds by remember { mutableStateOf(Rect.Zero) }
+    val cardTextBounds = remember(uiState.aktuelleKarte.instanceId) {
+        mutableStateMapOf<Int, Rect>()
+    }
+    val measuredModifier = modifier.onGloballyPositioned { coordinates ->
+        playAreaBounds = coordinates.boundsInRoot()
+    }
+
     if (session.selectingQuestion) {
         GamePlayArea(
             spielName = uiState.spielName,
@@ -89,12 +106,15 @@ internal fun FunFactsPlayArea(
             onSwipeTargetSelected = onSwipeTargetSelected,
             onKartentextPlayedStateChanged = { cardTextId, played ->
                 if (played) {
-                    fadingPreviousContent = true
+                    onQuestionTransitionStateChanged(true)
                     session.selectQuestion(cardTextId)
                 }
                 onKartentextPlayedStateChanged(cardTextId, played)
             },
-            modifier = modifier,
+            onKartentextBoundsChanged = { cardTextId, bounds ->
+                cardTextBounds[cardTextId] = bounds
+            },
+            modifier = measuredModifier.padding(horizontal = gameContentHorizontalPadding),
         )
         return
     }
@@ -109,51 +129,79 @@ internal fun FunFactsPlayArea(
             if (cardText.id == question.id) cardText.copy(gespielt = false) else cardText
         },
     )
-    var roundContentVisible by remember(question.id) { mutableStateOf(false) }
+    val transitionProgress = remember(question.id) { Animatable(0f) }
     LaunchedEffect(question.id) {
-        delay(QUESTION_SLIDE_DURATION_MILLIS)
-        roundContentVisible = true
+        onQuestionTransitionStateChanged(true)
+        try {
+            transitionProgress.snapTo(0f)
+            transitionProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(QUESTION_SLIDE_DURATION_MILLIS.toInt()),
+            )
+        } finally {
+            onQuestionTransitionStateChanged(false)
+        }
     }
 
-    Box(modifier = modifier) {
-        AnimatedVisibility(
-            visible = fadingPreviousContent,
-            exit = fadeOut(tween(QUESTION_SLIDE_DURATION_MILLIS.toInt())),
-        ) {
+    BoxWithConstraints(modifier = measuredModifier) {
+        val density = LocalDensity.current
+        val originBounds = cardTextBounds[question.id]
+        val originalWidth = with(density) { originBounds?.width?.toDp() } ?: 0.dp
+        val originalHeight = with(density) { originBounds?.height?.toDp() } ?: 0.dp
+        val compactTargetWidth = (maxWidth - SelectedQuestionHorizontalPadding * 2)
+            .coerceAtLeast(0.dp)
+            .coerceAtMost(560.dp)
+        val changesSize = uiState.aktuelleKarte.kartentexte.size < 3 || originBounds == null
+        val targetWidth = if (changesSize) compactTargetWidth else originalWidth
+        val targetHeight = if (changesSize) SelectedQuestionCompactHeight else originalHeight
+        val targetX = (maxWidth - targetWidth) / 2
+        val originX = originBounds?.let { bounds ->
+            with(density) { (bounds.left - playAreaBounds.left).toDp() }
+        } ?: targetX
+        val originY = originBounds?.let { bounds ->
+            with(density) { (bounds.top - playAreaBounds.top).toDp() }
+        } ?: (maxHeight - targetHeight)
+        val progress = transitionProgress.value
+        val animatedX = originX + (targetX - originX) * progress
+        val animatedY = originY + (0.dp - originY) * progress
+        val startWidth = originalWidth.takeIf { it > 0.dp } ?: targetWidth
+        val startHeight = originalHeight.takeIf { it > 0.dp } ?: targetHeight
+        val animatedWidth = if (changesSize) {
+            startWidth + (targetWidth - startWidth) * progress
+        } else {
+            originalWidth
+        }
+        val animatedHeight = if (changesSize) {
+            startHeight + (targetHeight - startHeight) * progress
+        } else {
+            originalHeight
+        }
+
+        if (progress < 1f) {
             GamePlayArea(
                 spielName = uiState.spielName,
                 aktuelleKarte = transitionCard,
                 kategorien = uiState.kategorien,
-                modifier = Modifier.fillMaxSize(),
+                interactionsEnabled = false,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = gameContentHorizontalPadding)
+                    .graphicsLayer { alpha = 1f - progress },
             )
         }
-        LaunchedEffect(fadingPreviousContent) {
-            if (fadingPreviousContent) fadingPreviousContent = false
-        }
+
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = progress },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-        SelectedQuestion(
-            text = question.text,
-            backgroundColor = questionColor,
-            canChange = session.players.isEmpty(),
-            modifier = Modifier.padding(horizontal = 44.dp),
-            onClick = {
-                session.reopenQuestionSelection()?.let { questionId ->
-                    onKartentextPlayedStateChanged(questionId, false)
-                }
-            },
-        )
-
-        AnimatedVisibility(
-            visible = roundContentVisible,
-            modifier = Modifier.weight(1f),
-            enter = fadeIn(tween(220)),
-        ) {
+            Spacer(modifier = Modifier.height(targetHeight))
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (session.phase == FunFactsPhase.EnterAnswer) {
@@ -170,6 +218,7 @@ internal fun FunFactsPlayArea(
                         onAnswerStrokeContinued = session.draftAnswer::continueStroke,
                         onClearAnswer = session.draftAnswer::clear,
                         onFinished = session::finishAnswer,
+                        showColorTabs = progress >= 1f,
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
@@ -209,9 +258,29 @@ internal fun FunFactsPlayArea(
                 }
             }
         }
-        }
-    }
 
+        CardTextPanel(
+            kartentext = question.copy(gespielt = false),
+            index = questionIndex,
+            kartentextCount = uiState.aktuelleKarte.kartentexte.size,
+            textPanelColor = questionColor,
+            interactionsEnabled = progress >= 1f && session.players.isEmpty(),
+            onKartentextPlayedStateChanged = { _, _ ->
+                session.reopenQuestionSelection()?.let { questionId ->
+                    onKartentextPlayedStateChanged(questionId, false)
+                }
+            },
+            modifier = Modifier
+                .offset {
+                    IntOffset(
+                        x = animatedX.roundToPx(),
+                        y = animatedY.roundToPx(),
+                    )
+                }
+                .width(animatedWidth)
+                .height(animatedHeight),
+        )
+    }
 }
 
 @Preview(showBackground = true)
@@ -220,61 +289,6 @@ private fun FunFactsPlayAreaPreview() {
     SpieleabendTheme {
         val session = remember { FunFactsSession().apply { selectQuestion(101) } }
         FunFactsPlayArea(uiState = PreviewUiState, session = session)
-    }
-}
-
-@Composable
-private fun SelectedQuestion(
-    text: String,
-    backgroundColor: Color,
-    canChange: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var visible by remember(text) { mutableStateOf(false) }
-    LaunchedEffect(text) { visible = true }
-    AnimatedVisibility(
-        visible = visible,
-        enter = slideInVertically(
-            animationSpec = tween(durationMillis = 480),
-            initialOffsetY = { height -> height * 4 },
-        ) + fadeIn(tween(durationMillis = 260)),
-    ) {
-        Surface(
-            onClick = onClick,
-            enabled = canChange,
-            modifier = modifier
-                .fillMaxWidth()
-                .heightIn(min = 112.dp),
-            shape = RoundedCornerShape(18.dp),
-            color = backgroundColor,
-            shadowElevation = 5.dp,
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
-                Text(
-                    text = text,
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color.Black,
-                    textAlign = TextAlign.Center,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
-                )
-            }
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun SelectedQuestionPreview() {
-    SpieleabendTheme {
-        SelectedQuestion(
-            text = "Wie schüchtern bist du?",
-            backgroundColor = Color(0xFF9C7AE8),
-            canChange = true,
-            onClick = {},
-        )
     }
 }
 
@@ -292,14 +306,15 @@ private fun AnswerEntry(
     onAnswerStrokeContinued: (androidx.compose.ui.geometry.Offset) -> Unit,
     onClearAnswer: () -> Unit,
     onFinished: () -> Unit,
+    showColorTabs: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
         val drawingWidthReduction =
             if (maxWidth < ColorTabCompactWidthBreakpoint) 88.dp else 136.dp
-        val drawingWidth = (maxWidth - drawingWidthReduction)
+        val drawingWidth = ((maxWidth - drawingWidthReduction)
             .coerceAtLeast(0.dp)
-            .coerceAtMost(560.dp)
+            .coerceAtMost(560.dp)) * SIGN_WIDTH_SCALE
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -307,7 +322,7 @@ private fun AnswerEntry(
             verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
         ) {
             DrawingPad(
-                label = "Name malen",
+                label = "Name:",
                 strokes = nameStrokes,
                 onStrokeStarted = onNameStrokeStarted,
                 onStrokeContinued = onNameStrokeContinued,
@@ -316,7 +331,7 @@ private fun AnswerEntry(
                     .fillMaxWidth(),
             )
             DrawingPad(
-                label = "Antwort malen",
+                label = "Antwort:",
                 strokes = answerStrokes,
                 onStrokeStarted = onAnswerStrokeStarted,
                 onStrokeContinued = onAnswerStrokeContinued,
@@ -332,12 +347,14 @@ private fun AnswerEntry(
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Fertig") }
         }
-        SideColorTabs(
-            selectedColorIndex = selectedColorIndex,
-            availableColorIndices = availableColorIndices,
-            onColorSelected = onColorSelected,
-            modifier = Modifier.fillMaxSize(),
-        )
+        if (showColorTabs) {
+            SideColorTabs(
+                selectedColorIndex = selectedColorIndex,
+                availableColorIndices = availableColorIndices,
+                onColorSelected = onColorSelected,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 }
 
@@ -429,8 +446,9 @@ private fun ColorTabColumn(
     ) {
         indices.forEach { index ->
             val available = index in availableColorIndices
+            val selected = index == selectedColorIndex && available
             val scale by animateFloatAsState(
-                targetValue = if (index == selectedColorIndex && available) 1.1f else 1f,
+                targetValue = if (selected) 1.1f else 1f,
                 animationSpec = tween(durationMillis = 90),
                 label = "color-tab-scale",
             )
@@ -441,7 +459,7 @@ private fun ColorTabColumn(
                     .graphicsLayer {
                         scaleX = scale
                         scaleY = scale
-                        alpha = if (available) 1f else 0.45f
+                        alpha = if (selected) 1f else UNSELECTED_COLOR_TAB_ALPHA
                         transformOrigin = TransformOrigin(
                             pivotFractionX = if (leftSide) 0f else 1f,
                             pivotFractionY = 0.5f,
@@ -454,7 +472,7 @@ private fun ColorTabColumn(
                             RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp)
                         },
                     )
-                    .background(SignColors[index])
+                    .background(if (available) SignColors[index] else AssignedColorTabColor)
                     .clickable(enabled = available) { onColorSelected(index) },
             )
         }
@@ -486,7 +504,7 @@ private fun DrawingPad(
                 color = Color.Black,
                 style = MaterialTheme.typography.labelLarge,
             )
-            OutlinedButton(onClick = onClear, enabled = strokes.isNotEmpty()) { Text("Löschen") }
+            Button(onClick = onClear, enabled = strokes.isNotEmpty()) { Text("Löschen") }
         }
         Surface(
             modifier = Modifier
@@ -500,16 +518,22 @@ private fun DrawingPad(
                 drawing = FunFactsDrawing(strokes),
                 modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = { position ->
-                                onStrokeStarted(position.normalized(size.width, size.height))
-                            },
-                            onDrag = { change, _ ->
+                    .pointerInput(onStrokeStarted, onStrokeContinued) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            down.consume()
+                            onStrokeStarted(down.position.normalized(size.width, size.height))
+                            var change = awaitPointerEvent().changes
+                                .firstOrNull { it.id == down.id }
+                            while (change?.pressed == true) {
                                 change.consume()
-                                onStrokeContinued(change.position.normalized(size.width, size.height))
-                            },
-                        )
+                                onStrokeContinued(
+                                    change.position.normalized(size.width, size.height),
+                                )
+                                change = awaitPointerEvent().changes
+                                    .firstOrNull { it.id == down.id }
+                            }
+                        }
                     },
             )
         }
@@ -521,7 +545,7 @@ private fun DrawingPad(
 private fun DrawingPadPreview() {
     SpieleabendTheme {
         DrawingPad(
-            label = "Name malen",
+            label = "Name:",
             strokes = listOf(
                 listOf(
                     androidx.compose.ui.geometry.Offset(0.1f, 0.2f),
@@ -557,7 +581,7 @@ private fun PositioningActions(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedButton(
+            Button(
                 onClick = onNextPlayer,
                 enabled = nextPlayerEnabled,
                 modifier = Modifier.weight(1f),
@@ -589,8 +613,12 @@ private fun RevealButtonWithHint(
             onDismissHint()
         }
     }
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Button(onClick = onReveal, modifier = Modifier.fillMaxWidth()) { Text("Aufdecken") }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(ActionButtonHeight),
+    ) {
+        Button(onClick = onReveal, modifier = Modifier.fillMaxSize()) { Text("Aufdecken") }
         AnimatedVisibility(
             visible = showHint,
             enter = fadeIn(tween(180)),
@@ -643,7 +671,7 @@ private fun PlayerSignStack(
                 active = player.id == activeSignId,
                 onMove = onMoveActiveSign,
                 modifier = Modifier
-                    .fillMaxWidth(0.82f)
+                    .fillMaxWidth(SIGN_STACK_WIDTH_FRACTION)
                     .aspectRatio(SIGN_ASPECT_RATIO),
             )
         }
@@ -838,7 +866,14 @@ private val PreviewDrawing = FunFactsDrawing(
 private val ColorTabWidth = 24.dp
 private val ColorTabSpacing = 10.dp
 private val ColorTabCompactWidthBreakpoint = 404.dp
-private const val SIGN_ASPECT_RATIO = 3.5f
+private val ActionButtonHeight = 40.dp
+private val SelectedQuestionHorizontalPadding = 44.dp
+private val SelectedQuestionCompactHeight = 112.dp
+private val AssignedColorTabColor = Color(0xFF757575)
+private const val SIGN_ASPECT_RATIO = 1.4f
+private const val SIGN_WIDTH_SCALE = 0.6f
+private const val SIGN_STACK_WIDTH_FRACTION = 0.492f
+private const val UNSELECTED_COLOR_TAB_ALPHA = 0.2f
 private const val DRAWING_STROKE_WIDTH_FRACTION = 0.045f
 private const val FIRST_PLAYER_HINT_DURATION_MILLIS = 5_000L
 private const val QUESTION_SLIDE_DURATION_MILLIS = 480L
