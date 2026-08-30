@@ -2,6 +2,10 @@
 
 package de.impulse.spieleabend.frontend.game
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -197,17 +201,23 @@ private fun GameScreenContent(
                 )
             }
 
-            if (
+            val categoryTabsVisible =
                 !funFactsActive ||
                 activeFunFactsSession.selectingQuestion ||
                 funFactsQuestionTransitionActive
+            AnimatedVisibility(
+                visible = categoryTabsVisible,
+                modifier = Modifier.fillMaxSize(),
+                enter = fadeIn(tween(CATEGORY_TAB_TRANSITION_DURATION_MILLIS)),
+                exit = fadeOut(tween(0)),
             ) {
                 CategoryTabs(
                     kategorien = uiState.kategorien,
                     modifier = Modifier.fillMaxSize(),
                     highlightedTarget = highlightedTarget,
                     previousEnabled = uiState.hasPreviousCard,
-                    interactionsEnabled = !swipeInteractionLocked,
+                    interactionsEnabled = !swipeInteractionLocked &&
+                        !funFactsQuestionTransitionActive,
                     onKategorieSelected = { kategorieId -> onKategorieSelected(kategorieId) },
                     onRandomSelected = onRandomSelected,
                     onPreviousSelected = onPreviousSelected,
@@ -344,6 +354,7 @@ private val TitleColor = Color(0xFF22201D)
 private val CompactWidthBreakpoint = 420.dp
 private val CompactHorizontalPadding = 52.dp
 private val ExpandedHorizontalPadding = 76.dp
+private const val CATEGORY_TAB_TRANSITION_DURATION_MILLIS = 480
 
 internal fun GameCardUiModel.textPanelColors(kategorien: List<GameKategorieUiModel>): List<Color> =
     kartentexte.map { kartentext ->

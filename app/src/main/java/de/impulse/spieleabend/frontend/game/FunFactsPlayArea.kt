@@ -32,8 +32,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -43,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -130,17 +129,24 @@ internal fun FunFactsPlayArea(
         },
     )
     val transitionProgress = remember(question.id) { Animatable(0f) }
-    LaunchedEffect(question.id) {
+    var returningToQuestionSelection by remember(question.id) { mutableStateOf(false) }
+    LaunchedEffect(question.id, returningToQuestionSelection) {
         onQuestionTransitionStateChanged(true)
-        try {
-            transitionProgress.snapTo(0f)
+        if (returningToQuestionSelection) {
+            transitionProgress.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(QUESTION_SLIDE_DURATION_MILLIS.toInt()),
+            )
+            session.reopenQuestionSelection()?.let { questionId ->
+                onKartentextPlayedStateChanged(questionId, false)
+            }
+        } else {
             transitionProgress.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(QUESTION_SLIDE_DURATION_MILLIS.toInt()),
             )
-        } finally {
-            onQuestionTransitionStateChanged(false)
         }
+        onQuestionTransitionStateChanged(false)
     }
 
     BoxWithConstraints(modifier = measuredModifier) {
@@ -218,7 +224,8 @@ internal fun FunFactsPlayArea(
                         onAnswerStrokeContinued = session.draftAnswer::continueStroke,
                         onClearAnswer = session.draftAnswer::clear,
                         onFinished = session::finishAnswer,
-                        showColorTabs = progress >= 1f,
+                        showColorTabs = progress >= 1f && !returningToQuestionSelection,
+                        drawingHorizontalPadding = gameContentHorizontalPadding,
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
@@ -264,11 +271,12 @@ internal fun FunFactsPlayArea(
             index = questionIndex,
             kartentextCount = uiState.aktuelleKarte.kartentexte.size,
             textPanelColor = questionColor,
-            interactionsEnabled = progress >= 1f && session.players.isEmpty(),
+            interactionsEnabled = progress >= 1f &&
+                session.players.isEmpty() &&
+                !returningToQuestionSelection,
             onKartentextPlayedStateChanged = { _, _ ->
-                session.reopenQuestionSelection()?.let { questionId ->
-                    onKartentextPlayedStateChanged(questionId, false)
-                }
+                onQuestionTransitionStateChanged(true)
+                returningToQuestionSelection = true
             },
             modifier = Modifier
                 .offset {
@@ -307,14 +315,13 @@ private fun AnswerEntry(
     onClearAnswer: () -> Unit,
     onFinished: () -> Unit,
     showColorTabs: Boolean = true,
+    drawingHorizontalPadding: Dp = 0.dp,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
-        val drawingWidthReduction =
-            if (maxWidth < ColorTabCompactWidthBreakpoint) 88.dp else 136.dp
-        val drawingWidth = ((maxWidth - drawingWidthReduction)
+        val drawingWidth = (maxWidth - drawingHorizontalPadding * 2)
             .coerceAtLeast(0.dp)
-            .coerceAtMost(560.dp)) * SIGN_WIDTH_SCALE
+            .coerceAtMost(560.dp)
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -660,20 +667,38 @@ private fun PlayerSignStack(
     onMoveActiveSign: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(
+    BoxWithConstraints(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy((-10).dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        contentAlignment = Alignment.Center,
     ) {
-        items(players, key = FunFactsPlayer::id) { player ->
-            PlayerSign(
-                player = player,
-                active = player.id == activeSignId,
-                onMove = onMoveActiveSign,
-                modifier = Modifier
-                    .fillMaxWidth(SIGN_STACK_WIDTH_FRACTION)
-                    .aspectRatio(SIGN_ASPECT_RATIO),
-            )
+        val tipGap = with(LocalDensity.current) { STACK_TIP_GAP_PX.toDp() }
+        val spacesInFullStack = MAX_SIGN_COUNT - 1
+        val stackHeightFactor = 1f +
+            CONCAVE_TIP_HEIGHT_FRACTION * spacesInFullStack
+        val signHeightByStack = (
+            maxHeight - tipGap * spacesInFullStack
+        ).coerceAtLeast(0.dp) / stackHeightFactor
+        val signHeight = minOf(signHeightByStack, maxWidth / SIGN_ASPECT_RATIO)
+        val signWidth = signHeight * SIGN_ASPECT_RATIO
+        val spacing = tipGap - signHeight * (1f - CONCAVE_TIP_HEIGHT_FRACTION)
+
+        Column(
+            modifier = Modifier.width(signWidth),
+            verticalArrangement = Arrangement.spacedBy(spacing, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            players.forEach { player ->
+                key(player.id) {
+                    PlayerSign(
+                        player = player,
+                        active = player.id == activeSignId,
+                        onMove = onMoveActiveSign,
+                        modifier = Modifier
+                            .width(signWidth)
+                            .height(signHeight),
+                    )
+                }
+            }
         }
     }
 }
@@ -865,15 +890,15 @@ private val PreviewDrawing = FunFactsDrawing(
 
 private val ColorTabWidth = 24.dp
 private val ColorTabSpacing = 10.dp
-private val ColorTabCompactWidthBreakpoint = 404.dp
 private val ActionButtonHeight = 40.dp
 private val SelectedQuestionHorizontalPadding = 44.dp
 private val SelectedQuestionCompactHeight = 112.dp
 private val AssignedColorTabColor = Color(0xFF757575)
-private const val SIGN_ASPECT_RATIO = 1.4f
-private const val SIGN_WIDTH_SCALE = 0.6f
-private const val SIGN_STACK_WIDTH_FRACTION = 0.492f
-private const val UNSELECTED_COLOR_TAB_ALPHA = 0.2f
+private const val SIGN_ASPECT_RATIO = 1.5555556f
+private const val CONCAVE_TIP_HEIGHT_FRACTION = 0.72f
+private const val MAX_SIGN_COUNT = 10
+private const val STACK_TIP_GAP_PX = 5
+private const val UNSELECTED_COLOR_TAB_ALPHA = 0.4f
 private const val DRAWING_STROKE_WIDTH_FRACTION = 0.045f
 private const val FIRST_PLAYER_HINT_DURATION_MILLIS = 5_000L
 private const val QUESTION_SLIDE_DURATION_MILLIS = 480L

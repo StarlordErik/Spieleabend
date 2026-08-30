@@ -94,6 +94,41 @@ class FunFactsSessionTest {
     }
 
     @Test
+    fun playersKeepTheirReservedColorsInTheNextRound() {
+        val session = FunFactsSession()
+        session.selectQuestion(10)
+        session.selectColor(3)
+        session.addPlayer("Ada", "10")
+        session.nextPlayer()
+        session.selectColor(7)
+        session.addPlayer("Bo", "20")
+
+        session.startNextRound()
+        session.selectQuestion(11)
+
+        assertEquals(7, session.selectedColorIndex)
+        assertFalse(3 in session.availableColorIndices)
+        session.addPlayer("Bo", "30")
+        session.nextPlayer()
+        assertEquals(3, session.selectedColorIndex)
+        assertFalse(7 in session.availableColorIndices)
+    }
+
+    @Test
+    fun reservedColorsSurviveSessionSerialization() {
+        val session = FunFactsSession()
+        session.selectQuestion(10)
+        session.selectColor(4)
+        session.addPlayer("Ada", "10")
+        session.startNextRound()
+
+        val restored = FunFactsSession.restore(session.serialize())
+        restored.selectQuestion(11)
+
+        assertEquals(4, restored.selectedColorIndex)
+    }
+
+    @Test
     fun finishedDrawingIsIndependentFromNextPlayersCanvas() {
         val session = FunFactsSession()
         session.selectQuestion(10)

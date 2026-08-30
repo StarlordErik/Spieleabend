@@ -79,6 +79,7 @@ internal class FunFactsSession(
     val draftAnswer = FunFactsDraftDrawing(onChanged)
 
     private val knownNames = mutableStateListOf<FunFactsDrawing>()
+    private val knownColors = mutableStateListOf<Int>()
     private var nextPlayerId by mutableIntStateOf(0)
     private var roundStartIndex by mutableIntStateOf(0)
     private var positioningPlayerId by mutableStateOf<Int?>(null)
@@ -94,8 +95,12 @@ internal class FunFactsSession(
         }
 
     val availableColorIndices: List<Int>
-        get() = (0 until SIGN_COLOR_COUNT).filterNot { colorIndex ->
-            players.any { it.colorIndex == colorIndex }
+        get() {
+            val reservedForCurrentPlayer = expectedKnownNameIndex()?.let(knownColors::getOrNull)
+            return (0 until SIGN_COLOR_COUNT).filter { colorIndex ->
+                players.none { it.colorIndex == colorIndex } &&
+                    (colorIndex !in knownColors || colorIndex == reservedForCurrentPlayer)
+            }
         }
 
     val canAddPlayer: Boolean
@@ -136,8 +141,11 @@ internal class FunFactsSession(
         val expectedNameIndex = expectedKnownNameIndex()
         if (expectedNameIndex != null) {
             knownNames[expectedNameIndex] = name
+            while (knownColors.size <= expectedNameIndex) knownColors += UNASSIGNED_COLOR
+            knownColors[expectedNameIndex] = selectedColorIndex
         } else {
             knownNames += name
+            knownColors += selectedColorIndex
         }
         val player = FunFactsPlayer(
             id = nextPlayerId++,
@@ -196,8 +204,11 @@ internal class FunFactsSession(
 
     fun startNextRound() {
         val lastRoundNames = players.sortedBy { it.id }.map { it.name }
+        val lastRoundColors = players.sortedBy { it.id }.map { it.colorIndex }
         knownNames.clear()
         knownNames.addAll(lastRoundNames)
+        knownColors.clear()
+        knownColors.addAll(lastRoundColors)
         roundStartIndex = if (knownNames.size > 1) 1 else 0
         players.clear()
         positioningPlayerId = null
@@ -222,8 +233,13 @@ internal class FunFactsSession(
     }
 
     private fun prepareDraftName() {
-        expectedKnownNameIndex()?.let { index -> draftName.restore(knownNames[index]) }
-        selectedColorIndex = availableColorIndices.firstOrNull() ?: 0
+        val knownNameIndex = expectedKnownNameIndex()
+        knownNameIndex?.let { index -> draftName.restore(knownNames[index]) }
+        selectedColorIndex = knownNameIndex
+            ?.let(knownColors::getOrNull)
+            ?.takeIf { it in availableColorIndices }
+            ?: availableColorIndices.firstOrNull()
+            ?: 0
     }
 
     private fun expectedKnownNameIndex(): Int? {
@@ -255,6 +271,8 @@ internal class FunFactsSession(
             }
             appendLine(session.knownNames.size)
             session.knownNames.forEach { drawing -> appendLine(encodeDrawing(drawing)) }
+            appendLine(session.knownColors.size)
+            session.knownColors.forEach { colorIndex -> appendLine(colorIndex) }
             appendLine(encodeDrawing(session.draftName.snapshot()))
             append(encodeDrawing(session.draftAnswer.snapshot()))
         }
@@ -264,7 +282,11 @@ internal class FunFactsSession(
             onChanged: () -> Unit,
         ): FunFactsSession = runCatching {
             val lines = serialized.lineSequence().iterator()
-            require(lines.next() == SERIALIZATION_VERSION)
+            val serializationVersion = lines.next()
+            require(
+                serializationVersion == SERIALIZATION_VERSION ||
+                    serializationVersion == PREVIOUS_SERIALIZATION_VERSION,
+            )
             val session = FunFactsSession(onChanged)
             session.phase = FunFactsPhase.valueOf(lines.next())
             session.showFirstPlayerHint = lines.next().toBooleanStrict()
@@ -285,6 +307,11 @@ internal class FunFactsSession(
             }
             repeat(lines.next().toInt()) {
                 session.knownNames += decodeDrawing(lines.next())
+            }
+            if (serializationVersion == SERIALIZATION_VERSION) {
+                repeat(lines.next().toInt()) {
+                    session.knownColors += lines.next().toInt()
+                }
             }
             session.draftName.restore(decodeDrawing(lines.next()))
             session.draftAnswer.restore(decodeDrawing(lines.next()))
@@ -327,8 +354,10 @@ internal class FunFactsSession(
             serialized?.let { FunFactsSessionCodec.decode(it, onChanged) } ?: FunFactsSession(onChanged)
 
         private const val SIGN_COLOR_COUNT = 10
+        private const val UNASSIGNED_COLOR = -1
         private const val NULL_INT = -1
-        private const val SERIALIZATION_VERSION = "2"
+        private const val SERIALIZATION_VERSION = "3"
+        private const val PREVIOUS_SERIALIZATION_VERSION = "2"
         private const val FIELD_SEPARATOR = ";"
         private const val STROKE_SEPARATOR = "|"
         private const val POINT_SEPARATOR = ","
