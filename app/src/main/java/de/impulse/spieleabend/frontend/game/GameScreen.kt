@@ -2,6 +2,10 @@
 
 package de.impulse.spieleabend.frontend.game
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -21,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -134,6 +140,16 @@ private fun GameScreenContent(
     val tabBounds = remember { mutableStateMapOf<CardSwipeTarget, Rect>() }
     val funFactsActive = uiState.spielId == FUN_FACTS_GAME_ID && uiState.funFactsModeEnabled
     val activeFunFactsSession = funFactsSession ?: remember { FunFactsSession() }
+    val context = LocalContext.current
+    DisposableEffect(context, funFactsActive) {
+        val activity = context.findActivity().takeIf { funFactsActive }
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        onDispose {
+            if (activity?.isChangingConfigurations == false) {
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+        }
+    }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -274,6 +290,12 @@ private fun GameScreenContent(
             onDismiss = { showSettings = false },
         )
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 @Preview(showBackground = true)
