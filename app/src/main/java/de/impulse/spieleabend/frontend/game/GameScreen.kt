@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -143,10 +144,21 @@ private fun GameScreenContent(
     var swipeInteractionLocked by remember { mutableStateOf(false) }
     var funFactsQuestionTransitionActive by remember { mutableStateOf(false) }
     var funFactsCategoryTabsVisible by remember { mutableStateOf(true) }
+    var nextSwipeRequestId by remember { mutableLongStateOf(0L) }
+    var swipeRequest by remember { mutableStateOf<CardSwipeRequest?>(null) }
     val tabBounds = remember { mutableStateMapOf<CardSwipeTarget, Rect>() }
     val funFactsActive = uiState.spielId == FUN_FACTS_GAME_ID && uiState.funFactsModeEnabled
     val activeFunFactsSession = funFactsSession ?: remember { FunFactsSession() }
     val context = LocalContext.current
+    val requestCardSwipe: (CardSwipeTarget) -> Unit = { target ->
+        if (swipeRequest == null && !swipeInteractionLocked) {
+            nextSwipeRequestId += 1
+            swipeRequest = CardSwipeRequest(id = nextSwipeRequestId, target = target)
+        }
+    }
+    val consumeCardSwipeRequest: (Long) -> Unit = { requestId ->
+        if (swipeRequest?.id == requestId) swipeRequest = null
+    }
     DisposableEffect(context, funFactsActive) {
         val activity = context.findActivity().takeIf { funFactsActive }
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
@@ -179,6 +191,8 @@ private fun GameScreenContent(
                     session = activeFunFactsSession,
                     swipeRegions = tabBounds.map { (target, bounds) -> SwipeRegion(target, bounds) },
                     previousEnabled = uiState.hasPreviousCard,
+                    swipeRequest = swipeRequest,
+                    onSwipeRequestConsumed = consumeCardSwipeRequest,
                     onHighlightedTargetChanged = { highlightedTarget = it },
                     onInteractionStateChanged = { swipeInteractionLocked = it },
                     onSwipeTargetSelected = { target ->
@@ -211,6 +225,8 @@ private fun GameScreenContent(
                     kategorien = uiState.kategorien,
                     swipeRegions = tabBounds.map { (target, bounds) -> SwipeRegion(target, bounds) },
                     previousEnabled = uiState.hasPreviousCard,
+                    swipeRequest = swipeRequest,
+                    onSwipeRequestConsumed = consumeCardSwipeRequest,
                     onHighlightedTargetChanged = { highlightedTarget = it },
                     onInteractionStateChanged = { swipeInteractionLocked = it },
                     onSwipeTargetSelected = { target ->
@@ -250,9 +266,11 @@ private fun GameScreenContent(
                     interactionsEnabled = !swipeInteractionLocked &&
                         !funFactsQuestionTransitionActive,
                     dimWhenInteractionsDisabled = !funFactsActive,
-                    onKategorieSelected = { kategorieId -> onKategorieSelected(kategorieId) },
-                    onRandomSelected = onRandomSelected,
-                    onPreviousSelected = onPreviousSelected,
+                    onKategorieSelected = { kategorieId ->
+                        requestCardSwipe(CardSwipeTarget.Category(kategorieId))
+                    },
+                    onRandomSelected = { requestCardSwipe(CardSwipeTarget.Random) },
+                    onPreviousSelected = { requestCardSwipe(CardSwipeTarget.Previous) },
                     onTabBoundsChanged = { target, bounds ->
                         if (tabBounds[target] != bounds) tabBounds[target] = bounds
                     },
@@ -262,7 +280,7 @@ private fun GameScreenContent(
             IconButton(
                 onClick = { showSettings = true },
                 modifier = Modifier
-                    .align(Alignment.TopStart)
+                    .align(Alignment.TopEnd)
                     .padding(6.dp)
                     .semantics { contentDescription = "Spieleinstellungen" },
             ) {
@@ -334,6 +352,8 @@ internal fun GamePlayArea(
     modifier: Modifier = Modifier,
     swipeRegions: Collection<SwipeRegion> = emptyList(),
     previousEnabled: Boolean = false,
+    swipeRequest: CardSwipeRequest? = null,
+    onSwipeRequestConsumed: (Long) -> Unit = {},
     onHighlightedTargetChanged: (CardSwipeTarget?) -> Unit = {},
     onInteractionStateChanged: (Boolean) -> Unit = {},
     onSwipeTargetSelected: (CardSwipeTarget) -> Unit = {},
@@ -370,6 +390,8 @@ internal fun GamePlayArea(
                 cardInstanceId = aktuelleKarte.instanceId,
                 swipeRegions = swipeRegions,
                 previousEnabled = previousEnabled,
+                swipeRequest = swipeRequest,
+                onSwipeRequestConsumed = onSwipeRequestConsumed,
                 onHighlightedTargetChanged = onHighlightedTargetChanged,
                 onInteractionStateChanged = onInteractionStateChanged,
                 onTargetSelected = onSwipeTargetSelected,

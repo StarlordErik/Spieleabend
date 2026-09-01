@@ -12,27 +12,27 @@ class CardSwipeTest {
     private val randomRegion =
         SwipeRegion(
             target = CardSwipeTarget.Random,
-            boundsInRoot = Rect(left = 0f, top = 100f, right = 80f, bottom = 220f),
+            boundsInRoot = Rect(left = 320f, top = 100f, right = 400f, bottom = 220f),
         )
     private val previousRegion =
         SwipeRegion(
             target = CardSwipeTarget.Previous,
-            boundsInRoot = Rect(left = 0f, top = 400f, right = 110f, bottom = 520f),
+            boundsInRoot = Rect(left = 310f, top = 400f, right = 420f, bottom = 520f),
         )
     private val categoryRegion =
         SwipeRegion(
             target = CardSwipeTarget.Category(id = 7),
-            boundsInRoot = Rect(left = 320f, top = 400f, right = 420f, bottom = 520f),
+            boundsInRoot = Rect(left = 0f, top = 400f, right = 100f, bottom = 520f),
         )
     private val regions = listOf(randomRegion, previousRegion, categoryRegion)
 
     @Test
-    fun rightSwipeAtRandomHeightSelectsRandom() {
+    fun leftSwipeAtRandomHeightSelectsRandom() {
         assertEquals(
             CardSwipeTarget.Random,
             resolveCardSwipeTarget(
-                startPositionInRoot = Offset(x = 180f, y = 160f),
-                direction = CardSwipeDirection.Right,
+                startPositionInRoot = Offset(x = 360f, y = 160f),
+                direction = CardSwipeDirection.Left,
                 regions = regions,
                 previousEnabled = true,
             ),
@@ -40,12 +40,12 @@ class CardSwipeTest {
     }
 
     @Test
-    fun leftSwipeAtCategoryHeightSelectsCategory() {
+    fun rightSwipeAtCategoryHeightSelectsCategory() {
         assertEquals(
             CardSwipeTarget.Category(id = 7),
             resolveCardSwipeTarget(
-                startPositionInRoot = Offset(x = 360f, y = 460f),
-                direction = CardSwipeDirection.Left,
+                startPositionInRoot = Offset(x = 60f, y = 460f),
+                direction = CardSwipeDirection.Right,
                 regions = regions,
                 previousEnabled = true,
             ),
@@ -57,7 +57,7 @@ class CardSwipeTest {
         assertEquals(
             CardSwipeTarget.Previous,
             resolveCardSwipeTarget(
-                startPositionInRoot = Offset(x = 60f, y = 460f),
+                startPositionInRoot = Offset(x = 360f, y = 460f),
                 direction = CardSwipeDirection.Left,
                 regions = regions,
                 previousEnabled = true,
@@ -66,17 +66,32 @@ class CardSwipeTest {
     }
 
     @Test
-    fun overlappingPreviousAndCategoryUseHorizontalStartPosition() {
-        val leftStart = Offset(x = 100f, y = 460f)
-        val rightStart = Offset(x = 330f, y = 460f)
+    fun opposingTabsAtSameHeightUseSwipeDirection() {
+        val start = Offset(x = 210f, y = 460f)
 
         assertEquals(
             CardSwipeTarget.Previous,
-            resolveCardSwipeTarget(leftStart, CardSwipeDirection.Left, regions, previousEnabled = true),
+            resolveCardSwipeTarget(start, CardSwipeDirection.Left, regions, previousEnabled = true),
         )
         assertEquals(
             CardSwipeTarget.Category(id = 7),
-            resolveCardSwipeTarget(rightStart, CardSwipeDirection.Left, regions, previousEnabled = true),
+            resolveCardSwipeTarget(start, CardSwipeDirection.Right, regions, previousEnabled = true),
+        )
+    }
+
+    @Test
+    fun targetsMapToSwipeDirectionFromTheirScreenEdge() {
+        assertEquals(
+            CardSwipeDirection.Left,
+            cardSwipeDirectionForTarget(CardSwipeTarget.Random),
+        )
+        assertEquals(
+            CardSwipeDirection.Left,
+            cardSwipeDirectionForTarget(CardSwipeTarget.Previous),
+        )
+        assertEquals(
+            CardSwipeDirection.Right,
+            cardSwipeDirectionForTarget(CardSwipeTarget.Category(id = 7)),
         )
     }
 
@@ -84,7 +99,7 @@ class CardSwipeTest {
     fun disabledPreviousIsNeverSelected() {
         assertNull(
             resolveCardSwipeTarget(
-                startPositionInRoot = Offset(x = 60f, y = 460f),
+                startPositionInRoot = Offset(x = 360f, y = 460f),
                 direction = CardSwipeDirection.Left,
                 regions = listOf(previousRegion),
                 previousEnabled = false,

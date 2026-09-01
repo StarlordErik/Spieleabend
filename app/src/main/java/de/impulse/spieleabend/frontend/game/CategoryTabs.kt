@@ -73,7 +73,7 @@ internal fun CategoryTabs(
             .coerceAtMost(layoutHeight)
         val tabSpacing = CategoryTabSpacing.roundToPx()
         val normalTabHeightPx = min(
-            rightCategoryTabHeight(
+            categoryTabHeight(
                 tabCount = kategorien.size,
                 layoutHeight = layoutHeight,
                 spacing = tabSpacing,
@@ -118,16 +118,19 @@ internal fun CategoryTabs(
                 )
                 nextNormalTabY += tab.placeable.height + tabSpacing
             }
-            measuredTabs.previousTab.placeRelative(x = 0, y = previousTabY)
+            measuredTabs.previousTab.placeRelative(
+                x = layoutWidth - measuredTabs.previousTab.width,
+                y = previousTabY,
+            )
             measuredTabs.randomTab.placeRelative(
-                x = 0,
+                x = layoutWidth - measuredTabs.randomTab.width,
                 y = randomTabY,
             )
         }
     }
 }
 
-private fun rightCategoryTabHeight(
+private fun categoryTabHeight(
     tabCount: Int,
     layoutHeight: Int,
     spacing: Int,
@@ -339,7 +342,7 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
     val previousTab = subcompose(CategoryTabSlot.PreviousCard) {
         CategoryTab(
             tab = PreviousCardTab,
-            side = CategoryTabSide.Left,
+            side = CategoryTabSide.Right,
             color = PreviousCardTabColor,
             highlighted = highlightedTarget == CardSwipeTarget.Previous,
             enabled = previousEnabled && interactionsEnabled,
@@ -353,7 +356,7 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
     val randomTab = subcompose(CategoryTabSlot.Random) {
         CategoryTab(
             tab = RandomTab,
-            side = CategoryTabSide.Left,
+            side = CategoryTabSide.Right,
             color = randomTabColor,
             contentColor = randomTabContentColor,
             fixedHeight = randomTabHeight,
@@ -366,7 +369,7 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
         )
     }.single().measure(measureConstraints)
     val normalTabs = kategorien.mapIndexed { index, tab ->
-        val side = CategoryTabSide.Right
+        val side = CategoryTabSide.Left
         val color = categoryTabColor(index)
         MeasuredCategoryTab(
             side = side,

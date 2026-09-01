@@ -41,6 +41,8 @@ internal fun SwipeableGameCard(
     onTargetSelected: (CardSwipeTarget) -> Unit,
     modifier: Modifier = Modifier,
     onInteractionStateChanged: (Boolean) -> Unit = {},
+    swipeRequest: CardSwipeRequest? = null,
+    onSwipeRequestConsumed: (Long) -> Unit = {},
     content: @Composable (idleEffectsEnabled: Boolean) -> Unit,
 ) {
     var translationX by remember { mutableFloatStateOf(0f) }
@@ -79,6 +81,29 @@ internal fun SwipeableGameCard(
             outgoingDirection = null
             interactionLocked = false
         }
+    }
+
+    LaunchedEffect(swipeRequest?.id, cardWidth, previousEnabled) {
+        val request = swipeRequest ?: return@LaunchedEffect
+        if (cardWidth <= 0 || interactionLocked) return@LaunchedEffect
+        if (request.target == CardSwipeTarget.Previous && !previousEnabled) {
+            onSwipeRequestConsumed(request.id)
+            return@LaunchedEffect
+        }
+
+        val direction = cardSwipeDirectionForTarget(request.target)
+        updateHighlight(request.target)
+        interactionLocked = true
+        outgoingDirection = direction
+        awaitingCardId = cardInstanceId
+        animate(
+            initialValue = translationX,
+            targetValue = direction.sign * cardWidth * OFFSCREEN_DISTANCE_FACTOR,
+            animationSpec = tween(OUTGOING_ANIMATION_MILLIS),
+        ) { value, _ -> translationX = value }
+        updateHighlight(null)
+        onTargetSelected(request.target)
+        onSwipeRequestConsumed(request.id)
     }
 
     Box(

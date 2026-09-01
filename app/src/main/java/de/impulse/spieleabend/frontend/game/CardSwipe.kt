@@ -21,6 +21,12 @@ internal sealed interface CardSwipeTarget {
 }
 
 @Immutable
+internal data class CardSwipeRequest(
+    val id: Long,
+    val target: CardSwipeTarget,
+)
+
+@Immutable
 internal data class SwipeRegion(
     val target: CardSwipeTarget,
     val boundsInRoot: Rect,
@@ -32,6 +38,15 @@ internal enum class CardSwipeDirection(
     Left(sign = -1f),
     Right(sign = 1f),
 }
+
+internal fun cardSwipeDirectionForTarget(target: CardSwipeTarget): CardSwipeDirection =
+    when (target) {
+        CardSwipeTarget.Random,
+        CardSwipeTarget.Previous,
+        -> CardSwipeDirection.Left
+
+        is CardSwipeTarget.Category -> CardSwipeDirection.Right
+    }
 
 internal fun resolveCardSwipeTarget(
     startPositionInRoot: Offset,
@@ -99,12 +114,12 @@ private fun SwipeRegion.isEligible(
     previousEnabled: Boolean,
 ): Boolean =
     when (direction) {
-        CardSwipeDirection.Right -> target == CardSwipeTarget.Random
+        CardSwipeDirection.Right -> target is CardSwipeTarget.Category
         CardSwipeDirection.Left ->
             when (target) {
-                CardSwipeTarget.Random -> false
+                CardSwipeTarget.Random -> true
                 CardSwipeTarget.Previous -> previousEnabled
-                is CardSwipeTarget.Category -> true
+                is CardSwipeTarget.Category -> false
             }
     }
 
