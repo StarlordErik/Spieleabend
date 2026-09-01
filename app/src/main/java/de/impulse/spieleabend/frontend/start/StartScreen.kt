@@ -67,7 +67,7 @@ fun StartScreen(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
-                .padding(8.dp)
+                .padding(6.dp)
                 .semantics { contentDescription = "Einstellungen" },
         ) {
             Text(
