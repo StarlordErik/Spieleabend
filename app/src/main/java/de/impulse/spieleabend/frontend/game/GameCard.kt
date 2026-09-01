@@ -5,6 +5,7 @@ package de.impulse.spieleabend.frontend.game
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -91,7 +92,12 @@ internal fun GameCard(
         modifier = modifier,
         shape = RoundedCornerShape(28.dp),
         color = CardBackground,
-        shadowElevation = 12.dp,
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f),
+        ),
+        tonalElevation = 4.dp,
+        shadowElevation = 18.dp,
     ) {
         GameCardContent(
             kartentexte = kartentexte,
@@ -213,13 +219,13 @@ private fun BoxScope.PlayedTooltip(visible: Boolean) {
     ) {
         Surface(
             shape = RoundedCornerShape(999.dp),
-            color = TooltipBackground,
+            color = MaterialTheme.colorScheme.primary,
             shadowElevation = 6.dp,
         ) {
             Text(
                 text = tooltipText,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                color = TooltipTextColor,
+                color = MaterialTheme.colorScheme.onPrimary,
                 style = MaterialTheme.typography.labelLarge,
             )
         }
@@ -485,22 +491,20 @@ private fun TextStyle.scaleTo(fontSize: androidx.compose.ui.unit.TextUnit): Text
             },
     )
 
-private val CardBackground = Color(0xFFFFFCF4)
-private val CardTextColor = Color(0xFF28231D)
-private val TooltipBackground = Color(0xE628231D)
-private val TooltipTextColor = Color(0xFFFFFCF4)
+private val CardBackground = Color(0xFF151922)
+private val CardTextColor = Color(0xFFF3F0E8)
 private val MIN_CARD_TEXT_FONT_SIZE = 10.sp
 private const val SHRINK_FACTOR = 0.92f
 private const val MAXIMUM_FONT_SIZE_SHRINK_STEPS = 64
-private const val PLAYED_DARKEN_FACTOR = 0.5f
+private const val PLAYED_DARKEN_FACTOR = 0.62f
 private const val SINGLE_CARD_IDLE_PLAY_DELAY_MILLIS = 15_000L
 private const val TOOLTIP_VISIBLE_DURATION_MILLIS = 500L
 
 private val CardTextPanelColors = listOf(
-    Color(0xFFF3E5C7),
-    Color(0xFFD9EEE7),
-    Color(0xFFFFD8C7),
-    Color(0xFFE8E0FF),
+    Color(0xFF3C3525),
+    Color(0xFF243D36),
+    Color(0xFF49302D),
+    Color(0xFF343249),
 )
 
 private fun Color.darkenedIfPlayed(gespielt: Boolean): Color =

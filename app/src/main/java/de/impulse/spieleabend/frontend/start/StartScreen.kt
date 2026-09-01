@@ -72,7 +72,7 @@ fun StartScreen(
         ) {
             Text(
                 text = "\u2699",
-                color = MaterialTheme.colorScheme.onSurface,
+                color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.headlineMedium,
             )
         }

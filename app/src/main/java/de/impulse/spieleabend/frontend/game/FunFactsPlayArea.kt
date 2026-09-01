@@ -539,8 +539,8 @@ private fun AnswerEntry(
                     .fillMaxWidth()
                     .height(FinishButtonHeight),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color.Black,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                 ),
             ) { Text("Fertig") }
         }
@@ -777,7 +777,7 @@ private fun DrawingPad(
                 .align(Alignment.TopStart)
                 .offset { IntOffset(x = 0, y = labelTop) }
                 .onSizeChanged { size -> labelSize = size },
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onBackground,
             style = MaterialTheme.typography.labelLarge,
         )
         Button(
@@ -799,7 +799,7 @@ private fun DrawingPad(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth(CATEGORY_LABEL_WIDTH_FRACTION)
                     .padding(bottom = 1.dp),
-                color = CategoryLabelColor,
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
@@ -859,10 +859,10 @@ private fun StrokeWidthSelector(
                         contentDescription = "Stiftdicke ${index + 1}"
                     },
                 shape = CircleShape,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 border = BorderStroke(
                     width = if (selected) 2.dp else 1.dp,
-                    color = if (selected) selectedColor else Color.Gray,
+                    color = if (selected) selectedColor else MaterialTheme.colorScheme.outlineVariant,
                 ),
                 shadowElevation = if (selected) 4.dp else 1.dp,
             ) {
@@ -908,6 +908,7 @@ private fun PositioningActions(
         Text(
             "Ziehe dein Schild nach oben oder unten an die richtige Stelle.",
             modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodySmall,
         )
@@ -965,14 +966,14 @@ private fun RevealButtonWithHint(
                     .fillMaxSize()
                     .clickable(onClick = onDismissHint),
                 shape = RoundedCornerShape(999.dp),
-                color = Color.Black.copy(alpha = 0.82f),
+                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.96f),
                 shadowElevation = 2.dp,
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         "Erster Spieler: Schild verschieben",
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.labelMedium,
                     )
@@ -1125,7 +1126,11 @@ private fun PlayerSign(
                     .background(signColor)
                     .border(
                         width = borderWidth,
-                        color = if (active) Color.Black else signColor.darkened(),
+                        color = if (active) {
+                            MaterialTheme.colorScheme.onBackground
+                        } else {
+                            signColor.darkened()
+                        },
                         shape = WideCaretShape,
                     )
                     .graphicsLayer { rotationY = if (rotation > 90f) 180f else 0f },
@@ -1310,8 +1315,7 @@ private val ActionButtonHeight = 40.dp
 private val MaxActionWidth = 580.dp
 private val SelectedQuestionHorizontalPadding = 44.dp
 private val SelectedQuestionCompactHeight = 112.dp
-private val AssignedColorTabColor = Color(0xFF757575)
-private val CategoryLabelColor = Color(0xFF22201D)
+private val AssignedColorTabColor = Color(0xFF414854)
 private val DrawingControlHeight = 40.dp
 private val DrawingControlsTopAllowance = 44.dp
 private val PreferredDrawingPadSpacing = 48.dp

@@ -10,6 +10,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
@@ -35,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -106,10 +109,13 @@ private fun GameLoadingContent(
         color = TableBackground,
     ) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(GameTableBrush)
+                .safeDrawingPadding(),
             contentAlignment = Alignment.Center,
         ) {
-            CircularProgressIndicator(color = TitleColor)
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -155,7 +161,12 @@ private fun GameScreenContent(
         modifier = modifier.fillMaxSize(),
         color = TableBackground,
     ) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(GameTableBrush)
+                .safeDrawingPadding(),
+        ) {
             val horizontalPadding = if (maxWidth < CompactWidthBreakpoint) {
                 CompactHorizontalPadding
             } else {
@@ -255,7 +266,11 @@ private fun GameScreenContent(
                     .padding(6.dp)
                     .semantics { contentDescription = "Spieleinstellungen" },
             ) {
-                Text(text = "\u2699", color = TitleColor, style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    text = "\u2699",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.headlineMedium,
+                )
             }
         }
     }
@@ -389,8 +404,12 @@ private fun GameScreenContentPreview() {
     }
 }
 
-private val TableBackground = Color(0xFFE5EFE9)
-private val TitleColor = Color(0xFF22201D)
+private val TableBackground = Color(0xFF0B1111)
+private val TableBackgroundHighlight = Color(0xFF17211E)
+private val GameTableBrush = Brush.verticalGradient(
+    colors = listOf(TableBackgroundHighlight, TableBackground),
+)
+private val TitleColor = Color(0xFFF0EDE5)
 private val CompactWidthBreakpoint = 420.dp
 private val CompactHorizontalPadding = 52.dp
 private val ExpandedHorizontalPadding = 76.dp
@@ -409,5 +428,5 @@ internal fun GameCardUiModel.textPanelColors(kategorien: List<GameKategorieUiMod
         }
     }
 
-private val FallbackTextPanelColor = Color(0xFFE8E0FF)
+private val FallbackTextPanelColor = Color(0xFF343249)
 internal const val FUN_FACTS_GAME_ID = 149

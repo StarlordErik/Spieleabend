@@ -49,6 +49,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 @Composable
+@Suppress("LongMethod")
 internal fun CategoryTabs(
     kategorien: List<GameKategorieUiModel>,
     modifier: Modifier = Modifier,
@@ -61,6 +62,9 @@ internal fun CategoryTabs(
     onPreviousSelected: () -> Unit = {},
     onTabBoundsChanged: (CardSwipeTarget, androidx.compose.ui.geometry.Rect) -> Unit = { _, _ -> },
 ) {
+    val randomTabColor = MaterialTheme.colorScheme.onBackground
+    val randomTabContentColor = MaterialTheme.colorScheme.background
+
     SubcomposeLayout(modifier = modifier) { constraints ->
         val layoutWidth = constraints.maxWidth
         val layoutHeight = constraints.maxHeight
@@ -86,6 +90,8 @@ internal fun CategoryTabs(
             previousEnabled = previousEnabled,
             interactionsEnabled = interactionsEnabled,
             dimWhenInteractionsDisabled = dimWhenInteractionsDisabled,
+            randomTabColor = randomTabColor,
+            randomTabContentColor = randomTabContentColor,
             onKategorieSelected = onKategorieSelected,
             onRandomSelected = onRandomSelected,
             onPreviousSelected = onPreviousSelected,
@@ -157,6 +163,7 @@ private fun CategoryTab(
     side: CategoryTabSide,
     color: Color,
     modifier: Modifier = Modifier,
+    contentColor: Color = CategoryTabContentColor,
     fixedHeight: Dp? = null,
     highlighted: Boolean = false,
     enabled: Boolean = true,
@@ -226,7 +233,7 @@ private fun CategoryTab(
             modifier = Modifier
                 .requiredWidth(fittedLabel.width)
                 .graphicsLayer(rotationZ = side.labelRotation),
-            color = CategoryTabContentColor,
+            color = contentColor,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Visible,
@@ -321,6 +328,8 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
     previousEnabled: Boolean,
     interactionsEnabled: Boolean,
     dimWhenInteractionsDisabled: Boolean,
+    randomTabColor: Color,
+    randomTabContentColor: Color,
     onKategorieSelected: (Int) -> Unit,
     onRandomSelected: () -> Unit,
     onPreviousSelected: () -> Unit,
@@ -345,7 +354,8 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
         CategoryTab(
             tab = RandomTab,
             side = CategoryTabSide.Left,
-            color = RandomTabColor,
+            color = randomTabColor,
+            contentColor = randomTabContentColor,
             fixedHeight = randomTabHeight,
             highlighted = highlightedTarget == CardSwipeTarget.Random,
             enabled = interactionsEnabled,
@@ -442,13 +452,12 @@ private val PreviousCardTab = GameKategorieUiModel(
     id = -1,
     name = "Vorherige Karte",
 )
-private val RandomTabColor = Color(0xFF1F2937)
-private val PreviousCardTabColor = Color(0xFF5F6268)
+private val PreviousCardTabColor = Color(0xFF192536)
 
 private val CategoryTabColors = listOf(
-    Color(0xFF2A7F62),
-    Color(0xFFC84C31),
-    Color(0xFF276A8A),
-    Color(0xFF8B5A96),
-    Color(0xFFB68A1F),
+    Color(0xFF276C58),
+    Color(0xFF9B4E38),
+    Color(0xFF2F627B),
+    Color(0xFF6E507D),
+    Color(0xFF80651F),
 )
