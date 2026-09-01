@@ -130,7 +130,10 @@ private fun GameScreenContent(
     var highlightedTarget by remember { mutableStateOf<CardSwipeTarget?>(null) }
     var swipeInteractionLocked by remember { mutableStateOf(false) }
     var funFactsQuestionTransitionActive by remember { mutableStateOf(false) }
+    var funFactsCategoryTabsVisible by remember { mutableStateOf(true) }
     val tabBounds = remember { mutableStateMapOf<CardSwipeTarget, Rect>() }
+    val funFactsActive = uiState.spielId == FUN_FACTS_GAME_ID && uiState.funFactsModeEnabled
+    val activeFunFactsSession = funFactsSession ?: remember { FunFactsSession() }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -143,8 +146,6 @@ private fun GameScreenContent(
                 ExpandedHorizontalPadding
             }
 
-            val funFactsActive = uiState.spielId == FUN_FACTS_GAME_ID && uiState.funFactsModeEnabled
-            val activeFunFactsSession = funFactsSession ?: remember { FunFactsSession() }
             if (funFactsActive) {
                 FunFactsPlayArea(
                     uiState = uiState,
@@ -163,6 +164,9 @@ private fun GameScreenContent(
                     onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
                     onQuestionTransitionStateChanged = { active ->
                         funFactsQuestionTransitionActive = active
+                    },
+                    onCategoryTabsVisibilityChanged = { visible ->
+                        funFactsCategoryTabsVisible = visible
                     },
                     onNextCard = onRandomSelected,
                     gameContentHorizontalPadding = horizontalPadding,
@@ -204,12 +208,12 @@ private fun GameScreenContent(
             val categoryTabsVisible =
                 !funFactsActive ||
                 activeFunFactsSession.selectingQuestion ||
-                funFactsQuestionTransitionActive
+                funFactsCategoryTabsVisible
             AnimatedVisibility(
                 visible = categoryTabsVisible,
                 modifier = Modifier.fillMaxSize(),
                 enter = fadeIn(tween(CATEGORY_TAB_TRANSITION_DURATION_MILLIS)),
-                exit = fadeOut(tween(0)),
+                exit = fadeOut(tween(CATEGORY_TAB_TRANSITION_DURATION_MILLIS)),
             ) {
                 CategoryTabs(
                     kategorien = uiState.kategorien,
@@ -218,6 +222,7 @@ private fun GameScreenContent(
                     previousEnabled = uiState.hasPreviousCard,
                     interactionsEnabled = !swipeInteractionLocked &&
                         !funFactsQuestionTransitionActive,
+                    dimWhenInteractionsDisabled = !funFactsActive,
                     onKategorieSelected = { kategorieId -> onKategorieSelected(kategorieId) },
                     onRandomSelected = onRandomSelected,
                     onPreviousSelected = onPreviousSelected,
@@ -247,6 +252,17 @@ private fun GameScreenContent(
             supportsFunFactsMode = uiState.spielId == FUN_FACTS_GAME_ID,
             funFactsModeEnabled = uiState.funFactsModeEnabled,
             onFunFactsModeChanged = onFunFactsModeChanged,
+            onRestartFunFactsGame = {
+                activeFunFactsSession.selectedQuestionId?.let { questionId ->
+                    onKartentextPlayedStateChanged(questionId, false)
+                }
+                activeFunFactsSession.restartGame()
+                funFactsQuestionTransitionActive = false
+                funFactsCategoryTabsVisible = true
+                highlightedTarget = null
+                swipeInteractionLocked = false
+                showSettings = false
+            },
             onResetSeenCards = onResetSeenCards,
             onResetAllCards = onResetAllCards,
             onTextsPerCardChanged = onTextsPerCardChanged,

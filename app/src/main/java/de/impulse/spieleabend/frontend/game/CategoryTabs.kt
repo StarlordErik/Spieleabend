@@ -55,6 +55,7 @@ internal fun CategoryTabs(
     highlightedTarget: CardSwipeTarget? = null,
     previousEnabled: Boolean = false,
     interactionsEnabled: Boolean = true,
+    dimWhenInteractionsDisabled: Boolean = true,
     onKategorieSelected: (Int) -> Unit = {},
     onRandomSelected: () -> Unit = {},
     onPreviousSelected: () -> Unit = {},
@@ -84,6 +85,7 @@ internal fun CategoryTabs(
             highlightedTarget = highlightedTarget,
             previousEnabled = previousEnabled,
             interactionsEnabled = interactionsEnabled,
+            dimWhenInteractionsDisabled = dimWhenInteractionsDisabled,
             onKategorieSelected = onKategorieSelected,
             onRandomSelected = onRandomSelected,
             onPreviousSelected = onPreviousSelected,
@@ -158,6 +160,7 @@ private fun CategoryTab(
     fixedHeight: Dp? = null,
     highlighted: Boolean = false,
     enabled: Boolean = true,
+    visuallyEnabled: Boolean = enabled,
     target: CardSwipeTarget? = null,
     onBoundsChanged: (CardSwipeTarget, androidx.compose.ui.geometry.Rect) -> Unit = { _, _ -> },
     onClick: (() -> Unit)? = null,
@@ -208,7 +211,7 @@ private fun CategoryTab(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-                alpha = if (enabled) 1f else DISABLED_TAB_ALPHA
+                alpha = if (visuallyEnabled) 1f else DISABLED_TAB_ALPHA
                 transformOrigin = TransformOrigin(
                     pivotFractionX = if (side == CategoryTabSide.Left) 0f else 1f,
                     pivotFractionY = 0.5f,
@@ -317,6 +320,7 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
     highlightedTarget: CardSwipeTarget?,
     previousEnabled: Boolean,
     interactionsEnabled: Boolean,
+    dimWhenInteractionsDisabled: Boolean,
     onKategorieSelected: (Int) -> Unit,
     onRandomSelected: () -> Unit,
     onPreviousSelected: () -> Unit,
@@ -330,6 +334,8 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
             color = PreviousCardTabColor,
             highlighted = highlightedTarget == CardSwipeTarget.Previous,
             enabled = previousEnabled && interactionsEnabled,
+            visuallyEnabled = previousEnabled &&
+                (interactionsEnabled || !dimWhenInteractionsDisabled),
             target = CardSwipeTarget.Previous,
             onBoundsChanged = onTabBoundsChanged,
             onClick = onPreviousSelected,
@@ -343,6 +349,7 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
             fixedHeight = randomTabHeight,
             highlighted = highlightedTarget == CardSwipeTarget.Random,
             enabled = interactionsEnabled,
+            visuallyEnabled = interactionsEnabled || !dimWhenInteractionsDisabled,
             target = CardSwipeTarget.Random,
             onBoundsChanged = onTabBoundsChanged,
             onClick = onRandomSelected,
@@ -361,6 +368,7 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
                     fixedHeight = normalTabHeight,
                     highlighted = highlightedTarget == CardSwipeTarget.Category(tab.id),
                     enabled = interactionsEnabled,
+                    visuallyEnabled = interactionsEnabled || !dimWhenInteractionsDisabled,
                     target = CardSwipeTarget.Category(tab.id),
                     onBoundsChanged = onTabBoundsChanged,
                     onClick = { onKategorieSelected(tab.id) },

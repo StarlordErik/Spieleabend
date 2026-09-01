@@ -93,6 +93,7 @@ fun GameSettingsDialog(
     supportsFunFactsMode: Boolean = false,
     funFactsModeEnabled: Boolean = false,
     onFunFactsModeChanged: (Boolean) -> Unit = {},
+    onRestartFunFactsGame: () -> Unit = {},
     onResetSeenCards: () -> Unit,
     onResetAllCards: () -> Unit,
     onTextsPerCardChanged: (Int) -> Unit,
@@ -128,6 +129,14 @@ fun GameSettingsDialog(
                             checked = funFactsModeEnabled,
                             onCheckedChange = onFunFactsModeChanged,
                         )
+                    }
+                    if (funFactsModeEnabled) {
+                        Button(
+                            onClick = onRestartFunFactsGame,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Spiel neu starten")
+                        }
                     }
                     HorizontalDivider()
                 }
