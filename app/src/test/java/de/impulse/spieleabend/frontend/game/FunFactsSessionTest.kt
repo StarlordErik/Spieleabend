@@ -11,10 +11,11 @@ class FunFactsSessionTest {
     @Test
     fun questionCanOnlyBeChangedBeforeFirstSignIsFinished() {
         val session = FunFactsSession()
-        session.selectQuestion(10)
+        session.selectQuestion(10, QUESTION_ORIGIN)
 
         assertEquals(10, session.reopenQuestionSelection())
         assertTrue(session.selectingQuestion)
+        assertNull(session.selectedQuestionOrigin)
 
         session.selectQuestion(11)
         session.addPlayer("Ada", "42")
@@ -161,6 +162,32 @@ class FunFactsSessionTest {
     }
 
     @Test
+    fun selectedQuestionOriginSurvivesSessionSerialization() {
+        val session = FunFactsSession()
+        session.selectQuestion(71, QUESTION_ORIGIN)
+
+        val restored = FunFactsSession.restore(session.serialize())
+
+        assertEquals(71, restored.selectedQuestionId)
+        assertEquals(QUESTION_ORIGIN, restored.selectedQuestionOrigin)
+    }
+
+    @Test
+    fun versionSixSessionWithoutQuestionOriginCanStillBeRestored() {
+        val session = FunFactsSession()
+        session.selectQuestion(71, QUESTION_ORIGIN)
+        val versionSixLines = session.serialize().lines().toMutableList().apply {
+            this[0] = "6"
+            removeAt(4)
+        }
+
+        val restored = FunFactsSession.restore(versionSixLines.joinToString("\n"))
+
+        assertEquals(71, restored.selectedQuestionId)
+        assertNull(restored.selectedQuestionOrigin)
+    }
+
+    @Test
     fun restartReturnsToQuestionSelectionAndClearsAllSigns() {
         val session = FunFactsSession()
         session.selectQuestion(10)
@@ -290,4 +317,13 @@ class FunFactsSessionTest {
     }
 
     private fun nameMarker(name: String): Float = name.length / 100f
+
+    private companion object {
+        val QUESTION_ORIGIN = FunFactsQuestionOrigin(
+            leftFraction = 0.1f,
+            topFraction = 0.3f,
+            widthFraction = 0.8f,
+            heightFraction = 0.2f,
+        )
+    }
 }

@@ -32,6 +32,24 @@ internal data class FunFactsDrawing(
     val strokeWidthFractions: List<Float> = emptyList(),
 )
 
+internal data class FunFactsQuestionOrigin(
+    val leftFraction: Float,
+    val topFraction: Float,
+    val widthFraction: Float,
+    val heightFraction: Float,
+) {
+    val valid: Boolean
+        get() =
+            leftFraction.isFinite() &&
+                topFraction.isFinite() &&
+                widthFraction.isFinite() &&
+                heightFraction.isFinite() &&
+                leftFraction in 0f..1f &&
+                topFraction in 0f..1f &&
+                widthFraction > 0f && widthFraction <= 1f &&
+                heightFraction > 0f && heightFraction <= 1f
+}
+
 @Stable
 internal class FunFactsDraftDrawing(
     private val onChanged: () -> Unit = {},
@@ -89,6 +107,8 @@ internal class FunFactsSession(
         private set
     var selectedQuestionId by mutableStateOf<Int?>(null)
         private set
+    var selectedQuestionOrigin by mutableStateOf<FunFactsQuestionOrigin?>(null)
+        private set
     var selectedColorIndex by mutableIntStateOf(0)
         private set
     var selectedStrokeWidthIndex by mutableIntStateOf(DEFAULT_STROKE_WIDTH_INDEX)
@@ -128,10 +148,20 @@ internal class FunFactsSession(
     val canAddPlayer: Boolean
         get() = players.size < SIGN_COLOR_COUNT
 
-    fun selectQuestion(questionId: Int) {
+    fun selectQuestion(
+        questionId: Int,
+        origin: FunFactsQuestionOrigin? = null,
+    ) {
         selectedQuestionId = questionId
+        selectedQuestionOrigin = origin?.takeIf(FunFactsQuestionOrigin::valid)
         phase = FunFactsPhase.EnterAnswer
         prepareDraftName()
+        onChanged()
+    }
+
+    fun rememberSelectedQuestionOrigin(origin: FunFactsQuestionOrigin) {
+        if (selectedQuestionId == null || selectedQuestionOrigin != null || !origin.valid) return
+        selectedQuestionOrigin = origin
         onChanged()
     }
 
@@ -139,6 +169,7 @@ internal class FunFactsSession(
         if (players.isNotEmpty()) return null
         val previous = selectedQuestionId
         selectedQuestionId = null
+        selectedQuestionOrigin = null
         draftAnswer.clear()
         phase = FunFactsPhase.SelectQuestion
         onChanged()
@@ -251,6 +282,7 @@ internal class FunFactsSession(
     fun restartGame() {
         phase = FunFactsPhase.SelectQuestion
         selectedQuestionId = null
+        selectedQuestionOrigin = null
         selectedColorIndex = 0
         selectedStrokeWidthIndex = DEFAULT_STROKE_WIDTH_INDEX
         showFirstPlayerHint = false
@@ -280,6 +312,7 @@ internal class FunFactsSession(
         players.clear()
         positioningPlayerId = null
         selectedQuestionId = null
+        selectedQuestionOrigin = null
         draftName.clear()
         draftAnswer.clear()
         phase = FunFactsPhase.SelectQuestion
@@ -330,6 +363,7 @@ internal class FunFactsSession(
             appendLine(session.phase.name)
             appendLine(session.showFirstPlayerHint)
             appendLine(session.selectedQuestionId ?: NULL_INT)
+            appendLine(encodeQuestionOrigin(session.selectedQuestionOrigin))
             appendLine(session.selectedColorIndex)
             appendLine(session.selectedStrokeWidthIndex)
             appendLine(session.nextPlayerId)
@@ -386,6 +420,9 @@ internal class FunFactsSession(
             session.phase = FunFactsPhase.valueOf(lines.next())
             session.showFirstPlayerHint = lines.next().toBooleanStrict()
             session.selectedQuestionId = lines.next().toNullableInt()
+            if (features.questionOrigin) {
+                session.selectedQuestionOrigin = decodeQuestionOrigin(lines.next())
+            }
             session.selectedColorIndex = lines.next().toInt()
             if (features.strokeWidthPreferences) {
                 session.selectedStrokeWidthIndex = lines.next().toInt()
@@ -447,8 +484,9 @@ internal class FunFactsSession(
         private data class SerializationFeatures(val version: String) {
             val answerVisibility = version in ANSWER_VISIBILITY_VERSIONS
             val strokeWidths = version in STROKE_WIDTH_VERSIONS
-            val strokeWidthPreferences = version == SERIALIZATION_VERSION
-            val knownColors = version != LEGACY_SERIALIZATION_VERSION
+            val strokeWidthPreferences = version in STROKE_WIDTH_PREFERENCE_VERSIONS
+            val questionOrigin = version == SERIALIZATION_VERSION
+            val knownColors = version != INITIAL_SERIALIZATION_VERSION
             val playerRevealedIndex = if (strokeWidthPreferences) {
                 PLAYER_REVEALED_INDEX
             } else {
@@ -484,6 +522,27 @@ internal class FunFactsSession(
                     "$strokeWidth$STROKE_WIDTH_SEPARATOR$points"
                 }.joinToString(STROKE_SEPARATOR)
             }
+
+        private fun encodeQuestionOrigin(origin: FunFactsQuestionOrigin?): String =
+            origin?.run {
+                listOf(leftFraction, topFraction, widthFraction, heightFraction)
+                    .joinToString(FIELD_SEPARATOR)
+            } ?: NULL_QUESTION_ORIGIN
+
+        private fun decodeQuestionOrigin(serialized: String): FunFactsQuestionOrigin? =
+            serialized
+                .takeUnless { it == NULL_QUESTION_ORIGIN }
+                ?.split(FIELD_SEPARATOR)
+                ?.takeIf { fields -> fields.size == QUESTION_ORIGIN_FIELD_COUNT }
+                ?.let { fields ->
+                    FunFactsQuestionOrigin(
+                        leftFraction = fields[0].toFloat(),
+                        topFraction = fields[1].toFloat(),
+                        widthFraction = fields[2].toFloat(),
+                        heightFraction = fields[3].toFloat(),
+                    )
+                }
+                ?.takeIf(FunFactsQuestionOrigin::valid)
 
         private fun decodeDrawing(
             serialized: String,
@@ -527,24 +586,32 @@ internal class FunFactsSession(
         private const val STROKE_WIDTH_OPTION_COUNT = 3
         private const val UNASSIGNED_COLOR = -1
         private const val NULL_INT = -1
-        private const val SERIALIZATION_VERSION = "6"
-        private const val PREVIOUS_SERIALIZATION_VERSION = "5"
-        private const val OLDER_SERIALIZATION_VERSION = "4"
-        private const val EARLIER_SERIALIZATION_VERSION = "3"
-        private const val LEGACY_SERIALIZATION_VERSION = "2"
+        private const val SERIALIZATION_VERSION = "7"
+        private const val PREVIOUS_SERIALIZATION_VERSION = "6"
+        private const val OLDER_SERIALIZATION_VERSION = "5"
+        private const val EARLIER_SERIALIZATION_VERSION = "4"
+        private const val LEGACY_SERIALIZATION_VERSION = "3"
+        private const val INITIAL_SERIALIZATION_VERSION = "2"
         private val SUPPORTED_SERIALIZATION_VERSIONS = setOf(
             SERIALIZATION_VERSION,
             PREVIOUS_SERIALIZATION_VERSION,
             OLDER_SERIALIZATION_VERSION,
             EARLIER_SERIALIZATION_VERSION,
             LEGACY_SERIALIZATION_VERSION,
+            INITIAL_SERIALIZATION_VERSION,
         )
         private val ANSWER_VISIBILITY_VERSIONS = setOf(
             SERIALIZATION_VERSION,
             PREVIOUS_SERIALIZATION_VERSION,
             OLDER_SERIALIZATION_VERSION,
+            EARLIER_SERIALIZATION_VERSION,
         )
         private val STROKE_WIDTH_VERSIONS = setOf(
+            SERIALIZATION_VERSION,
+            PREVIOUS_SERIALIZATION_VERSION,
+            OLDER_SERIALIZATION_VERSION,
+        )
+        private val STROKE_WIDTH_PREFERENCE_VERSIONS = setOf(
             SERIALIZATION_VERSION,
             PREVIOUS_SERIALIZATION_VERSION,
         )
@@ -554,6 +621,8 @@ internal class FunFactsSession(
         private const val COORDINATE_SEPARATOR = ":"
         private const val STROKE_WIDTH_SEPARATOR = "~"
         private const val EMPTY_DRAWING = "-"
+        private const val NULL_QUESTION_ORIGIN = "-"
+        private const val QUESTION_ORIGIN_FIELD_COUNT = 4
         private const val PLAYER_STROKE_WIDTH_INDEX = 2
         private const val PLAYER_REVEALED_INDEX = 3
         private const val PLAYER_ANSWER_VISIBLE_INDEX = 4

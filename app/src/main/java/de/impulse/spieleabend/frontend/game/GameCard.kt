@@ -35,23 +35,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.isSpecified
 import de.impulse.spieleabend.R
 import de.impulse.spieleabend.frontend.theme.SpieleabendTheme
+import kotlin.math.pow
 import kotlinx.coroutines.delay
 
 @Composable
@@ -62,6 +66,7 @@ internal fun GameCard(
     textPanelColors: List<Color> = emptyList(),
     idleEffectsEnabled: Boolean = true,
     interactionsEnabled: Boolean = true,
+    hiddenCardTextIds: Set<Int> = emptySet(),
     onKartentextBoundsChanged: (Int, Rect) -> Unit = { _, _ -> },
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
@@ -93,6 +98,7 @@ internal fun GameCard(
             textPanelColors = textPanelColors,
             tooltipVisible = tooltipState.visible,
             interactionsEnabled = interactionsEnabled,
+            hiddenCardTextIds = hiddenCardTextIds,
             onKartentextBoundsChanged = onKartentextBoundsChanged,
             onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
             onKartentextMarkedAsPlayed = tooltipState::show,
@@ -121,6 +127,7 @@ private fun GameCardContent(
     textPanelColors: List<Color>,
     tooltipVisible: Boolean,
     interactionsEnabled: Boolean = true,
+    hiddenCardTextIds: Set<Int> = emptySet(),
     onKartentextBoundsChanged: (Int, Rect) -> Unit = { _, _ -> },
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit,
     onKartentextMarkedAsPlayed: () -> Unit,
@@ -136,19 +143,33 @@ private fun GameCardContent(
                 Spacer(modifier = Modifier.weight(1f))
             } else {
                 kartentexte.forEachIndexed { index, kartentext ->
-                    CardTextPanel(
-                        kartentext = kartentext,
-                        index = index,
-                        kartentextCount = kartentexte.size,
-                        textPanelColor = textPanelColors.getOrNull(index),
-                        interactionsEnabled = interactionsEnabled,
-                        onBoundsChanged = { bounds -> onKartentextBoundsChanged(kartentext.id, bounds) },
-                        onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
-                        onKartentextMarkedAsPlayed = onKartentextMarkedAsPlayed,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                    )
+                    val panelModifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                    if (kartentext.id in hiddenCardTextIds) {
+                        Box(
+                            modifier = panelModifier.onGloballyPositioned { coordinates ->
+                                onKartentextBoundsChanged(
+                                    kartentext.id,
+                                    coordinates.boundsInRoot(),
+                                )
+                            },
+                        )
+                    } else {
+                        CardTextPanel(
+                            kartentext = kartentext,
+                            index = index,
+                            kartentextCount = kartentexte.size,
+                            textPanelColor = textPanelColors.getOrNull(index),
+                            interactionsEnabled = interactionsEnabled,
+                            onBoundsChanged = { bounds ->
+                                onKartentextBoundsChanged(kartentext.id, bounds)
+                            },
+                            onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
+                            onKartentextMarkedAsPlayed = onKartentextMarkedAsPlayed,
+                            modifier = panelModifier,
+                        )
+                    }
                 }
             }
         }
@@ -379,48 +400,78 @@ private fun AutoShrinkText(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        var scaledStyle by remember(text, style, maxWidth, maxHeight) {
-            mutableStateOf(style)
-        }
-        var readyToDraw by remember(text, style, maxWidth, maxHeight) {
-            mutableStateOf(false)
+        val textMeasurer = rememberTextMeasurer()
+        val fittedStyle = remember(text, style, constraints, textMeasurer) {
+            textMeasurer.fitCardTextStyle(
+                text = text,
+                style = style,
+                constraints = Constraints(
+                    maxWidth = constraints.maxWidth,
+                    maxHeight = constraints.maxHeight,
+                ),
+            )
         }
 
         Text(
             text = text,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .drawWithContent {
-                    if (readyToDraw) {
-                        drawContent()
-                    }
-                },
-            color = scaledStyle.color,
+            modifier = Modifier.fillMaxWidth(),
+            color = fittedStyle.color,
             textAlign = TextAlign.Center,
             softWrap = true,
             overflow = TextOverflow.Clip,
-            style =
-                scaledStyle.copy(
-                    lineBreak = LineBreak.Simple,
-                    hyphens = Hyphens.None,
-                ),
-            onTextLayout = { layoutResult ->
-                if (layoutResult.didOverflowHeight || layoutResult.didOverflowWidth) {
-                    val nextFontSize =
-                        maxOf(
-                            scaledStyle.fontSize.value * SHRINK_FACTOR,
-                            MIN_CARD_TEXT_FONT_SIZE.value,
-                        ).sp
-                    if (nextFontSize < scaledStyle.fontSize) {
-                        scaledStyle = scaledStyle.scaleTo(nextFontSize)
-                        return@Text
-                    }
-                }
-                readyToDraw = true
-            },
+            style = fittedStyle,
         )
     }
+}
+
+private fun TextMeasurer.fitCardTextStyle(
+    text: String,
+    style: TextStyle,
+    constraints: Constraints,
+): TextStyle {
+    val layoutStyle = style.copy(
+        lineBreak = LineBreak.Simple,
+        hyphens = Hyphens.None,
+    )
+    if (!layoutStyle.fontSize.isSpecified || fits(text, layoutStyle, constraints)) {
+        return layoutStyle
+    }
+
+    val maximumFontSize = layoutStyle.fontSize.value
+    var minimumShrinkSteps = 1
+    var maximumShrinkSteps = MAXIMUM_FONT_SIZE_SHRINK_STEPS
+    while (minimumShrinkSteps < maximumShrinkSteps) {
+        val candidateShrinkSteps = (minimumShrinkSteps + maximumShrinkSteps) / 2
+        val candidateFontSize = maximumFontSize.shrunk(candidateShrinkSteps)
+        val candidateStyle = layoutStyle.scaleTo(candidateFontSize.sp)
+        if (fits(text, candidateStyle, constraints)) {
+            maximumShrinkSteps = candidateShrinkSteps
+        } else {
+            minimumShrinkSteps = candidateShrinkSteps + 1
+        }
+    }
+    return layoutStyle.scaleTo(maximumFontSize.shrunk(minimumShrinkSteps).sp)
+}
+
+private fun Float.shrunk(steps: Int): Float =
+    maxOf(
+        this * SHRINK_FACTOR.pow(steps),
+        MIN_CARD_TEXT_FONT_SIZE.value,
+    )
+
+private fun TextMeasurer.fits(
+    text: String,
+    style: TextStyle,
+    constraints: Constraints,
+): Boolean {
+    val result = measure(
+        text = AnnotatedString(text),
+        style = style,
+        overflow = TextOverflow.Clip,
+        softWrap = true,
+        constraints = constraints,
+    )
+    return !result.didOverflowHeight && !result.didOverflowWidth
 }
 
 private fun TextStyle.scaleTo(fontSize: androidx.compose.ui.unit.TextUnit): TextStyle =
@@ -440,6 +491,7 @@ private val TooltipBackground = Color(0xE628231D)
 private val TooltipTextColor = Color(0xFFFFFCF4)
 private val MIN_CARD_TEXT_FONT_SIZE = 10.sp
 private const val SHRINK_FACTOR = 0.92f
+private const val MAXIMUM_FONT_SIZE_SHRINK_STEPS = 64
 private const val PLAYED_DARKEN_FACTOR = 0.5f
 private const val SINGLE_CARD_IDLE_PLAY_DELAY_MILLIS = 15_000L
 private const val TOOLTIP_VISIBLE_DURATION_MILLIS = 500L

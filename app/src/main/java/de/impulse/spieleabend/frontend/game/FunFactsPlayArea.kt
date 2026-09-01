@@ -101,6 +101,7 @@ internal fun FunFactsPlayArea(
     val nextCardTransitionScope = rememberCoroutineScope()
     var nextCardTransitionRunning by remember { mutableStateOf(false) }
     var awaitingNextCardId by remember { mutableStateOf<Long?>(null) }
+    var newlySelectedQuestionId by remember { mutableStateOf<Int?>(null) }
     var playAreaBounds by remember { mutableStateOf(Rect.Zero) }
     val cardTextBounds = remember(uiState.aktuelleKarte.instanceId) {
         mutableStateMapOf<Int, Rect>()
@@ -137,7 +138,12 @@ internal fun FunFactsPlayArea(
                 if (played) {
                     onQuestionTransitionStateChanged(true)
                     onCategoryTabsVisibilityChanged(false)
-                    session.selectQuestion(cardTextId)
+                    newlySelectedQuestionId = cardTextId
+                    session.selectQuestion(
+                        questionId = cardTextId,
+                        origin = cardTextBounds[cardTextId]
+                            ?.relativeTo(playAreaBounds),
+                    )
                 }
                 onKartentextPlayedStateChanged(cardTextId, played)
             },
@@ -163,10 +169,27 @@ internal fun FunFactsPlayArea(
             if (cardText.id == question.id) cardText.copy(gespielt = false) else cardText
         },
     )
-    val transitionProgress = remember(question.id) { Animatable(0f) }
+    val questionOrigin = session.selectedQuestionOrigin
+    val measuredQuestionBounds = cardTextBounds[question.id]
+    LaunchedEffect(question.id, questionOrigin, measuredQuestionBounds, playAreaBounds) {
+        if (questionOrigin == null) {
+            measuredQuestionBounds
+                ?.relativeTo(playAreaBounds)
+                ?.let(session::rememberSelectedQuestionOrigin)
+        }
+    }
+    val transitionProgress = remember(question.id) {
+        Animatable(
+            if (newlySelectedQuestionId == question.id || questionOrigin == null) 0f else 1f,
+        )
+    }
     var returningToQuestionSelection by remember(question.id) { mutableStateOf(false) }
-    LaunchedEffect(question.id, returningToQuestionSelection) {
+    LaunchedEffect(question.id, returningToQuestionSelection, questionOrigin) {
         onQuestionTransitionStateChanged(true)
+        if (questionOrigin == null) {
+            onCategoryTabsVisibilityChanged(false)
+            return@LaunchedEffect
+        }
         if (returningToQuestionSelection) {
             onCategoryTabsVisibilityChanged(true)
             transitionProgress.animateTo(
@@ -178,10 +201,13 @@ internal fun FunFactsPlayArea(
             }
         } else {
             onCategoryTabsVisibilityChanged(false)
-            transitionProgress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(QUESTION_SLIDE_DURATION_MILLIS.toInt()),
-            )
+            if (transitionProgress.value < 1f) {
+                transitionProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(QUESTION_SLIDE_DURATION_MILLIS.toInt()),
+                )
+            }
+            newlySelectedQuestionId = null
         }
         onQuestionTransitionStateChanged(false)
     }
@@ -193,19 +219,28 @@ internal fun FunFactsPlayArea(
             maxWidth - (ColorTabWidth + actionColorTabGap) * 2
         ).coerceAtLeast(0.dp).coerceAtMost(MaxActionWidth)
         val originBounds = cardTextBounds[question.id]
-        val originalWidth = with(density) { originBounds?.width?.toDp() } ?: 0.dp
-        val originalHeight = with(density) { originBounds?.height?.toDp() } ?: 0.dp
+        val originalWidth = questionOrigin?.let { origin ->
+            maxWidth * origin.widthFraction
+        } ?: with(density) { originBounds?.width?.toDp() } ?: 0.dp
+        val originalHeight = questionOrigin?.let { origin ->
+            maxHeight * origin.heightFraction
+        } ?: with(density) { originBounds?.height?.toDp() } ?: 0.dp
         val compactTargetWidth = (maxWidth - SelectedQuestionHorizontalPadding * 2)
             .coerceAtLeast(0.dp)
             .coerceAtMost(560.dp)
-        val changesSize = uiState.aktuelleKarte.kartentexte.size < 3 || originBounds == null
+        val changesSize = uiState.aktuelleKarte.kartentexte.size < 3 ||
+            (questionOrigin == null && originBounds == null)
         val targetWidth = if (changesSize) compactTargetWidth else originalWidth
         val targetHeight = if (changesSize) SelectedQuestionCompactHeight else originalHeight
         val targetX = (maxWidth - targetWidth) / 2
-        val originX = originBounds?.let { bounds ->
+        val originX = questionOrigin?.let { origin ->
+            maxWidth * origin.leftFraction
+        } ?: originBounds?.let { bounds ->
             with(density) { (bounds.left - playAreaBounds.left).toDp() }
         } ?: targetX
-        val originY = originBounds?.let { bounds ->
+        val originY = questionOrigin?.let { origin ->
+            maxHeight * origin.topFraction
+        } ?: originBounds?.let { bounds ->
             with(density) { (bounds.top - playAreaBounds.top).toDp() }
         } ?: (maxHeight - targetHeight)
         val progress = transitionProgress.value
@@ -224,16 +259,26 @@ internal fun FunFactsPlayArea(
             originalHeight
         }
 
-        if (progress < 1f) {
+        if (questionOrigin == null || progress < 1f) {
             GamePlayArea(
                 spielName = uiState.spielName,
                 aktuelleKarte = transitionCard,
                 kategorien = uiState.kategorien,
                 interactionsEnabled = false,
+                hiddenCardTextIds = if (questionOrigin == null) {
+                    emptySet()
+                } else {
+                    setOf(question.id)
+                },
+                onKartentextBoundsChanged = { cardTextId, bounds ->
+                    cardTextBounds[cardTextId] = bounds
+                },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = gameContentHorizontalPadding)
-                    .graphicsLayer { alpha = 1f - progress },
+                    .graphicsLayer {
+                        alpha = if (questionOrigin == null) 1f else 1f - progress
+                    },
             )
         }
 
@@ -346,29 +391,31 @@ internal fun FunFactsPlayArea(
             }
         }
 
-        CardTextPanel(
-            kartentext = question.copy(gespielt = false),
-            index = questionIndex,
-            kartentextCount = uiState.aktuelleKarte.kartentexte.size,
-            textPanelColor = questionColor,
-            interactionsEnabled = progress >= 1f &&
-                session.players.isEmpty() &&
-                !returningToQuestionSelection,
-            onKartentextPlayedStateChanged = { _, _ ->
-                onQuestionTransitionStateChanged(true)
-                onCategoryTabsVisibilityChanged(true)
-                returningToQuestionSelection = true
-            },
-            modifier = Modifier
-                .offset {
-                    IntOffset(
-                        x = animatedX.roundToPx(),
-                        y = animatedY.roundToPx(),
-                    )
-                }
-                .width(animatedWidth)
-                .height(animatedHeight),
-        )
+        if (questionOrigin != null) {
+            CardTextPanel(
+                kartentext = question.copy(gespielt = false),
+                index = questionIndex,
+                kartentextCount = uiState.aktuelleKarte.kartentexte.size,
+                textPanelColor = questionColor,
+                interactionsEnabled = progress >= 1f &&
+                    session.players.isEmpty() &&
+                    !returningToQuestionSelection,
+                onKartentextPlayedStateChanged = { _, _ ->
+                    onQuestionTransitionStateChanged(true)
+                    onCategoryTabsVisibilityChanged(true)
+                    returningToQuestionSelection = true
+                },
+                modifier = Modifier
+                    .offset {
+                        IntOffset(
+                            x = animatedX.roundToPx(),
+                            y = animatedY.roundToPx(),
+                        )
+                    }
+                    .width(animatedWidth)
+                    .height(animatedHeight),
+            )
+        }
     }
 }
 
@@ -376,7 +423,19 @@ internal fun FunFactsPlayArea(
 @Composable
 private fun FunFactsPlayAreaPreview() {
     SpieleabendTheme {
-        val session = remember { FunFactsSession().apply { selectQuestion(101) } }
+        val session = remember {
+            FunFactsSession().apply {
+                selectQuestion(
+                    questionId = 101,
+                    origin = FunFactsQuestionOrigin(
+                        leftFraction = 0.15f,
+                        topFraction = 0.35f,
+                        widthFraction = 0.7f,
+                        heightFraction = 0.2f,
+                    ),
+                )
+            }
+        }
         FunFactsPlayArea(uiState = PreviewUiState, session = session)
     }
 }
@@ -1221,6 +1280,16 @@ private fun androidx.compose.ui.geometry.Offset.normalized(
         x = (x / width.coerceAtLeast(1)).coerceIn(0f, 1f),
         y = (y / height.coerceAtLeast(1)).coerceIn(0f, 1f),
     )
+
+private fun Rect.relativeTo(container: Rect): FunFactsQuestionOrigin? {
+    if (container.width <= 0f || container.height <= 0f) return null
+    return FunFactsQuestionOrigin(
+        leftFraction = ((left - container.left) / container.width).coerceIn(0f, 1f),
+        topFraction = ((top - container.top) / container.height).coerceIn(0f, 1f),
+        widthFraction = (width / container.width).coerceIn(0f, 1f),
+        heightFraction = (height / container.height).coerceIn(0f, 1f),
+    ).takeIf(FunFactsQuestionOrigin::valid)
+}
 
 private val PreviewDrawing = FunFactsDrawing(
     strokes = listOf(

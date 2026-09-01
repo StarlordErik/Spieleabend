@@ -323,6 +323,7 @@ internal fun GamePlayArea(
     onInteractionStateChanged: (Boolean) -> Unit = {},
     onSwipeTargetSelected: (CardSwipeTarget) -> Unit = {},
     interactionsEnabled: Boolean = true,
+    hiddenCardTextIds: Set<Int> = emptySet(),
     onKartentextBoundsChanged: (Int, Rect) -> Unit = { _, _ -> },
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
@@ -370,6 +371,7 @@ internal fun GamePlayArea(
                     textPanelColors = aktuelleKarte.textPanelColors(kategorien),
                     idleEffectsEnabled = idleEffectsEnabled,
                     interactionsEnabled = interactionsEnabled,
+                    hiddenCardTextIds = hiddenCardTextIds,
                     onKartentextBoundsChanged = onKartentextBoundsChanged,
                     onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
                     modifier = Modifier.fillMaxSize(),
