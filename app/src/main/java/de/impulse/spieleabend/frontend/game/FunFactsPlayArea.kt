@@ -94,6 +94,10 @@ internal fun FunFactsPlayArea(
     onInteractionStateChanged: (Boolean) -> Unit = {},
     onSwipeTargetSelected: (CardSwipeTarget) -> Unit = {},
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
+    developerMode: Boolean = false,
+    onKartentextDeletedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
+    onKartentextFavoriteStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
+    onKartentextEditRequested: (Int) -> Unit = {},
     onQuestionTransitionStateChanged: (Boolean) -> Unit = {},
     onCategoryTabsVisibilityChanged: (Boolean) -> Unit = {},
     onNextCard: () -> Unit = {},
@@ -138,6 +142,10 @@ internal fun FunFactsPlayArea(
             onHighlightedTargetChanged = onHighlightedTargetChanged,
             onInteractionStateChanged = onInteractionStateChanged,
             onSwipeTargetSelected = onSwipeTargetSelected,
+            developerMode = developerMode,
+            onKartentextDeletedStateChanged = onKartentextDeletedStateChanged,
+            onKartentextFavoriteStateChanged = onKartentextFavoriteStateChanged,
+            onKartentextEditRequested = onKartentextEditRequested,
             onKartentextPlayedStateChanged = { cardTextId, played ->
                 if (played) {
                     onQuestionTransitionStateChanged(true)
@@ -269,6 +277,7 @@ internal fun FunFactsPlayArea(
                 aktuelleKarte = transitionCard,
                 kategorien = uiState.kategorien,
                 interactionsEnabled = false,
+                developerMode = developerMode,
                 hiddenCardTextIds = if (questionOrigin == null) {
                     emptySet()
                 } else {
@@ -404,6 +413,12 @@ internal fun FunFactsPlayArea(
                 interactionsEnabled = progress >= 1f &&
                     session.players.isEmpty() &&
                     !returningToQuestionSelection,
+                markerInteractionsEnabled = progress >= 1f &&
+                    !returningToQuestionSelection,
+                developerMode = developerMode,
+                onKartentextDeletedStateChanged = onKartentextDeletedStateChanged,
+                onKartentextFavoriteStateChanged = onKartentextFavoriteStateChanged,
+                onKartentextEditRequested = onKartentextEditRequested,
                 onKartentextPlayedStateChanged = { _, _ ->
                     onQuestionTransitionStateChanged(true)
                     onCategoryTabsVisibilityChanged(true)

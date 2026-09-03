@@ -18,8 +18,8 @@ class DrawNextCardFromCategoryUseCase @Inject constructor(
 
         val historyState = repository.commitCardDraw(
             gameId = gameId,
-            resetSeenCategoryIds = plannedCardDraw.resetSeenKategorieIds,
-            resetSeenAndPlayedCategoryIds = plannedCardDraw.resetSeenUndGespieltKategorieIds,
+            resetSeenCardTextIds = plannedCardDraw.resetSeenKartentextIds,
+            resetSeenAndPlayedCardTextIds = plannedCardDraw.resetSeenUndGespieltKartentextIds,
             card = plannedCardDraw.karte,
         )
 

@@ -157,10 +157,8 @@ class SpieleabendDomainModelTest {
     }
 
     @Test
-    fun gezogeneKarteBenoetigtMindestensEinenKartentext() {
-        assertThrows(IllegalArgumentException::class.java) {
-            GezogeneKarte(kartentexte = emptyList())
-        }
+    fun gezogeneKarteErlaubtLeereExklusivAuswahl() {
+        assertEquals(emptyList<GezogenerKartentext>(), GezogeneKarte(kartentexte = emptyList()).kartentexte)
     }
 
     private fun spiel(

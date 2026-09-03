@@ -18,6 +18,21 @@ interface LokalisierungDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertTranslationen(translationen: List<TranslationEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertTranslation(translation: TranslationEntity)
+
+    @Query(
+        """
+        DELETE FROM translation
+        WHERE lokalisierung_id = :lokalisierungId
+          AND sprache = :sprache
+        """,
+    )
+    suspend fun deleteTranslation(
+        lokalisierungId: Int,
+        sprache: de.impulse.spieleabend.common.Sprache,
+    )
+
     @Query("SELECT * FROM lokalisierung WHERE id = :lokalisierungId LIMIT 1")
     suspend fun lokalisierung(lokalisierungId: Int): LokalisierungEntity?
 

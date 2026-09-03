@@ -3,6 +3,7 @@ package de.impulse.spieleabend.frontend.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.impulse.spieleabend.common.Sprache
 import de.impulse.spieleabend.domain.repository.AppSettingsRepository
 import de.impulse.spieleabend.domain.usecase.ResetAllCardsForAllGamesUseCase
 import javax.inject.Inject
@@ -22,9 +23,21 @@ class AppSettingsViewModel @Inject constructor(
         initialValue = false,
     )
 
+    val language: StateFlow<Sprache> = appSettingsRepository.language.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
+        initialValue = Sprache.DE,
+    )
+
     fun setDeveloperMode(enabled: Boolean) {
         viewModelScope.launch {
             appSettingsRepository.setDeveloperMode(enabled)
+        }
+    }
+
+    fun setLanguage(language: Sprache) {
+        viewModelScope.launch {
+            appSettingsRepository.setLanguage(language)
         }
     }
 

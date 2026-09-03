@@ -83,6 +83,7 @@ room {
 
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
+    implementation(platform(libs.kotlinx.serialization.bom))
     androidTestImplementation(platform(libs.androidx.compose.bom))
 
     implementation(libs.androidx.activity.compose)

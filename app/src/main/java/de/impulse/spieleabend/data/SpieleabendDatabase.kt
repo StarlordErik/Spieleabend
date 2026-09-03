@@ -8,6 +8,7 @@ import de.impulse.spieleabend.data.dao.KategorieDao
 import de.impulse.spieleabend.data.dao.LokalisierungDao
 import de.impulse.spieleabend.data.dao.SpielDao
 import de.impulse.spieleabend.data.dao.SpielEinstellungDao
+import de.impulse.spieleabend.data.dao.SpielZiehEinstellungDao
 import de.impulse.spieleabend.data.entity.GezogeneKarteEntity
 import de.impulse.spieleabend.data.entity.GezogenerKartentextEntity
 import de.impulse.spieleabend.data.entity.KartentextEntity
@@ -16,6 +17,7 @@ import de.impulse.spieleabend.data.entity.KategorieXKartentextEntity
 import de.impulse.spieleabend.data.entity.LokalisierungEntity
 import de.impulse.spieleabend.data.entity.SpielEntity
 import de.impulse.spieleabend.data.entity.SpielEinstellungEntity
+import de.impulse.spieleabend.data.entity.SpielZiehEinstellungEntity
 import de.impulse.spieleabend.data.entity.SpielXKategorieEntity
 import de.impulse.spieleabend.data.entity.TranslationEntity
 
@@ -31,8 +33,9 @@ import de.impulse.spieleabend.data.entity.TranslationEntity
         GezogeneKarteEntity::class,
         GezogenerKartentextEntity::class,
         SpielEinstellungEntity::class,
+        SpielZiehEinstellungEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class SpieleabendDatabase : RoomDatabase() {
@@ -47,4 +50,6 @@ abstract class SpieleabendDatabase : RoomDatabase() {
     abstract fun kartenverlaufDao(): KartenverlaufDao
 
     abstract fun spielEinstellungDao(): SpielEinstellungDao
+
+    abstract fun spielZiehEinstellungDao(): SpielZiehEinstellungDao
 }

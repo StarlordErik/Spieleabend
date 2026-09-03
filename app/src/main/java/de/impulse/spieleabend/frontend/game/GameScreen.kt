@@ -50,6 +50,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.impulse.spieleabend.domain.model.BearbeiteteKartentexteModus
+import de.impulse.spieleabend.domain.model.FavoritenModus
+import de.impulse.spieleabend.domain.model.GeloeschteKartentexteModus
 import de.impulse.spieleabend.frontend.theme.SpieleabendTheme
 import de.impulse.spieleabend.frontend.settings.GameSettingsDialog
 
@@ -78,6 +81,12 @@ fun GameScreen(
                 onTextsPerCardChanged = viewModel::setTextsPerCard,
                 onResetTextsPerCard = viewModel::resetTextsPerCard,
                 onKartentextPlayedStateChanged = viewModel::setKartentextGespielt,
+                onKartentextDeletedStateChanged = viewModel::setKartentextGeloescht,
+                onKartentextFavoriteStateChanged = viewModel::setKartentextFavorit,
+                onCustomCardTextChanged = viewModel::setEigeneKartentextLokalisierung,
+                onDeletedCardTextsModeChanged = viewModel::setGeloeschteKartentexteModus,
+                onFavoritesModeChanged = viewModel::setFavoritenModus,
+                onEditedCardTextsModeChanged = viewModel::setBearbeiteteKartentexteModus,
                 onFunFactsModeChanged = viewModel::setFunFactsModeEnabled,
                 funFactsSession = viewModel.funFactsSession,
             )
@@ -136,10 +145,17 @@ private fun GameScreenContent(
     onTextsPerCardChanged: (Int) -> Unit = {},
     onResetTextsPerCard: () -> Unit = {},
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
+    onKartentextDeletedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
+    onKartentextFavoriteStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
+    onCustomCardTextChanged: (Int, String?) -> Unit = { _, _ -> },
+    onDeletedCardTextsModeChanged: (GeloeschteKartentexteModus) -> Unit = {},
+    onFavoritesModeChanged: (FavoritenModus) -> Unit = {},
+    onEditedCardTextsModeChanged: (BearbeiteteKartentexteModus) -> Unit = {},
     onFunFactsModeChanged: (Boolean) -> Unit = {},
     funFactsSession: FunFactsSession? = null,
 ) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
+    var editingCardTextId by rememberSaveable { mutableStateOf<Int?>(null) }
     var highlightedTarget by remember { mutableStateOf<CardSwipeTarget?>(null) }
     var swipeInteractionLocked by remember { mutableStateOf(false) }
     var funFactsQuestionTransitionActive by remember { mutableStateOf(false) }
@@ -203,6 +219,10 @@ private fun GameScreenContent(
                         }
                     },
                     onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
+                    developerMode = developerMode,
+                    onKartentextDeletedStateChanged = onKartentextDeletedStateChanged,
+                    onKartentextFavoriteStateChanged = onKartentextFavoriteStateChanged,
+                    onKartentextEditRequested = { cardTextId -> editingCardTextId = cardTextId },
                     onQuestionTransitionStateChanged = { active ->
                         funFactsQuestionTransitionActive = active
                     },
@@ -237,6 +257,10 @@ private fun GameScreenContent(
                         }
                     },
                     onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
+                    developerMode = developerMode,
+                    onKartentextDeletedStateChanged = onKartentextDeletedStateChanged,
+                    onKartentextFavoriteStateChanged = onKartentextFavoriteStateChanged,
+                    onKartentextEditRequested = { cardTextId -> editingCardTextId = cardTextId },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(
@@ -300,7 +324,13 @@ private fun GameScreenContent(
             developerMode = developerMode,
             supportsFunFactsMode = uiState.spielId == FUN_FACTS_GAME_ID,
             funFactsModeEnabled = uiState.funFactsModeEnabled,
+            deletedCardTextsMode = uiState.geloeschteKartentexteModus,
+            favoritesMode = uiState.favoritenModus,
+            editedCardTextsMode = uiState.bearbeiteteKartentexteModus,
             onFunFactsModeChanged = onFunFactsModeChanged,
+            onDeletedCardTextsModeChanged = onDeletedCardTextsModeChanged,
+            onFavoritesModeChanged = onFavoritesModeChanged,
+            onEditedCardTextsModeChanged = onEditedCardTextsModeChanged,
             onRestartFunFactsGame = {
                 activeFunFactsSession.selectedQuestionId?.let { questionId ->
                     onKartentextPlayedStateChanged(questionId, false)
@@ -321,6 +351,25 @@ private fun GameScreenContent(
                 onShowCards()
             },
             onDismiss = { showSettings = false },
+        )
+    }
+
+    val editingCardText = uiState.aktuelleKarte.kartentexte.firstOrNull { cardText ->
+        cardText.id == editingCardTextId
+    }
+    if (developerMode && editingCardText != null) {
+        CardTextEditorDialog(
+            cardText = editingCardText,
+            language = uiState.sprache,
+            onSave = { text ->
+                onCustomCardTextChanged(editingCardText.id, text)
+                editingCardTextId = null
+            },
+            onDeleteOwnTranslation = {
+                onCustomCardTextChanged(editingCardText.id, null)
+                editingCardTextId = null
+            },
+            onDismiss = { editingCardTextId = null },
         )
     }
 }
@@ -359,8 +408,12 @@ internal fun GamePlayArea(
     onSwipeTargetSelected: (CardSwipeTarget) -> Unit = {},
     interactionsEnabled: Boolean = true,
     hiddenCardTextIds: Set<Int> = emptySet(),
+    developerMode: Boolean = false,
     onKartentextBoundsChanged: (Int, Rect) -> Unit = { _, _ -> },
     onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
+    onKartentextDeletedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
+    onKartentextFavoriteStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
+    onKartentextEditRequested: (Int) -> Unit = {},
 ) {
     Column(
         modifier = modifier,
@@ -409,8 +462,12 @@ internal fun GamePlayArea(
                     idleEffectsEnabled = idleEffectsEnabled,
                     interactionsEnabled = interactionsEnabled,
                     hiddenCardTextIds = hiddenCardTextIds,
+                    developerMode = developerMode,
                     onKartentextBoundsChanged = onKartentextBoundsChanged,
                     onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
+                    onKartentextDeletedStateChanged = onKartentextDeletedStateChanged,
+                    onKartentextFavoriteStateChanged = onKartentextFavoriteStateChanged,
+                    onKartentextEditRequested = onKartentextEditRequested,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

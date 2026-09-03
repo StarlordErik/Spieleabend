@@ -8,7 +8,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.impulse.spieleabend.common.Sprache
+import de.impulse.spieleabend.domain.model.BearbeiteteKartentexteModus
+import de.impulse.spieleabend.domain.model.FavoritenModus
 import de.impulse.spieleabend.domain.model.GezogeneKarte
+import de.impulse.spieleabend.domain.model.GeloeschteKartentexteModus
 import de.impulse.spieleabend.domain.model.Spiel
 import de.impulse.spieleabend.domain.repository.AppSettingsRepository
 import de.impulse.spieleabend.domain.usecase.DrawCardResult
@@ -21,6 +24,7 @@ import de.impulse.spieleabend.domain.usecase.ResetTextsPerCardUseCase
 import de.impulse.spieleabend.domain.usecase.SetCardTextPlayedStateUseCase
 import de.impulse.spieleabend.domain.usecase.SetTextsPerCardUseCase
 import de.impulse.spieleabend.domain.usecase.ShowPreviousCardUseCase
+import de.impulse.spieleabend.domain.usecase.UpdateCardTextSettingsUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,8 +33,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.Locale
-import java.util.Locale.ROOT
 import javax.inject.Inject
 
 @HiltViewModel
@@ -46,11 +48,12 @@ class GameViewModel @Inject constructor(
     private val resetAllCardsUseCase: ResetAllCardsForGameUseCase,
     private val setTextsPerCardUseCase: SetTextsPerCardUseCase,
     private val resetTextsPerCardUseCase: ResetTextsPerCardUseCase,
+    private val updateCardTextSettings: UpdateCardTextSettingsUseCase,
     private val appSettingsRepository: AppSettingsRepository,
 ) : ViewModel() {
     private val gameIdArg: String? = savedStateHandle[GAME_ID_ARG]
     private val gameId: Int = gameIdArg?.toIntOrNull() ?: DefaultGameId
-    private val sprache: Sprache = spracheAusLocale(Locale.getDefault())
+    private var sprache: Sprache = Sprache.DE
     private val cardChangeMutex = Mutex()
     private var funFactsModeEnabled = true
     private var funFactsPersistenceJob: Job? = null
@@ -70,6 +73,17 @@ class GameViewModel @Inject constructor(
                 funFactsModeEnabled = enabled
                 val state = _uiState.value as? GameScreenUiState.Loaded ?: return@collect
                 _uiState.value = GameScreenUiState.Loaded(state.game.copy(funFactsModeEnabled = enabled))
+            }
+        }
+        viewModelScope.launch {
+            appSettingsRepository.language.collect { language ->
+                cardChangeMutex.withLock {
+                    val languageChanged = sprache != language
+                    sprache = language
+                    if (languageChanged && _uiState.value is GameScreenUiState.Loaded) {
+                        showCard(getOrDrawInitialCard(gameId))
+                    }
+                }
             }
         }
         viewModelScope.launch {
@@ -167,6 +181,77 @@ class GameViewModel @Inject constructor(
         }
     }
 
+    fun setKartentextGeloescht(
+        cardTextId: Int,
+        deleted: Boolean,
+    ) {
+        val state = _uiState.value as? GameScreenUiState.Loaded ?: return
+        if (state.game.aktuelleKarte.kartentexte.none { cardText -> cardText.id == cardTextId }) return
+        _uiState.value = GameScreenUiState.Loaded(
+            state.game.withCardTextDeletedState(cardTextId, deleted),
+        )
+        viewModelScope.launch {
+            cardChangeMutex.withLock {
+                updateCardTextSettings.setDeleted(cardTextId, deleted)
+            }
+        }
+    }
+
+    fun setKartentextFavorit(
+        cardTextId: Int,
+        favorite: Boolean,
+    ) {
+        val state = _uiState.value as? GameScreenUiState.Loaded ?: return
+        if (state.game.aktuelleKarte.kartentexte.none { cardText -> cardText.id == cardTextId }) return
+        _uiState.value = GameScreenUiState.Loaded(
+            state.game.withCardTextFavoriteState(cardTextId, favorite),
+        )
+        viewModelScope.launch {
+            cardChangeMutex.withLock {
+                updateCardTextSettings.setFavorite(cardTextId, favorite)
+            }
+        }
+    }
+
+    fun setEigeneKartentextLokalisierung(
+        cardTextId: Int,
+        text: String?,
+    ) {
+        viewModelScope.launch {
+            cardChangeMutex.withLock {
+                updateCardTextSettings.setCustomTranslation(cardTextId, sprache, text)
+                showCard(getOrDrawInitialCard(gameId))
+            }
+        }
+    }
+
+    fun setGeloeschteKartentexteModus(mode: GeloeschteKartentexteModus) {
+        updateGameSettings { game -> game.copy(geloeschteKartentexteModus = mode) }
+        viewModelScope.launch {
+            cardChangeMutex.withLock {
+                updateCardTextSettings.setDeletedMode(gameId, mode)
+            }
+        }
+    }
+
+    fun setFavoritenModus(mode: FavoritenModus) {
+        updateGameSettings { game -> game.copy(favoritenModus = mode) }
+        viewModelScope.launch {
+            cardChangeMutex.withLock {
+                updateCardTextSettings.setFavoritesMode(gameId, mode)
+            }
+        }
+    }
+
+    fun setBearbeiteteKartentexteModus(mode: BearbeiteteKartentexteModus) {
+        updateGameSettings { game -> game.copy(bearbeiteteKartentexteModus = mode) }
+        viewModelScope.launch {
+            cardChangeMutex.withLock {
+                updateCardTextSettings.setEditedMode(gameId, mode)
+            }
+        }
+    }
+
     override fun onCleared() {
         appSettingsRepository.setFunFactsSession(funFactsSession.serialize())
     }
@@ -197,6 +282,11 @@ class GameViewModel @Inject constructor(
         )
     }
 
+    private fun updateGameSettings(transform: (GameUiState) -> GameUiState) {
+        val state = _uiState.value as? GameScreenUiState.Loaded ?: return
+        _uiState.value = GameScreenUiState.Loaded(transform(state.game))
+    }
+
     private fun Spiel.toUiState(
         aktuelleKarte: GezogeneKarte,
         cardInstanceId: Long,
@@ -208,11 +298,6 @@ class GameViewModel @Inject constructor(
             cardInstanceId = cardInstanceId,
             hasPreviousCard = hasPreviousCard,
         )
-
-    private fun spracheAusLocale(locale: Locale): Sprache =
-        Sprache.entries.firstOrNull { sprache ->
-            sprache.name == locale.language.uppercase(ROOT)
-        } ?: Sprache.DE
 
     private companion object {
         const val DefaultGameId = 1

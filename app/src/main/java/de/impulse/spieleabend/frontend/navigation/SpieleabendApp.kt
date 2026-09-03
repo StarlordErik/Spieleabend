@@ -32,6 +32,7 @@ fun SpieleabendApp(
     val navController = rememberNavController()
     val appSettingsViewModel: AppSettingsViewModel = hiltViewModel()
     val developerMode by appSettingsViewModel.developerMode.collectAsStateWithLifecycle()
+    val language by appSettingsViewModel.language.collectAsStateWithLifecycle()
 
     NavHost(
         navController = navController,
@@ -56,7 +57,9 @@ fun SpieleabendApp(
             if (showSettings) {
                 AppSettingsDialog(
                     developerMode = developerMode,
+                    language = language,
                     onDeveloperModeChanged = appSettingsViewModel::setDeveloperMode,
+                    onLanguageChanged = appSettingsViewModel::setLanguage,
                     onResetAllCards = appSettingsViewModel::resetAllCards,
                     onDismiss = { showSettings = false },
                 )

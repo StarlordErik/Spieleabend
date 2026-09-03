@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import de.impulse.spieleabend.data.SpieleabendDatabase
 import de.impulse.spieleabend.data.migration.Migration2To3
+import de.impulse.spieleabend.data.migration.Migration3To4
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -88,6 +89,82 @@ class DatabaseModuleMigrationTest {
                 cursor.getInt(0)
             }
             assertEquals(3, newTableCount)
+        }
+    }
+
+    @Test
+    fun migration3To4PreservesExistingSettingsAndAddsDrawModes() {
+        migrationHelper.createDatabase(MIGRATION_DATABASE_NAME, 3).apply {
+            execSQL("INSERT INTO lokalisierung (id, og_sprache) VALUES (1, 'DE')")
+            execSQL("INSERT INTO lokalisierung (id, og_sprache) VALUES (2, 'DE')")
+            execSQL(
+                """
+                INSERT INTO spiel (
+                    lokalisierung_id, inaktiv, selbst_erstellt, favorit, bild_dateiname, texte_pro_karte
+                ) VALUES (1, 0, 0, 0, NULL, 2)
+                """.trimIndent(),
+            )
+            execSQL(
+                "INSERT INTO spiel_einstellung (spiel_id, texte_pro_karte_override) VALUES (1, 4)",
+            )
+            execSQL(
+                """
+                INSERT INTO kartentext (
+                    lokalisierung_id, inaktiv, selbst_erstellt, favorit, gesehen, gespielt
+                ) VALUES (2, 1, 0, 1, 1, 0)
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO translation (lokalisierung_id, sprache, text, bearbeitet)
+                VALUES (2, 'DE', 'Bearbeitet', 1)
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        migrationHelper.runMigrationsAndValidate(
+            name = MIGRATION_DATABASE_NAME,
+            version = 4,
+            validateDroppedTables = true,
+            Migration3To4,
+        ).use { database ->
+            database.query(
+                "SELECT texte_pro_karte_override FROM spiel_einstellung WHERE spiel_id = 1",
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(4, cursor.getInt(0))
+            }
+            database.query(
+                "SELECT inaktiv, favorit, gesehen, gespielt FROM kartentext WHERE lokalisierung_id = 2",
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(1, cursor.getInt(0))
+                assertEquals(1, cursor.getInt(1))
+                assertEquals(1, cursor.getInt(2))
+                assertEquals(0, cursor.getInt(3))
+            }
+            database.query(
+                "SELECT text, bearbeitet FROM translation WHERE lokalisierung_id = 2 AND sprache = 'DE'",
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("Bearbeitet", cursor.getString(0))
+                assertEquals(1, cursor.getInt(1))
+            }
+
+            database.execSQL("INSERT INTO spiel_zieh_einstellung (spiel_id) VALUES (1)")
+            database.query(
+                """
+                SELECT geloeschte_modus, favoriten_modus, bearbeitete_modus
+                FROM spiel_zieh_einstellung
+                WHERE spiel_id = 1
+                """.trimIndent(),
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("ALS_LETZTE", cursor.getString(0))
+                assertEquals("UNBEACHTET", cursor.getString(1))
+                assertEquals("UNBEACHTET", cursor.getString(2))
+            }
         }
     }
 

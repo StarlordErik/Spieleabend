@@ -59,5 +59,25 @@ val Migration2To3: Migration =
         }
     }
 
+val Migration3To4: Migration =
+    object : Migration(DATABASE_VERSION_3, DATABASE_VERSION_4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `spiel_zieh_einstellung` (
+                    `spiel_id` INTEGER NOT NULL,
+                    `geloeschte_modus` TEXT NOT NULL DEFAULT 'ALS_LETZTE',
+                    `favoriten_modus` TEXT NOT NULL DEFAULT 'UNBEACHTET',
+                    `bearbeitete_modus` TEXT NOT NULL DEFAULT 'UNBEACHTET',
+                    PRIMARY KEY(`spiel_id`),
+                    FOREIGN KEY(`spiel_id`) REFERENCES `spiel`(`lokalisierung_id`)
+                        ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+        }
+    }
+
 private const val DATABASE_VERSION_2 = 2
 private const val DATABASE_VERSION_3 = 3
+private const val DATABASE_VERSION_4 = 4

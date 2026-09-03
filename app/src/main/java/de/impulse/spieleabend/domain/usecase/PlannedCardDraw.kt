@@ -1,14 +1,17 @@
 package de.impulse.spieleabend.domain.usecase
 
+import de.impulse.spieleabend.domain.model.BearbeiteteKartentexteModus
+import de.impulse.spieleabend.domain.model.FavoritenModus
+import de.impulse.spieleabend.domain.model.GeloeschteKartentexteModus
 import de.impulse.spieleabend.domain.model.GezogeneKarte
 import de.impulse.spieleabend.domain.model.GezogenerKartentext
-import de.impulse.spieleabend.domain.model.Kategorie
+import de.impulse.spieleabend.domain.model.Kartentext
 import de.impulse.spieleabend.domain.model.Spiel
 
 internal data class PlannedCardDraw(
     val karte: GezogeneKarte,
-    val resetSeenKategorieIds: Set<Int> = emptySet(),
-    val resetSeenUndGespieltKategorieIds: Set<Int> = emptySet(),
+    val resetSeenKartentextIds: Set<Int> = emptySet(),
+    val resetSeenUndGespieltKartentextIds: Set<Int> = emptySet(),
 )
 
 internal fun planNextCardFromCategory(
@@ -21,167 +24,219 @@ internal fun planNextCardFromCategory(
         "Das Spiel ${spiel.id()} enth\u00e4lt keine Kategorie mit der ID $kategorieId."
     }
 
-    val playedResetKategorieIds =
-        if (kategorie.ziehbareKartentexte(unseenOnly = false).isEmpty()) {
-            setOf(kategorie.id())
-        } else {
-            emptySet()
-        }
-    val effektiveKategorieNachPlayedReset =
-        if (playedResetKategorieIds.isEmpty()) {
-            kategorie
-        } else {
-            kategorie.resetSeenUndGespielt()
-        }
-    val ungeseheneKartentexte = effektiveKategorieNachPlayedReset.ziehbareKartentexte(unseenOnly = true)
-
-    val resetSeenKategorieIds =
-        if (ungeseheneKartentexte.isEmpty() && playedResetKategorieIds.isEmpty()) {
-            setOf(kategorie.id())
-        } else {
-            emptySet()
-        }
-    val effektiveKategorie =
-        if (resetSeenKategorieIds.isEmpty()) {
-            effektiveKategorieNachPlayedReset
-        } else {
-            effektiveKategorieNachPlayedReset.resetSeenForNichtGespielte()
-        }
-    val ziehbareKartentexte = effektiveKategorie.ziehbareKartentexte(unseenOnly = true)
-
-    return PlannedCardDraw(
-        karte = effektiveKategorie.gezogeneKarte(
-            texteProKarte = spiel.texteProKarte,
-            kartentexte = ziehbareKartentexte,
-        ),
-        resetSeenKategorieIds = resetSeenKategorieIds,
-        resetSeenUndGespieltKategorieIds = playedResetKategorieIds,
+    return planNextCard(
+        spiel = spiel,
+        candidates = kategorie.kartentexte.map { kartentext ->
+            CardTextCandidate(kartentext = kartentext, kategorieId = kategorie.id())
+        },
     )
 }
 
-internal fun planNextRandomCard(spiel: Spiel): PlannedCardDraw {
-    val kategorien = spiel.kategorien.toList()
-    val playedResetKategorieIds =
-        if (kategorien.isNotEmpty() && randomKartentexte(kategorien, unseenOnly = false).isEmpty()) {
-            kategorien.map { kategorie -> kategorie.id() }.toSet()
-        } else {
-            emptySet()
-        }
-    val effektiveKategorienNachPlayedReset =
-        if (playedResetKategorieIds.isEmpty()) {
-            kategorien
-        } else {
-            kategorien.map { kategorie -> kategorie.resetSeenUndGespielt() }
-        }
-    val ungeseheneKartentexte = randomKartentexte(effektiveKategorienNachPlayedReset, unseenOnly = true)
-    val resetSeenKategorieIds =
-        if (ungeseheneKartentexte.isEmpty() && playedResetKategorieIds.isEmpty()) {
-            effektiveKategorienNachPlayedReset.map { kategorie -> kategorie.id() }.toSet()
-        } else {
-            emptySet()
-        }
-    val effektiveKategorien =
-        if (resetSeenKategorieIds.isEmpty()) {
-            effektiveKategorienNachPlayedReset
-        } else {
-            effektiveKategorienNachPlayedReset.map { kategorie -> kategorie.resetSeenForNichtGespielte() }
-        }
-    val ziehbareKartentexte = randomKartentexte(effektiveKategorien, unseenOnly = true)
-
-    return PlannedCardDraw(
-        karte = GezogeneKarte(ziehbareKartentexte.take(spiel.texteProKarte)),
-        resetSeenKategorieIds = resetSeenKategorieIds,
-        resetSeenUndGespieltKategorieIds = playedResetKategorieIds,
-    )
-}
-
-private fun Kategorie.gezogeneKarte(
-    texteProKarte: Int,
-    kartentexte: List<de.impulse.spieleabend.domain.model.Kartentext> = this.kartentexte.toList(),
-): GezogeneKarte =
-    GezogeneKarte(
-        kartentexte =
-            kartentexte
-                .shuffled()
-                .take(texteProKarte)
-                .map { kartentext ->
-                    GezogenerKartentext(
-                        kartentext = kartentext,
-                        kategorieId = id(),
-                    )
-                },
-    )
-
-private fun randomKartentexte(
-    kategorien: List<Kategorie>,
-    unseenOnly: Boolean,
-): List<GezogenerKartentext> =
-    kategorien
-        .flatMap { kategorie ->
-            kategorie.ziehbareKartentexte(unseenOnly)
-                .map { kartentext ->
-                    GezogenerKartentext(
-                        kartentext = kartentext,
-                        kategorieId = kategorie.id(),
-                    )
+internal fun planNextRandomCard(spiel: Spiel): PlannedCardDraw =
+    planNextCard(
+        spiel = spiel,
+        candidates = spiel.kategorien
+            .flatMap { kategorie ->
+                kategorie.kartentexte.map { kartentext ->
+                    CardTextCandidate(kartentext = kartentext, kategorieId = kategorie.id())
                 }
-        }
-        .shuffled()
-        .distinctBy { gezogenerKartentext ->
-            gezogenerKartentext.kartentext.id()
-        }
+            }
+            .shuffled()
+            .distinctBy { candidate -> candidate.kartentext.id() },
+    )
 
-private fun Kategorie.ziehbareKartentexte(unseenOnly: Boolean): List<de.impulse.spieleabend.domain.model.Kartentext> =
-    kartentexte.filterNot { kartentext ->
-        kartentext.gespielt || (unseenOnly && kartentext.gesehen)
+private fun planNextCard(
+    spiel: Spiel,
+    candidates: List<CardTextCandidate>,
+): PlannedCardDraw {
+    val planner = CardTextPoolPlanner()
+    var hardFilteredCandidates = candidates
+
+    if (spiel.bearbeiteteKartentexteModus == BearbeiteteKartentexteModus.AUSSCHLIESSLICH) {
+        hardFilteredCandidates = hardFilteredCandidates.filter { candidate ->
+            candidate.kartentext.lokalisierung.hatEigeneLokalisierung()
+        }
+    }
+    if (spiel.favoritenModus == FavoritenModus.AUSSCHLIESSLICH) {
+        hardFilteredCandidates = hardFilteredCandidates.filter { candidate -> candidate.kartentext.favorit }
+    }
+    hardFilteredCandidates = when (spiel.geloeschteKartentexteModus) {
+        GeloeschteKartentexteModus.AUSBLENDEN ->
+            hardFilteredCandidates.filterNot { candidate -> candidate.kartentext.inaktiv }
+        GeloeschteKartentexteModus.AUSSCHLIESSLICH ->
+            hardFilteredCandidates.filter { candidate -> candidate.kartentext.inaktiv }
+        GeloeschteKartentexteModus.ALS_LETZTE,
+        GeloeschteKartentexteModus.UNBEACHTET,
+        -> hardFilteredCandidates
     }
 
-private fun Kategorie.resetSeenForNichtGespielte(): Kategorie =
-    copy(
-        originaleKartentexte = originaleKartentexte.mapToLinkedHashSet { kartentext ->
-            if (kartentext.gespielt) {
-                kartentext
-            } else {
-                kartentext.copy(gesehen = false)
-            }
-        },
-        hinzugefuegteKartentexte = hinzugefuegteKartentexte.mapToLinkedHashSet { kartentext ->
-            if (kartentext.gespielt) {
-                kartentext
-            } else {
-                kartentext.copy(gesehen = false)
-            }
-        },
-        inaktiveKartentexte = inaktiveKartentexte.mapToLinkedHashSet { kartentext ->
-            if (kartentext.gespielt) {
-                kartentext
-            } else {
-                kartentext.copy(gesehen = false)
-            }
-        },
+    val deletionStage = deletionStage(
+        candidates = hardFilteredCandidates.map(planner::effectiveCandidate),
+        mode = spiel.geloeschteKartentexteModus,
     )
+    val selected = when (spiel.favoritenModus) {
+        FavoritenModus.GENAU_EINER_PRO_KARTE -> planner.drawWithExactlyOneFavorite(
+            candidates = deletionStage.candidates,
+            count = spiel.texteProKarte,
+        )
+        FavoritenModus.UNBEACHTET,
+        FavoritenModus.AUSSCHLIESSLICH,
+        -> planner.draw(deletionStage.candidates, spiel.texteProKarte)
+    }
 
-private fun Kategorie.resetSeenUndGespielt(): Kategorie =
-    copy(
-        originaleKartentexte = originaleKartentexte.mapToLinkedHashSet { kartentext ->
-            kartentext.copy(
-                gesehen = false,
-                gespielt = false,
-            )
-        },
-        hinzugefuegteKartentexte = hinzugefuegteKartentexte.mapToLinkedHashSet { kartentext ->
-            kartentext.copy(
-                gesehen = false,
-                gespielt = false,
-            )
-        },
-        inaktiveKartentexte = inaktiveKartentexte.mapToLinkedHashSet { kartentext ->
-            kartentext.copy(
-                gesehen = false,
-                gespielt = false,
-            )
-        },
+    if (deletionStage.shouldResetNormalCandidatesAfterDraw(planner, selected)) {
+        planner.refreshForNextCycle(deletionStage.normalCandidatesToResetAfterDraw)
+    }
+
+    return PlannedCardDraw(
+        karte = GezogeneKarte(
+            selected.map { candidate ->
+                GezogenerKartentext(
+                    kartentext = candidate.kartentext,
+                    kategorieId = candidate.kategorieId,
+                )
+            },
+        ),
+        resetSeenKartentextIds = planner.resetSeenIds,
+        resetSeenUndGespieltKartentextIds = planner.resetSeenAndPlayedIds,
     )
+}
 
-private fun <T, R> Iterable<T>.mapToLinkedHashSet(transform: (T) -> R): LinkedHashSet<R> =
-    map(transform).toCollection(LinkedHashSet())
+@Suppress("ReturnCount")
+private fun deletionStage(
+    candidates: List<CardTextCandidate>,
+    mode: GeloeschteKartentexteModus,
+): DeletionStage {
+    if (mode != GeloeschteKartentexteModus.ALS_LETZTE) {
+        return DeletionStage(candidates = candidates)
+    }
+
+    val normalCandidates = candidates.filterNot { candidate -> candidate.kartentext.inaktiv }
+    val deletedCandidates = candidates.filter { candidate -> candidate.kartentext.inaktiv }
+    val unseenNormalCandidates = normalCandidates.filter(CardTextCandidate::isUnseenAndUnplayed)
+    if (unseenNormalCandidates.isNotEmpty() || deletedCandidates.isEmpty()) {
+        return DeletionStage(candidates = normalCandidates)
+    }
+
+    return DeletionStage(
+        candidates = deletedCandidates,
+        normalCandidatesToResetAfterDraw = normalCandidates,
+    )
+}
+
+private data class DeletionStage(
+    val candidates: List<CardTextCandidate>,
+    val normalCandidatesToResetAfterDraw: List<CardTextCandidate> = emptyList(),
+)
+
+private fun DeletionStage.shouldResetNormalCandidatesAfterDraw(
+    planner: CardTextPoolPlanner,
+    selected: List<CardTextCandidate>,
+): Boolean {
+    if (normalCandidatesToResetAfterDraw.isEmpty()) return false
+
+    val selectedIds = selected.mapTo(mutableSetOf()) { candidate -> candidate.kartentext.id() }
+    val unseenDeletedAfterRefresh = candidates
+        .map(planner::effectiveCandidate)
+        .filter(CardTextCandidate::isUnseenAndUnplayed)
+    return unseenDeletedAfterRefresh.isNotEmpty() &&
+        unseenDeletedAfterRefresh.all { candidate -> candidate.kartentext.id() in selectedIds }
+}
+
+private data class CardTextCandidate(
+    val kartentext: Kartentext,
+    val kategorieId: Int,
+) {
+    fun isUnseenAndUnplayed(): Boolean = !kartentext.gesehen && !kartentext.gespielt
+}
+
+private class CardTextPoolPlanner {
+    private val mutableResetSeenIds = linkedSetOf<Int>()
+    private val mutableResetSeenAndPlayedIds = linkedSetOf<Int>()
+
+    val resetSeenIds: Set<Int>
+        get() = mutableResetSeenIds
+
+    val resetSeenAndPlayedIds: Set<Int>
+        get() = mutableResetSeenAndPlayedIds
+
+    fun drawWithExactlyOneFavorite(
+        candidates: List<CardTextCandidate>,
+        count: Int,
+    ): List<CardTextCandidate> {
+        val favoriteCandidates = candidates.filter { candidate -> candidate.kartentext.favorit }
+        if (favoriteCandidates.isEmpty()) {
+            return draw(candidates, count)
+        }
+
+        val selectedFavorite = draw(favoriteCandidates, count = 1)
+        val otherCandidates = candidates.filterNot { candidate -> candidate.kartentext.favorit }
+        val selectedOthers = draw(
+            candidates = otherCandidates,
+            count = (count - selectedFavorite.size).coerceAtLeast(0),
+        )
+        return (selectedFavorite + selectedOthers).shuffled()
+    }
+
+    fun draw(
+        candidates: List<CardTextCandidate>,
+        count: Int,
+    ): List<CardTextCandidate> {
+        if (count <= 0 || candidates.isEmpty()) {
+            return emptyList()
+        }
+
+        var effectiveCandidates = candidates.map(::effectiveCandidate)
+        var unplayedCandidates = effectiveCandidates.filterNot { candidate -> candidate.kartentext.gespielt }
+        if (unplayedCandidates.isEmpty()) {
+            resetSeenAndPlayed(effectiveCandidates)
+            effectiveCandidates = effectiveCandidates.map(::effectiveCandidate)
+            unplayedCandidates = effectiveCandidates
+        }
+
+        var unseenCandidates = unplayedCandidates.filterNot { candidate -> candidate.kartentext.gesehen }
+        if (unseenCandidates.isEmpty()) {
+            resetSeen(unplayedCandidates)
+            unseenCandidates = unplayedCandidates.map(::effectiveCandidate)
+        }
+
+        return unseenCandidates.shuffled().take(count)
+    }
+
+    fun resetSeen(candidates: Collection<CardTextCandidate>) {
+        candidates
+            .filterNot { candidate -> candidate.kartentext.gespielt }
+            .mapTo(mutableResetSeenIds) { candidate -> candidate.kartentext.id() }
+    }
+
+    fun resetSeenAndPlayed(candidates: Collection<CardTextCandidate>) {
+        val ids = candidates.map { candidate -> candidate.kartentext.id() }
+        mutableResetSeenIds.removeAll(ids.toSet())
+        mutableResetSeenAndPlayedIds.addAll(ids)
+    }
+
+    fun refreshForNextCycle(candidates: Collection<CardTextCandidate>) {
+        val effectiveCandidates = candidates.map(::effectiveCandidate)
+        if (effectiveCandidates.isNotEmpty() && effectiveCandidates.all { candidate ->
+                candidate.kartentext.gespielt
+            }
+        ) {
+            resetSeenAndPlayed(effectiveCandidates)
+        } else {
+            resetSeen(effectiveCandidates)
+        }
+    }
+
+    fun effectiveCandidate(candidate: CardTextCandidate): CardTextCandidate {
+        val id = candidate.kartentext.id()
+        return when (id) {
+            in mutableResetSeenAndPlayedIds -> candidate.copy(
+                kartentext = candidate.kartentext.copy(gesehen = false, gespielt = false),
+            )
+            in mutableResetSeenIds -> candidate.copy(
+                kartentext = candidate.kartentext.copy(gesehen = false),
+            )
+            else -> candidate
+        }
+    }
+}

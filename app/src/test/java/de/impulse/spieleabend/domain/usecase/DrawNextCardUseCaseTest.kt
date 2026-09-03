@@ -2,8 +2,11 @@ package de.impulse.spieleabend.domain.usecase
 
 import de.impulse.spieleabend.common.Sprache
 import de.impulse.spieleabend.domain.model.CardHistoryState
+import de.impulse.spieleabend.domain.model.BearbeiteteKartentexteModus
+import de.impulse.spieleabend.domain.model.FavoritenModus
 import de.impulse.spieleabend.domain.model.GezogeneKarte
 import de.impulse.spieleabend.domain.model.GezogenerKartentext
+import de.impulse.spieleabend.domain.model.GeloeschteKartentexteModus
 import de.impulse.spieleabend.domain.model.Kartentext
 import de.impulse.spieleabend.domain.model.Kategorie
 import de.impulse.spieleabend.domain.model.Lokalisierung
@@ -149,7 +152,7 @@ class DrawNextCardUseCaseTest {
                 kategorieId = 1,
             )
 
-        assertEquals(setOf(1), repository.lastResetSeenCategoryIds)
+        assertEquals(setOf(101), repository.lastResetSeenCategoryIds)
         assertEquals(emptySet<Int>(), repository.lastResetSeenAndPlayedCategoryIds)
         assertEquals(setOf(101), repository.lastSeenCardTextIds)
         val kartentexte =
@@ -183,7 +186,7 @@ class DrawNextCardUseCaseTest {
             )
 
         assertEquals(emptySet<Int>(), repository.lastResetSeenCategoryIds)
-        assertEquals(setOf(1), repository.lastResetSeenAndPlayedCategoryIds)
+        assertEquals(setOf(101, 102), repository.lastResetSeenAndPlayedCategoryIds)
         assertTrue(
             result.karte.kartentexte.all { gezogenerKartentext ->
                 !gezogenerKartentext.kartentext.gespielt
@@ -249,7 +252,7 @@ class DrawNextCardUseCaseTest {
 
         val result = DrawNextRandomCardUseCase(repository)(gameId = 10)
 
-        assertEquals(setOf(1, 2), repository.lastResetSeenCategoryIds)
+        assertEquals(setOf(101), repository.lastResetSeenCategoryIds)
         assertEquals(emptySet<Int>(), repository.lastResetSeenAndPlayedCategoryIds)
         assertEquals(setOf(101), repository.lastSeenCardTextIds)
         val kartentexte =
@@ -281,7 +284,7 @@ class DrawNextCardUseCaseTest {
         val result = DrawNextRandomCardUseCase(repository)(gameId = 10)
 
         assertEquals(emptySet<Int>(), repository.lastResetSeenCategoryIds)
-        assertEquals(setOf(1, 2), repository.lastResetSeenAndPlayedCategoryIds)
+        assertEquals(setOf(101, 201), repository.lastResetSeenAndPlayedCategoryIds)
         assertTrue(
             result.karte.kartentexte.all { gezogenerKartentext ->
                 !gezogenerKartentext.kartentext.gespielt
@@ -414,18 +417,18 @@ class DrawNextCardUseCaseTest {
 
         override suspend fun commitCardDraw(
             gameId: Int,
-            resetSeenCategoryIds: Set<Int>,
-            resetSeenAndPlayedCategoryIds: Set<Int>,
+            resetSeenCardTextIds: Set<Int>,
+            resetSeenAndPlayedCardTextIds: Set<Int>,
             card: GezogeneKarte,
         ): CardHistoryState {
             val seenCardTextIds = card.kartentexte.map { it.kartentext.id() }.toSet()
-            lastResetSeenCategoryIds = resetSeenCategoryIds
-            lastResetSeenAndPlayedCategoryIds = resetSeenAndPlayedCategoryIds
+            lastResetSeenCategoryIds = resetSeenCardTextIds
+            lastResetSeenAndPlayedCategoryIds = resetSeenAndPlayedCardTextIds
             lastSeenCardTextIds = seenCardTextIds
             spiel =
                 spiel.withCardTextStates(
-                    resetSeenCategoryIds = resetSeenCategoryIds,
-                    resetSeenAndPlayedCategoryIds = resetSeenAndPlayedCategoryIds,
+                    resetSeenCardTextIds = resetSeenCardTextIds,
+                    resetSeenAndPlayedCardTextIds = resetSeenAndPlayedCardTextIds,
                     seenCardTextIds = seenCardTextIds,
                 )
             val state = CardHistoryState(
@@ -441,8 +444,8 @@ class DrawNextCardUseCaseTest {
         suspend fun commit(card: GezogeneKarte): CardHistoryState =
             commitCardDraw(
                 gameId = 10,
-                resetSeenCategoryIds = emptySet(),
-                resetSeenAndPlayedCategoryIds = emptySet(),
+                resetSeenCardTextIds = emptySet(),
+                resetSeenAndPlayedCardTextIds = emptySet(),
                 card = card,
             )
 
@@ -475,16 +478,44 @@ class DrawNextCardUseCaseTest {
         override suspend fun setTextsPerCardOverride(gameId: Int, value: Int?) {
             spiel = spiel.copy(texteProKarte = value ?: spiel.standardTexteProKarte)
         }
+
+        override suspend fun setCardTextDeletedState(cardTextId: Int, deleted: Boolean) = Unit
+
+        override suspend fun setCardTextFavoriteState(cardTextId: Int, favorite: Boolean) = Unit
+
+        override suspend fun setCustomCardTextTranslation(
+            cardTextId: Int,
+            language: Sprache,
+            text: String?,
+        ) = Unit
+
+        override suspend fun setDeletedCardTextsMode(
+            gameId: Int,
+            mode: GeloeschteKartentexteModus,
+        ) {
+            spiel = spiel.copy(geloeschteKartentexteModus = mode)
+        }
+
+        override suspend fun setFavoritesMode(
+            gameId: Int,
+            mode: FavoritenModus,
+        ) {
+            spiel = spiel.copy(favoritenModus = mode)
+        }
+
+        override suspend fun setEditedCardTextsMode(
+            gameId: Int,
+            mode: BearbeiteteKartentexteModus,
+        ) {
+            spiel = spiel.copy(bearbeiteteKartentexteModus = mode)
+        }
     }
 
     private fun Spiel.withCardTextStates(
-        resetSeenCategoryIds: Set<Int>,
-        resetSeenAndPlayedCategoryIds: Set<Int>,
+        resetSeenCardTextIds: Set<Int>,
+        resetSeenAndPlayedCardTextIds: Set<Int>,
         seenCardTextIds: Set<Int>,
     ): Spiel {
-        val resetSeenCardTextIds = categoryCardTextIds(resetSeenCategoryIds, onlyUnplayed = true)
-        val resetSeenAndPlayedCardTextIds = categoryCardTextIds(resetSeenAndPlayedCategoryIds)
-
         return copy(
             originaleKategorien = originaleKategorien.mapToLinkedHashSet { kategorie ->
                 kategorie.withCardTextStates(
@@ -534,19 +565,6 @@ class DrawNextCardUseCaseTest {
                 )
             },
         )
-
-    private fun Spiel.categoryCardTextIds(
-        categoryIds: Set<Int>,
-        onlyUnplayed: Boolean = false,
-    ): Set<Int> =
-        (originaleKategorien + hinzugefuegteKategorien + inaktiveKategorien)
-            .filter { kategorie -> kategorie.id() in categoryIds }
-            .flatMap { kategorie ->
-                (kategorie.originaleKartentexte + kategorie.hinzugefuegteKartentexte)
-                    .filter { kartentext -> !onlyUnplayed || !kartentext.gespielt }
-                    .map { kartentext -> kartentext.id() }
-            }
-            .toSet()
 
     private fun Kategorie.withCardTextStates(
         resetSeenCardTextIds: Set<Int>,

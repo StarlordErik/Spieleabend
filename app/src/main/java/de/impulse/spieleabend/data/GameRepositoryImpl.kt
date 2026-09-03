@@ -1,16 +1,22 @@
 package de.impulse.spieleabend.data
 
 import androidx.room.withTransaction
+import de.impulse.spieleabend.common.Sprache
 import de.impulse.spieleabend.data.entity.GezogeneKarteEntity
 import de.impulse.spieleabend.data.entity.GezogenerKartentextEntity
 import de.impulse.spieleabend.data.entity.KartentextEntity
 import de.impulse.spieleabend.data.entity.KategorieEntity
 import de.impulse.spieleabend.data.entity.SpielEntity
 import de.impulse.spieleabend.data.entity.SpielEinstellungEntity
+import de.impulse.spieleabend.data.entity.SpielZiehEinstellungEntity
+import de.impulse.spieleabend.data.entity.TranslationEntity
 import de.impulse.spieleabend.data.mapper.toDomain
+import de.impulse.spieleabend.domain.model.BearbeiteteKartentexteModus
 import de.impulse.spieleabend.domain.model.CardHistoryState
+import de.impulse.spieleabend.domain.model.FavoritenModus
 import de.impulse.spieleabend.domain.model.GezogeneKarte
 import de.impulse.spieleabend.domain.model.GezogenerKartentext
+import de.impulse.spieleabend.domain.model.GeloeschteKartentexteModus
 import de.impulse.spieleabend.domain.model.Kartentext
 import de.impulse.spieleabend.domain.model.Kategorie
 import de.impulse.spieleabend.domain.model.Lokalisierung
@@ -36,26 +42,23 @@ class GameRepositoryImpl @Inject constructor(
 
     override suspend fun commitCardDraw(
         gameId: Int,
-        resetSeenCategoryIds: Set<Int>,
-        resetSeenAndPlayedCategoryIds: Set<Int>,
+        resetSeenCardTextIds: Set<Int>,
+        resetSeenAndPlayedCardTextIds: Set<Int>,
         card: GezogeneKarte,
     ): CardHistoryState =
         database.withTransaction {
             val kartentextDao = database.kartentextDao()
-            val seenOnlyResetCategoryIds = resetSeenCategoryIds - resetSeenAndPlayedCategoryIds
+            val seenOnlyResetCardTextIds = resetSeenCardTextIds - resetSeenAndPlayedCardTextIds
 
-            if (resetSeenAndPlayedCategoryIds.isNotEmpty()) {
-                kartentextDao.updateGesehenUndGespieltForKategorien(
-                    kategorieIds = resetSeenAndPlayedCategoryIds.toList(),
-                    gesehen = false,
-                    gespielt = false,
+            if (resetSeenAndPlayedCardTextIds.isNotEmpty()) {
+                kartentextDao.resetGesehenUndGespieltForKartentexte(
+                    kartentextIds = resetSeenAndPlayedCardTextIds.toList(),
                 )
             }
 
-            if (seenOnlyResetCategoryIds.isNotEmpty()) {
-                kartentextDao.updateGesehenForNichtGespielteKategorien(
-                    kategorieIds = seenOnlyResetCategoryIds.toList(),
-                    gesehen = false,
+            if (seenOnlyResetCardTextIds.isNotEmpty()) {
+                kartentextDao.resetGesehenForKartentexte(
+                    kartentextIds = seenOnlyResetCardTextIds.toList(),
                 )
             }
 
@@ -132,6 +135,56 @@ class GameRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setCardTextDeletedState(
+        cardTextId: Int,
+        deleted: Boolean,
+    ) {
+        database.withTransaction {
+            require(database.kartentextDao().updateGeloescht(cardTextId, deleted) == 1) {
+                "Der Kartentext $cardTextId fehlt in der Datenbank."
+            }
+        }
+    }
+
+    override suspend fun setCardTextFavoriteState(
+        cardTextId: Int,
+        favorite: Boolean,
+    ) {
+        database.withTransaction {
+            require(database.kartentextDao().updateFavorit(cardTextId, favorite) == 1) {
+                "Der Kartentext $cardTextId fehlt in der Datenbank."
+            }
+        }
+    }
+
+    override suspend fun setCustomCardTextTranslation(
+        cardTextId: Int,
+        language: Sprache,
+        text: String?,
+    ) {
+        require(language.auswaehlbar) { "$language kann nicht bearbeitet werden." }
+        require(text == null || text.isNotBlank()) { "Ein eigener Kartentext darf nicht leer sein." }
+
+        database.withTransaction {
+            requireNotNull(database.kartentextDao().kartentext(cardTextId)) {
+                "Der Kartentext $cardTextId fehlt in der Datenbank."
+            }
+            val customLanguage = language.eigeneSprache()
+            if (text == null) {
+                database.lokalisierungDao().deleteTranslation(cardTextId, customLanguage)
+            } else {
+                database.lokalisierungDao().upsertTranslation(
+                    TranslationEntity(
+                        lokalisierungId = cardTextId,
+                        sprache = customLanguage,
+                        text = text,
+                        bearbeitet = true,
+                    ),
+                )
+            }
+        }
+    }
+
     override suspend fun resetSeenCards(gameId: Int) {
         database.withTransaction {
             spielEntity(gameId)
@@ -175,6 +228,33 @@ class GameRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setDeletedCardTextsMode(
+        gameId: Int,
+        mode: GeloeschteKartentexteModus,
+    ) {
+        updateDrawSettings(gameId) { settings ->
+            settings.copy(geloeschteKartentexteModus = mode)
+        }
+    }
+
+    override suspend fun setFavoritesMode(
+        gameId: Int,
+        mode: FavoritenModus,
+    ) {
+        updateDrawSettings(gameId) { settings ->
+            settings.copy(favoritenModus = mode)
+        }
+    }
+
+    override suspend fun setEditedCardTextsMode(
+        gameId: Int,
+        mode: BearbeiteteKartentexteModus,
+    ) {
+        updateDrawSettings(gameId) { settings ->
+            settings.copy(bearbeiteteKartentexteModus = mode)
+        }
+    }
+
     private suspend fun spielEntity(gameId: Int): SpielEntity {
         val spielDao = database.spielDao()
 
@@ -188,6 +268,9 @@ class GameRepositoryImpl @Inject constructor(
         val texteProKarteOverride = database.spielEinstellungDao()
             .einstellung(lokalisierungId)
             ?.texteProKarteOverride
+        val drawSettings = database.spielZiehEinstellungDao()
+            .einstellung(lokalisierungId)
+            ?: SpielZiehEinstellungEntity(spielId = lokalisierungId)
 
         return toDomain(
             lokalisierung = lokalisierung(lokalisierungId),
@@ -195,7 +278,22 @@ class GameRepositoryImpl @Inject constructor(
             hinzugefuegteKategorien = kategorien.hinzugefuegte,
             inaktiveKategorien = kategorien.inaktive,
             texteProKarteOverride = texteProKarteOverride,
+            geloeschteKartentexteModus = drawSettings.geloeschteKartentexteModus,
+            favoritenModus = drawSettings.favoritenModus,
+            bearbeiteteKartentexteModus = drawSettings.bearbeiteteKartentexteModus,
         )
+    }
+
+    private suspend fun updateDrawSettings(
+        gameId: Int,
+        transform: (SpielZiehEinstellungEntity) -> SpielZiehEinstellungEntity,
+    ) {
+        database.withTransaction {
+            spielEntity(gameId)
+            val dao = database.spielZiehEinstellungDao()
+            val current = dao.einstellung(gameId) ?: SpielZiehEinstellungEntity(spielId = gameId)
+            dao.upsert(transform(current))
+        }
     }
 
     private suspend fun GezogeneKarteEntity.toHistoryState(

@@ -10,6 +10,9 @@ import de.impulse.spieleabend.domain.model.Kategorie
 import de.impulse.spieleabend.domain.model.Lokalisierung
 import de.impulse.spieleabend.domain.model.Spiel
 import de.impulse.spieleabend.domain.model.Translation
+import de.impulse.spieleabend.domain.model.BearbeiteteKartentexteModus
+import de.impulse.spieleabend.domain.model.FavoritenModus
+import de.impulse.spieleabend.domain.model.GeloeschteKartentexteModus
 
 internal fun SpielEntity.toDomain(
     lokalisierung: Lokalisierung,
@@ -17,6 +20,9 @@ internal fun SpielEntity.toDomain(
     hinzugefuegteKategorien: Set<Kategorie>,
     inaktiveKategorien: Set<Kategorie>,
     texteProKarteOverride: Int? = null,
+    geloeschteKartentexteModus: GeloeschteKartentexteModus = GeloeschteKartentexteModus.ALS_LETZTE,
+    favoritenModus: FavoritenModus = FavoritenModus.UNBEACHTET,
+    bearbeiteteKartentexteModus: BearbeiteteKartentexteModus = BearbeiteteKartentexteModus.UNBEACHTET,
 ): Spiel =
     Spiel(
         lokalisierung = lokalisierung,
@@ -29,6 +35,9 @@ internal fun SpielEntity.toDomain(
         bildDateiname = bildDateiname,
         texteProKarte = texteProKarteOverride ?: texteProKarte,
         standardTexteProKarte = texteProKarte,
+        geloeschteKartentexteModus = geloeschteKartentexteModus,
+        favoritenModus = favoritenModus,
+        bearbeiteteKartentexteModus = bearbeiteteKartentexteModus,
     )
 
 internal fun KategorieEntity.toDomain(

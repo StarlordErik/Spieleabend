@@ -11,6 +11,9 @@ data class Spiel(
     val bildDateiname: String? = null,
     val texteProKarte: Int = 1,
     val standardTexteProKarte: Int = texteProKarte,
+    val geloeschteKartentexteModus: GeloeschteKartentexteModus = GeloeschteKartentexteModus.ALS_LETZTE,
+    val favoritenModus: FavoritenModus = FavoritenModus.UNBEACHTET,
+    val bearbeiteteKartentexteModus: BearbeiteteKartentexteModus = BearbeiteteKartentexteModus.UNBEACHTET,
 ) : Spielelement(lokalisierung, inaktiv, selbstErstellt, favorit) {
     val kategorien: Set<Kategorie>
         get() {

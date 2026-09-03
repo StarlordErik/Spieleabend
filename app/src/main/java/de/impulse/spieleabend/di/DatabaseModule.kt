@@ -14,7 +14,9 @@ import de.impulse.spieleabend.data.dao.KategorieDao
 import de.impulse.spieleabend.data.dao.LokalisierungDao
 import de.impulse.spieleabend.data.dao.SpielDao
 import de.impulse.spieleabend.data.dao.SpielEinstellungDao
+import de.impulse.spieleabend.data.dao.SpielZiehEinstellungDao
 import de.impulse.spieleabend.data.migration.Migration2To3
+import de.impulse.spieleabend.data.migration.Migration3To4
 import javax.inject.Singleton
 
 @Module
@@ -31,7 +33,7 @@ object DatabaseModule {
             DATABASE_NAME,
         )
             .createFromAsset(DATABASE_ASSET_PATH)
-            .addMigrations(Migration2To3)
+            .addMigrations(Migration2To3, Migration3To4)
             // `fallbackToDestructiveMigration()` already covers downgrades.
             // Chaining `fallbackToDestructiveMigrationOnDowngrade()` afterwards would
             // re-enable required migrations for upgrades and break 1 -> 2 installs.
@@ -61,6 +63,10 @@ object DatabaseModule {
     @Provides
     fun provideSpielEinstellungDao(database: SpieleabendDatabase): SpielEinstellungDao =
         database.spielEinstellungDao()
+
+    @Provides
+    fun provideSpielZiehEinstellungDao(database: SpieleabendDatabase): SpielZiehEinstellungDao =
+        database.spielZiehEinstellungDao()
 
     private const val DATABASE_NAME = "spieleabend.db"
     private const val DATABASE_ASSET_PATH = "spieleabend.db"

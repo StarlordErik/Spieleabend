@@ -7,6 +7,7 @@ import androidx.room.Query
 import de.impulse.spieleabend.data.entity.KartentextEntity
 
 @Dao
+@Suppress("TooManyFunctions")
 interface KartentextDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(kartentext: KartentextEntity)
@@ -16,6 +17,18 @@ interface KartentextDao {
 
     @Query("SELECT * FROM kartentext WHERE lokalisierung_id = :kartentextId LIMIT 1")
     suspend fun kartentext(kartentextId: Int): KartentextEntity?
+
+    @Query("UPDATE kartentext SET inaktiv = :geloescht WHERE lokalisierung_id = :kartentextId")
+    suspend fun updateGeloescht(
+        kartentextId: Int,
+        geloescht: Boolean,
+    ): Int
+
+    @Query("UPDATE kartentext SET favorit = :favorit WHERE lokalisierung_id = :kartentextId")
+    suspend fun updateFavorit(
+        kartentextId: Int,
+        favorit: Boolean,
+    ): Int
 
     @Query(
         """
@@ -28,6 +41,26 @@ interface KartentextDao {
         kartentextIds: List<Int>,
         gesehen: Boolean,
     )
+
+    @Query(
+        """
+        UPDATE kartentext
+        SET gesehen = 0
+        WHERE lokalisierung_id IN (:kartentextIds)
+          AND gespielt = 0
+        """,
+    )
+    suspend fun resetGesehenForKartentexte(kartentextIds: List<Int>)
+
+    @Query(
+        """
+        UPDATE kartentext
+        SET gesehen = 0,
+            gespielt = 0
+        WHERE lokalisierung_id IN (:kartentextIds)
+        """,
+    )
+    suspend fun resetGesehenUndGespieltForKartentexte(kartentextIds: List<Int>)
 
     @Query(
         """

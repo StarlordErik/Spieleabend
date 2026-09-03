@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package de.impulse.spieleabend.frontend.settings
 
 import androidx.compose.foundation.layout.Arrangement
@@ -6,11 +8,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -26,13 +30,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import de.impulse.spieleabend.common.Sprache
+import de.impulse.spieleabend.domain.model.BearbeiteteKartentexteModus
+import de.impulse.spieleabend.domain.model.FavoritenModus
+import de.impulse.spieleabend.domain.model.GeloeschteKartentexteModus
 import de.impulse.spieleabend.frontend.theme.SpieleabendTheme
 import kotlin.math.roundToInt
 
 @Composable
 fun AppSettingsDialog(
     developerMode: Boolean,
+    language: Sprache,
     onDeveloperModeChanged: (Boolean) -> Unit,
+    onLanguageChanged: (Sprache) -> Unit,
     onResetAllCards: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -42,7 +52,19 @@ fun AppSettingsDialog(
         onDismissRequest = onDismiss,
         title = { Text("Einstellungen") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("Sprache", style = MaterialTheme.typography.titleSmall)
+                Sprache.AuswaehlbareSprachen.forEach { availableLanguage ->
+                    SettingsRadioOption(
+                        label = availableLanguage.displayName(),
+                        selected = language == availableLanguage,
+                        onClick = { onLanguageChanged(availableLanguage) },
+                    )
+                }
+                HorizontalDivider()
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -77,7 +99,9 @@ private fun AppSettingsDialogPreview() {
     SpieleabendTheme {
         AppSettingsDialog(
             developerMode = true,
+            language = Sprache.DE,
             onDeveloperModeChanged = {},
+            onLanguageChanged = {},
             onResetAllCards = {},
             onDismiss = {},
         )
@@ -92,7 +116,13 @@ fun GameSettingsDialog(
     developerMode: Boolean,
     supportsFunFactsMode: Boolean = false,
     funFactsModeEnabled: Boolean = false,
+    deletedCardTextsMode: GeloeschteKartentexteModus = GeloeschteKartentexteModus.ALS_LETZTE,
+    favoritesMode: FavoritenModus = FavoritenModus.UNBEACHTET,
+    editedCardTextsMode: BearbeiteteKartentexteModus = BearbeiteteKartentexteModus.UNBEACHTET,
     onFunFactsModeChanged: (Boolean) -> Unit = {},
+    onDeletedCardTextsModeChanged: (GeloeschteKartentexteModus) -> Unit = {},
+    onFavoritesModeChanged: (FavoritenModus) -> Unit = {},
+    onEditedCardTextsModeChanged: (BearbeiteteKartentexteModus) -> Unit = {},
     onRestartFunFactsGame: () -> Unit = {},
     onResetSeenCards: () -> Unit,
     onResetAllCards: () -> Unit,
@@ -140,6 +170,35 @@ fun GameSettingsDialog(
                     }
                     HorizontalDivider()
                 }
+                Text("Gelöschte Kartentexte", style = MaterialTheme.typography.titleSmall)
+                GeloeschteKartentexteModus.entries.forEach { mode ->
+                    SettingsRadioOption(
+                        label = mode.displayName(),
+                        selected = deletedCardTextsMode == mode,
+                        onClick = { onDeletedCardTextsModeChanged(mode) },
+                    )
+                }
+                HorizontalDivider()
+                Text("Favoriten", style = MaterialTheme.typography.titleSmall)
+                FavoritenModus.entries.forEach { mode ->
+                    SettingsRadioOption(
+                        label = mode.displayName(),
+                        selected = favoritesMode == mode,
+                        onClick = { onFavoritesModeChanged(mode) },
+                    )
+                }
+                if (developerMode) {
+                    HorizontalDivider()
+                    Text("Bearbeitete Kartentexte", style = MaterialTheme.typography.titleSmall)
+                    BearbeiteteKartentexteModus.entries.forEach { mode ->
+                        SettingsRadioOption(
+                            label = mode.displayName(),
+                            selected = editedCardTextsMode == mode,
+                            onClick = { onEditedCardTextsModeChanged(mode) },
+                        )
+                    }
+                }
+                HorizontalDivider()
                 SettingsActionRow(
                     label = "Gesehene Karten zurücksetzen",
                     onClick = onResetSeenCards,
@@ -234,6 +293,32 @@ private fun SettingsActionRow(
     }
 }
 
+@Composable
+private fun SettingsRadioOption(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Text(text = label, modifier = Modifier.padding(start = 4.dp))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsRadioOptionPreview() {
+    SpieleabendTheme {
+        SettingsRadioOption(label = "Unbeachtet", selected = true, onClick = {})
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun SettingsActionRowPreview() {
@@ -275,3 +360,32 @@ private const val TEXT_COUNT_DEFAULT_INFO =
     "Entfernt die persönliche Auswahl und verwendet wieder den Standard dieses Spiels."
 private const val MIN_TEXTS_PER_CARD = 1
 private const val MAX_TEXTS_PER_CARD = 5
+
+private fun Sprache.displayName(): String =
+    when (this) {
+        Sprache.DE -> "Deutsch"
+        Sprache.EN -> "Englisch"
+        Sprache.ERIK -> "Erik (Deutsch)"
+        Sprache.OG, Sprache.EIGENE_DE, Sprache.EIGENE_EN -> name
+    }
+
+private fun GeloeschteKartentexteModus.displayName(): String =
+    when (this) {
+        GeloeschteKartentexteModus.AUSBLENDEN -> "Ausblenden"
+        GeloeschteKartentexteModus.ALS_LETZTE -> "Als letzte einblenden"
+        GeloeschteKartentexteModus.UNBEACHTET -> "Unbeachtet einblenden"
+        GeloeschteKartentexteModus.AUSSCHLIESSLICH -> "Ausschließlich einblenden"
+    }
+
+private fun FavoritenModus.displayName(): String =
+    when (this) {
+        FavoritenModus.UNBEACHTET -> "Unbeachtet einblenden"
+        FavoritenModus.GENAU_EINER_PRO_KARTE -> "Genau einen pro Karte"
+        FavoritenModus.AUSSCHLIESSLICH -> "Ausschließlich Favoriten"
+    }
+
+private fun BearbeiteteKartentexteModus.displayName(): String =
+    when (this) {
+        BearbeiteteKartentexteModus.UNBEACHTET -> "Unbeachtet einblenden"
+        BearbeiteteKartentexteModus.AUSSCHLIESSLICH -> "Ausschließlich bearbeitete"
+    }

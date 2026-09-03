@@ -113,9 +113,9 @@ val rawDataDirectory = layout.projectDirectory.dir("rohdaten").asFile.toPath()
 val outputDatabase = layout.projectDirectory.file("app/src/main/assets/spieleabend.db").asFile.toPath()
 val legacyOutputDatabase = layout.projectDirectory.file("app/src/main/assets/data/seed/spieleabend.db").asFile.toPath()
 val roomImplFile =
-    layout.projectDirectory.file(
-        "app/build/generated/ksp/debug/kotlin/de/impulse/spieleabend/data/SpieleabendDatabase_Impl.kt",
-    ).asFile.toPath()
+    project(":app").layout.buildDirectory.file(
+        "generated/ksp/debug/kotlin/de/impulse/spieleabend/data/SpieleabendDatabase_Impl.kt",
+    ).get().asFile.toPath()
 
 tasks.register("writeRawDataDatabase") {
     group = "data"
