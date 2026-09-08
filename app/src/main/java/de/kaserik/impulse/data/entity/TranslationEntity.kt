@@ -1,0 +1,25 @@
+package de.kaserik.impulse.data.entity
+
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import de.kaserik.impulse.common.Sprache
+
+@Entity(
+    tableName = "translation",
+    primaryKeys = ["lokalisierung_id", "sprache"],
+    foreignKeys = [
+        ForeignKey(
+            entity = LokalisierungEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["lokalisierung_id"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class TranslationEntity(
+    @ColumnInfo(name = "lokalisierung_id") val lokalisierungId: Int,
+    @ColumnInfo(name = "sprache") val sprache: Sprache,
+    val text: String,
+    val bearbeitet: Boolean,
+)

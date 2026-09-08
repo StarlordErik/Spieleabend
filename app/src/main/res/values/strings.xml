@@ -1,4 +1,115 @@
-<resources>
-    <string name="app_name">Spieleabend</string>
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">Impulse</string>
     <string name="card_text_marked_as_played">Kartentext als gespielt markiert</string>
+    <string name="settings">Einstellungen</string>
+    <string name="language">Sprache</string>
+    <string name="developer_access">Dev-Zugang</string>
+    <string name="reset_all_cards">Alle Karten zurücksetzen</string>
+    <string name="close">Schließen</string>
+    <string name="game_settings">Spieleinstellungen</string>
+    <string name="game_mode">Spielmodus</string>
+    <string name="mode_fun_facts">Fun Facts</string>
+    <string name="mode_basic">Basic (Swipe-Karten)</string>
+    <string name="restart_game">Spiel neu starten</string>
+    <string name="deleted_card_texts">Gelöschte Kartentexte</string>
+    <string name="favorites">Favoriten</string>
+    <string name="edited_card_texts">Bearbeitete Kartentexte</string>
+    <string name="reset_seen_cards">Gesehene Karten zurücksetzen</string>
+    <string name="texts_per_card">Kartentexte pro Karte: %1$d</string>
+    <string name="restore_default_text_count">Standard (%1$d) wiederherstellen</string>
+    <string name="show_cards">Karten zeigen</string>
+    <string name="information">Information</string>
+    <string name="ok">OK</string>
+    <string name="developer_access_info">Aktiviert zusätzliche Werkzeuge für die Entwicklung und Kontrolle der Kartendaten.</string>
+    <string name="global_reset_info">Setzt bei allen Kartentexten aller Spiele ‚gesehen‘ und ‚gespielt‘ zurück.</string>
+    <string name="reset_seen_info">Setzt ‚gesehen‘ nur bei noch nicht gespielten Kartentexten zurück.</string>
+    <string name="game_reset_info">Setzt bei allen Kartentexten dieses Spiels ‚gesehen‘ und ‚gespielt‘ zurück.</string>
+    <string name="text_count_info">Legt für zukünftige Ziehungen fest, wie viele Texte eine Karte enthält.</string>
+    <string name="text_count_default_info">Entfernt die persönliche Auswahl und verwendet wieder den Standard dieses Spiels.</string>
+    <string name="language_german">Deutsch</string>
+    <string name="language_english">Englisch</string>
+    <string name="language_erik">Erik (Deutsch)</string>
+    <string name="language_original">Original</string>
+    <string name="language_own_german">Eigene (Deutsch)</string>
+    <string name="language_own_english">Eigene (Englisch)</string>
+    <string name="mode_hide">Ausblenden</string>
+    <string name="mode_show_last">Als letzte einblenden</string>
+    <string name="mode_show_regardless">Unbeachtet einblenden</string>
+    <string name="mode_show_exclusively">Ausschließlich einblenden</string>
+    <string name="mode_one_favorite_per_card">Genau einen pro Karte</string>
+    <string name="mode_favorites_only">Ausschließlich Favoriten</string>
+    <string name="mode_edited_only">Ausschließlich bearbeitete</string>
+    <string name="edit_card_text_title">Kartentext bearbeiten (%1$s)</string>
+    <string name="own_translation_info">Gespeichert wird nur deine eigene Lokalisierung.</string>
+    <string name="own_card_text">Eigener Kartentext</string>
+    <string name="save">Speichern</string>
+    <string name="delete_own_translation">Eigene löschen</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="card">Karte</string>
+    <string name="reveal">Aufdecken</string>
+    <string name="next_card">Nächste Karte</string>
+    <string name="player_name_label">Name:</string>
+    <string name="answer_label">Antwort:</string>
+    <string name="done">Fertig</string>
+    <string name="delete">Löschen</string>
+    <string name="stroke_width_description">Stiftdicke %1$d</string>
+    <string name="sign_placement_hint">Ziehe dein Schild nach oben oder unten an die richtige Stelle.</string>
+    <string name="next_player">Nächster Spieler</string>
+    <string name="first_player_hint">Erster Spieler: Schild verschieben</string>
+    <string name="active_sign_description">Aktives Schild, vertikal verschiebbar</string>
+    <string name="answer_side_description">Antwortseite, antippen für den Namen</string>
+    <string name="name_side_description">Namensseite, antippen für die Antwort</string>
+    <string name="sign_description">Schild</string>
+    <string name="previous_card">Vorherige Karte</string>
+    <string name="random_card">Zufällig</string>
+    <string name="back">‹ Zurück</string>
+    <string name="card_text_column">Text</string>
+    <string name="seen">Gesehen</string>
+    <string name="played">Gespielt</string>
+    <string name="status_yes_description">%1$s: ja</string>
+    <string name="status_no_description">%1$s: nein</string>
+    <string name="sorted_ascending">%1$s ↑</string>
+    <string name="sorted_descending">%1$s ↓</string>
+    <string name="deleted">Gelöscht</string>
+    <string name="not_deleted">Nicht gelöscht</string>
+    <string name="favorited">Favorisiert</string>
+    <string name="not_favorited">Nicht favorisiert</string>
+    <string name="own_card_text_available">Eigener Kartentext vorhanden</string>
+    <string name="edit_card_text">Kartentext bearbeiten</string>
+    <string name="marker_description">Markierung</string>
+    <string name="missing_translation">Keine passende Übersetzung vorhanden</string>
+    <string name="preview_question_moment">Was war heute dein schönster Moment?</string>
+    <string name="preview_quiz">Kneipenquiz</string>
+    <string name="preview_category_knowledge">Wissen</string>
+    <string name="preview_category_music">Musik</string>
+    <string name="preview_category_film">Film</string>
+    <string name="preview_category_finale">Finale</string>
+    <string name="preview_question_city">Welche Stadt trägt den Spitznamen Big Apple?</string>
+    <string name="preview_question_city_hint">Tipp: Sie liegt an der Ostküste.</string>
+    <string name="preview_question_team">Ein Team darf eine Zusatzfrage stellen.</string>
+    <string name="preview_question_city_short">Welche Stadt heißt Big Apple?</string>
+    <string name="preview_question_planets">Wie viele Planeten gibt es?</string>
+    <string name="preview_action">Aktion</string>
+    <string name="preview_unconsidered">Unbeachtet</string>
+    <string name="preview_game_conversation">Erzählt euch mehr</string>
+    <string name="preview_game_couples">Erzählt euch mehr für Paare</string>
+    <string name="preview_game_privacy">Privacy</string>
+    <string name="preview_game_strangers">We\'re Not Really Strangers</string>
+    <string name="symbol_settings" translatable="false">⚙</string>
+    <string name="symbol_information" translatable="false">ⓘ</string>
+    <string name="symbol_checked" translatable="false">✓</string>
+    <string name="symbol_unchecked" translatable="false">✕</string>
+    <string name="symbol_translation" translatable="false">A文</string>
+    <!-- Used by scripts/generate_game_box_art.py. -->
+    <string name="art_conversation_title" tools:ignore="UnusedResources" translatable="false">ERZÄHLT\nEUCH MEHR</string>
+    <string name="art_conversation_strapline" tools:ignore="UnusedResources" translatable="false">Fragen für echte Gespräche</string>
+    <string name="art_couples_title" tools:ignore="UnusedResources" translatable="false">ERZÄHLT EUCH MEHR\nFÜR PAARE</string>
+    <string name="art_couples_strapline" tools:ignore="UnusedResources" translatable="false">Date night edition</string>
+    <string name="art_fun_facts_title" tools:ignore="UnusedResources" translatable="false">FUN FACTS</string>
+    <string name="art_fun_facts_strapline" tools:ignore="UnusedResources" translatable="false">Schätzen, lachen, überraschen</string>
+    <string name="art_privacy_title" tools:ignore="UnusedResources" translatable="false">PRIVACY</string>
+    <string name="art_privacy_strapline" tools:ignore="UnusedResources" translatable="false">Wie gut kennt ihr euch wirklich?</string>
+    <string name="art_strangers_title" tools:ignore="UnusedResources" translatable="false">WE\'RE NOT REALLY\nSTRANGERS</string>
+    <string name="art_strangers_strapline" tools:ignore="UnusedResources" translatable="false">Perception. Connection. Reflection.</string>
 </resources>

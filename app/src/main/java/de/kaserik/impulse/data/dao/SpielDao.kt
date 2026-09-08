@@ -1,0 +1,49 @@
+package de.kaserik.impulse.data.dao
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import de.kaserik.impulse.data.entity.KategorieEntity
+import de.kaserik.impulse.data.entity.SpielEntity
+import de.kaserik.impulse.data.entity.SpielXKategorieEntity
+
+@Dao
+interface SpielDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(spiel: SpielEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(spiele: List<SpielEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSpielXKategorien(spielXKategorien: List<SpielXKategorieEntity>)
+
+    @Query("SELECT * FROM spiel ORDER BY lokalisierung_id")
+    suspend fun spiele(): List<SpielEntity>
+
+    @Query("SELECT * FROM spiel WHERE lokalisierung_id = :spielId LIMIT 1")
+    suspend fun spiel(spielId: Int): SpielEntity?
+
+    @Query(
+        """
+        SELECT kategorie.*
+        FROM kategorie
+        INNER JOIN spiel_x_kategorie
+            ON spiel_x_kategorie.kategorie_id = kategorie.lokalisierung_id
+        WHERE spiel_x_kategorie.spiel_id = :spielId
+        ORDER BY kategorie.lokalisierung_id
+        """,
+    )
+    suspend fun kategorienFuerSpiel(spielId: Int): List<KategorieEntity>
+
+    @Query(
+        """
+        SELECT *
+        FROM spiel_x_kategorie
+        WHERE spiel_id = :spielId
+        ORDER BY kategorie_id
+        """,
+    )
+    suspend fun spielXKategorienFuerSpiel(spielId: Int): List<SpielXKategorieEntity>
+}

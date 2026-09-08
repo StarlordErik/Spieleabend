@@ -110,11 +110,11 @@ data class ParsedMetadata(
 )
 
 val rawDataDirectory = layout.projectDirectory.dir("rohdaten").asFile.toPath()
-val outputDatabase = layout.projectDirectory.file("app/src/main/assets/spieleabend.db").asFile.toPath()
-val legacyOutputDatabase = layout.projectDirectory.file("app/src/main/assets/data/seed/spieleabend.db").asFile.toPath()
+val outputDatabase = layout.projectDirectory.file("app/src/main/assets/impulse.db").asFile.toPath()
+val legacyOutputDatabase = layout.projectDirectory.file("app/src/main/assets/data/seed/impulse.db").asFile.toPath()
 val roomImplFile =
     project(":app").layout.buildDirectory.file(
-        "generated/ksp/debug/kotlin/de/impulse/spieleabend/data/SpieleabendDatabase_Impl.kt",
+        "generated/ksp/debug/kotlin/de/kaserik/impulse/data/ImpulseDatabase_Impl.kt",
     ).get().asFile.toPath()
 
 tasks.register("writeRawDataDatabase") {

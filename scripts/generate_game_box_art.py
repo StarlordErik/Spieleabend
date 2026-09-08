@@ -3,11 +3,24 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
+from xml.etree import ElementTree
 
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
+RESOURCE_DIR = ROOT_DIR / "app" / "src" / "main" / "res" / "values"
+
+
+def load_resources(filename: str) -> dict[str, str]:
+    return {
+        element.attrib["name"]: (element.text or "").replace(r"\'", "'").replace(r"\n", "\n")
+        for element in ElementTree.parse(RESOURCE_DIR / filename).getroot()
+    }
+
+
+COLORS = load_resources("colors.xml")
+STRINGS = load_resources("strings.xml")
 OUTPUT_DIRS = (
     ROOT_DIR / "app" / "src" / "main" / "assets" / "images",
     ROOT_DIR / "app" / "src" / "main" / "res" / "drawable-nodpi",
@@ -35,56 +48,56 @@ ART_SPECS = (
     ArtSpec(
         filename="game_box_side_erzaehlt_euch_mehr.png",
         size=(1500, 330),
-        title="ERZÄHLT\nEUCH MEHR",
-        strapline="Fragen für echte Gespräche",
-        base="#2F6B5C",
-        dark="#173A32",
-        light="#F7F1E2",
-        accent="#E7C36C",
+        title=STRINGS["art_conversation_title"],
+        strapline=STRINGS["art_conversation_strapline"],
+        base=COLORS["art_conversation_base"],
+        dark=COLORS["art_conversation_dark"],
+        light=COLORS["art_conversation_light"],
+        accent=COLORS["art_conversation_accent"],
         pattern="bands",
     ),
     ArtSpec(
         filename="game_box_side_erzaehlt_euch_mehr_fuer_paare.png",
         size=(1220, 360),
-        title="ERZÄHLT EUCH MEHR\nFÜR PAARE",
-        strapline="Date night edition",
-        base="#874A65",
-        dark="#482433",
-        light="#F8EBDD",
-        accent="#F2B27A",
+        title=STRINGS["art_couples_title"],
+        strapline=STRINGS["art_couples_strapline"],
+        base=COLORS["art_couples_base"],
+        dark=COLORS["art_couples_dark"],
+        light=COLORS["art_couples_light"],
+        accent=COLORS["art_couples_accent"],
         pattern="hearts",
     ),
     ArtSpec(
         filename="game_box_side_fun_facts.png",
         size=(1420, 270),
-        title="FUN FACTS",
-        strapline="Schätzen, lachen, überraschen",
-        base="#D7773B",
-        dark="#6F341A",
-        light="#FBE6B9",
-        accent="#2A5F79",
+        title=STRINGS["art_fun_facts_title"],
+        strapline=STRINGS["art_fun_facts_strapline"],
+        base=COLORS["art_fun_facts_base"],
+        dark=COLORS["art_fun_facts_dark"],
+        light=COLORS["art_fun_facts_light"],
+        accent=COLORS["art_fun_facts_accent"],
         pattern="confetti",
     ),
     ArtSpec(
         filename="game_box_side_privacy.png",
         size=(1080, 320),
-        title="PRIVACY",
-        strapline="Wie gut kennt ihr euch wirklich?",
-        base="#31547F",
-        dark="#15263D",
-        light="#F2F0E6",
-        accent="#D54E43",
+        title=STRINGS["art_privacy_title"],
+        strapline=STRINGS["art_privacy_strapline"],
+        base=COLORS["art_privacy_base"],
+        dark=COLORS["art_privacy_dark"],
+        light=COLORS["art_privacy_light"],
+        accent=COLORS["art_privacy_accent"],
         pattern="rings",
     ),
     ArtSpec(
         filename=WERE_NOT_REALLY_STRANGERS_FILENAME,
         size=(1580, 250),
-        title="WE'RE NOT REALLY\nSTRANGERS",
-        strapline="Perception. Connection. Reflection.",
-        base="#E8E2D7",
-        dark="#1B1A1A",
-        light="#FFFDF8",
-        accent="#D64F43",
+        title=STRINGS["art_strangers_title"],
+        strapline=STRINGS["art_strangers_strapline"],
+        base=COLORS["art_strangers_base"],
+        dark=COLORS["art_strangers_dark"],
+        light=COLORS["art_strangers_light"],
+        accent=COLORS["art_strangers_accent"],
         pattern="blocks",
     ),
 )

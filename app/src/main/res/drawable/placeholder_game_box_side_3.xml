@@ -5,30 +5,30 @@
     android:viewportWidth="640"
     android:viewportHeight="140">
     <path
-        android:fillColor="#C86C3D"
+        android:fillColor="@color/game_box_side_3_tone_1"
         android:pathData="M8,8h624v124h-624z" />
     <path
-        android:fillColor="#9E4D2C"
+        android:fillColor="@color/game_box_side_3_tone_2"
         android:pathData="M8,8h624v18h-624z" />
     <path
-        android:fillColor="#77351F"
+        android:fillColor="@color/game_box_side_3_tone_3"
         android:pathData="M8,114h624v18h-624z" />
     <path
-        android:fillColor="#F1D58F"
+        android:fillColor="@color/game_box_side_3_tone_4"
         android:pathData="M38,30h152v22h-152z" />
     <path
-        android:fillColor="#F1D58F"
+        android:fillColor="@color/game_box_side_3_tone_4"
         android:pathData="M38,68h214v22h-214z" />
     <path
-        android:fillColor="#345E74"
+        android:fillColor="@color/game_box_side_3_tone_5"
         android:pathData="M300,26h86v88h-86z" />
     <path
-        android:fillColor="#DFECEF"
+        android:fillColor="@color/game_box_side_3_tone_6"
         android:pathData="M412,30h48v84h-48z" />
     <path
-        android:fillColor="#8AA9B0"
+        android:fillColor="@color/game_box_side_3_tone_7"
         android:pathData="M500,38h70v64h-70z" />
     <path
-        android:fillColor="#F4E6BD"
+        android:fillColor="@color/game_box_side_3_tone_8"
         android:pathData="M520,54h30v30h-30z" />
 </vector>

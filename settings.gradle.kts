@@ -1,7 +1,7 @@
 import java.io.File
 import java.util.Locale
 
-fun localGradleStateDir(projectDir: File): File {
+fun localGradleStateDir(projectDir: File, projectName: String): File {
     val baseDir = if (File.separatorChar == '\\') {
         projectDir.toPath().root?.toFile()?.resolve("GradleWorkspaces")
     } else {
@@ -13,11 +13,13 @@ fun localGradleStateDir(projectDir: File): File {
         ?: File(System.getProperty("user.home"), ".cache").resolve("GradleWorkspaces")
     val workspaceId = projectDir.absolutePath.lowercase(Locale.ROOT).hashCode().toUInt().toString(16)
 
-    return baseDir.resolve("${projectDir.name}-$workspaceId")
+    return baseDir.resolve("$projectName-$workspaceId")
 }
 
+rootProject.name = "Impulse"
+
 // Keep project-local Gradle state out of cloud-synced workspaces to avoid file locks on Windows.
-gradle.startParameter.projectCacheDir = localGradleStateDir(settingsDir).resolve("project-cache")
+gradle.startParameter.projectCacheDir = localGradleStateDir(settingsDir, rootProject.name).resolve("project-cache")
 
 pluginManagement {
     repositories {
@@ -43,5 +45,4 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Spieleabend"
 include(":app")

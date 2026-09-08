@@ -9,13 +9,13 @@ plugins {
 }
 
 android {
-    namespace = "de.impulse.spieleabend"
+    namespace = "de.kaserik.impulse"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "de.impulse.spieleabend"
+        applicationId = "de.kaserik.impulse"
         minSdk = 29
 
         //noinspection OldTargetApi

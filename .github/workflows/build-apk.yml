@@ -52,8 +52,8 @@ jobs:
         if: github.ref_name == 'dev'
         uses: actions/upload-artifact@v7
         with:
-          name: Spieleabend-dev-debug-${{ github.sha }}
-          path: ${{ runner.temp }}/gradle-state/GradleWorkspaces/Spieleabend-*/build/app/outputs/apk/debug/*.apk
+          name: Impulse-dev-debug-${{ github.sha }}
+          path: ${{ runner.temp }}/gradle-state/GradleWorkspaces/Impulse-*/build/app/outputs/apk/debug/*.apk
           if-no-files-found: error
           compression-level: 0
 
@@ -61,7 +61,7 @@ jobs:
         if: github.ref_name == 'main'
         uses: actions/upload-artifact@v7
         with:
-          name: Spieleabend-main-release-${{ github.sha }}
-          path: ${{ runner.temp }}/gradle-state/GradleWorkspaces/Spieleabend-*/build/app/outputs/apk/release/*.apk
+          name: Impulse-main-release-${{ github.sha }}
+          path: ${{ runner.temp }}/gradle-state/GradleWorkspaces/Impulse-*/build/app/outputs/apk/release/*.apk
           if-no-files-found: error
           compression-level: 0

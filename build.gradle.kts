@@ -24,7 +24,7 @@ plugins {
     alias(libs.plugins.room) apply false
 }
 
-fun localGradleStateDir(projectDir: File): File {
+fun localGradleStateDir(projectDir: File, projectName: String): File {
     val baseDir = if (File.separatorChar == '\\') {
         projectDir.toPath().root?.toFile()?.resolve("GradleWorkspaces")
     } else {
@@ -36,10 +36,10 @@ fun localGradleStateDir(projectDir: File): File {
         ?: File(System.getProperty("user.home"), ".cache").resolve("GradleWorkspaces")
     val workspaceId = projectDir.absolutePath.lowercase(Locale.ROOT).hashCode().toUInt().toString(16)
 
-    return baseDir.resolve("${projectDir.name}-$workspaceId")
+    return baseDir.resolve("$projectName-$workspaceId")
 }
 
-val localBuildRoot = localGradleStateDir(rootProject.projectDir).resolve("build")
+val localBuildRoot = localGradleStateDir(rootProject.projectDir, rootProject.name).resolve("build")
 
 allprojects {
     val projectBuildDir = if (path == ":") {

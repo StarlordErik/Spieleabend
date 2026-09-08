@@ -1,4 +1,127 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="spieleabend_gold">#E8B75A</color>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <color name="impulse_gold">#E8B75A</color>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="transparent">#00000000</color>
+    <color name="theme_on_primary">#2D2108</color>
+    <color name="theme_primary_container">#4D3910</color>
+    <color name="theme_on_primary_container">#FFDEA0</color>
+    <color name="theme_secondary">#A7D0C0</color>
+    <color name="theme_on_secondary">#10382E</color>
+    <color name="theme_secondary_container">#284E43</color>
+    <color name="theme_on_secondary_container">#C3ECDE</color>
+    <color name="theme_tertiary">#D8B8E4</color>
+    <color name="theme_on_tertiary">#3C2944</color>
+    <color name="theme_tertiary_container">#543F5C</color>
+    <color name="theme_on_tertiary_container">#F4D5FF</color>
+    <color name="theme_background">#0C0F15</color>
+    <color name="theme_on_background">#E7EAF0</color>
+    <color name="theme_surface">@color/theme_background</color>
+    <color name="theme_on_surface">@color/theme_on_background</color>
+    <color name="theme_surface_variant">#282E39</color>
+    <color name="theme_on_surface_variant">#C2C7D0</color>
+    <color name="theme_outline">#89909E</color>
+    <color name="theme_outline_variant">#3D4450</color>
+    <color name="theme_inverse_surface">@color/theme_on_background</color>
+    <color name="theme_inverse_on_surface">#2A3039</color>
+    <color name="theme_inverse_primary">#755A18</color>
+    <color name="theme_error">#FFB4AB</color>
+    <color name="theme_on_error">#690005</color>
+    <color name="theme_error_container">#93000A</color>
+    <color name="theme_on_error_container">#FFDAD6</color>
+    <color name="card_background">#151922</color>
+    <color name="card_text_color">#F3F0E8</color>
+    <color name="card_text_panel_color_1">#3C3525</color>
+    <color name="card_text_panel_color_2">#243D36</color>
+    <color name="card_text_panel_color_3">#49302D</color>
+    <color name="card_text_panel_color_4">#343249</color>
+    <color name="table_background">#0B1111</color>
+    <color name="table_background_highlight">#17211E</color>
+    <color name="title_color">#F0EDE5</color>
+    <color name="fallback_text_panel_color">@color/card_text_panel_color_4</color>
+    <color name="previous_card_tab_color">#192536</color>
+    <color name="category_tab_color_1">#276C58</color>
+    <color name="category_tab_color_2">#9B4E38</color>
+    <color name="category_tab_color_3">#2F627B</color>
+    <color name="category_tab_color_4">#6E507D</color>
+    <color name="category_tab_color_5">#80651F</color>
+    <color name="assigned_color_tab_color">#414854</color>
+    <color name="sign_color_1">#EF5350</color>
+    <color name="sign_color_2">#FB8C00</color>
+    <color name="sign_color_3">#FDD835</color>
+    <color name="sign_color_4">#66BB6A</color>
+    <color name="sign_color_5">#26A69A</color>
+    <color name="sign_color_6">#29B6F6</color>
+    <color name="sign_color_7">#7986CB</color>
+    <color name="sign_color_8">#BA68C8</color>
+    <color name="sign_color_9">#EC407A</color>
+    <color name="sign_color_10">#A1887F</color>
+    <color name="game_box_side_1_tone_1">#305F55</color>
+    <color name="game_box_side_1_tone_2">#24463F</color>
+    <color name="game_box_side_1_tone_3">#19332E</color>
+    <color name="game_box_side_1_tone_4">#E6C56A</color>
+    <color name="game_box_side_1_tone_5">#F1E8C7</color>
+    <color name="game_box_side_1_tone_6">#A93A34</color>
+    <color name="game_box_side_1_tone_7">#D9A13B</color>
+    <color name="game_box_side_1_tone_8">#F3D68A</color>
+    <color name="game_box_side_2_tone_1">#6B3650</color>
+    <color name="game_box_side_2_tone_2">#51273C</color>
+    <color name="game_box_side_2_tone_3">#3A1E2C</color>
+    <color name="game_box_side_2_tone_4">#F0B85E</color>
+    <color name="game_box_side_2_tone_5">#D96B57</color>
+    <color name="game_box_side_2_tone_6">#E6D9C4</color>
+    <color name="game_box_side_2_tone_7">#F2D39B</color>
+    <color name="game_box_side_2_tone_8">#844D66</color>
+    <color name="game_box_side_3_tone_1">#C86C3D</color>
+    <color name="game_box_side_3_tone_2">#9E4D2C</color>
+    <color name="game_box_side_3_tone_3">#77351F</color>
+    <color name="game_box_side_3_tone_4">#F1D58F</color>
+    <color name="game_box_side_3_tone_5">#345E74</color>
+    <color name="game_box_side_3_tone_6">#DFECEF</color>
+    <color name="game_box_side_3_tone_7">#8AA9B0</color>
+    <color name="game_box_side_3_tone_8">#F4E6BD</color>
+    <color name="game_box_side_4_tone_1">#2F4D75</color>
+    <color name="game_box_side_4_tone_2">#233B5A</color>
+    <color name="game_box_side_4_tone_3">#182A40</color>
+    <color name="game_box_side_4_tone_4">#D6E2F0</color>
+    <color name="game_box_side_4_tone_5">#5D7EA8</color>
+    <color name="game_box_side_4_tone_6">#F0C961</color>
+    <color name="game_box_side_4_tone_7">#EAE5D7</color>
+    <color name="game_box_side_4_tone_8">#C4493E</color>
+    <color name="shelf_background_tone_1">#241A17</color>
+    <color name="shelf_background_tone_2">#1A1110</color>
+    <color name="shelf_background_tone_3">#0F0908</color>
+    <color name="shelf_background_tone_4">#3A2720</color>
+    <color name="shelf_background_tone_5">#6D4B36</color>
+    <color name="shelf_background_tone_6">#B9895B</color>
+    <color name="shelf_background_tone_7">#D6A36C</color>
+    <color name="theme_surface_bright">#3B383E</color>
+    <color name="theme_surface_dim">#141218</color>
+    <color name="theme_surface_container">#211F26</color>
+    <color name="theme_surface_container_high">#2B2930</color>
+    <color name="theme_surface_container_highest">#36343B</color>
+    <color name="theme_surface_container_low">#1D1B20</color>
+    <color name="theme_surface_container_lowest">#0F0D13</color>
+    <!-- Used by scripts/generate_game_box_art.py. -->
+    <color name="art_conversation_base" tools:ignore="UnusedResources">#2F6B5C</color>
+    <color name="art_conversation_dark" tools:ignore="UnusedResources">#173A32</color>
+    <color name="art_conversation_light" tools:ignore="UnusedResources">#F7F1E2</color>
+    <color name="art_conversation_accent" tools:ignore="UnusedResources">#E7C36C</color>
+    <color name="art_couples_base" tools:ignore="UnusedResources">#874A65</color>
+    <color name="art_couples_dark" tools:ignore="UnusedResources">#482433</color>
+    <color name="art_couples_light" tools:ignore="UnusedResources">#F8EBDD</color>
+    <color name="art_couples_accent" tools:ignore="UnusedResources">#F2B27A</color>
+    <color name="art_fun_facts_base" tools:ignore="UnusedResources">#D7773B</color>
+    <color name="art_fun_facts_dark" tools:ignore="UnusedResources">#6F341A</color>
+    <color name="art_fun_facts_light" tools:ignore="UnusedResources">#FBE6B9</color>
+    <color name="art_fun_facts_accent" tools:ignore="UnusedResources">#2A5F79</color>
+    <color name="art_privacy_base" tools:ignore="UnusedResources">#31547F</color>
+    <color name="art_privacy_dark" tools:ignore="UnusedResources">#15263D</color>
+    <color name="art_privacy_light" tools:ignore="UnusedResources">#F2F0E6</color>
+    <color name="art_privacy_accent" tools:ignore="UnusedResources">#D54E43</color>
+    <color name="art_strangers_base" tools:ignore="UnusedResources">#E8E2D7</color>
+    <color name="art_strangers_dark" tools:ignore="UnusedResources">#1B1A1A</color>
+    <color name="art_strangers_light" tools:ignore="UnusedResources">#FFFDF8</color>
+    <color name="art_strangers_accent" tools:ignore="UnusedResources">#D64F43</color>
 </resources>
