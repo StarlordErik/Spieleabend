@@ -68,9 +68,9 @@ private fun CardTableCategory.sorted(
     ascending: Boolean,
 ): CardTableCategory {
     val comparator = when (column) {
-        CardTableSortColumn.Text -> compareBy<CardTableRow> { row -> row.text.lowercase() }
-        CardTableSortColumn.Seen -> compareBy<CardTableRow> { row -> row.seen }
-        CardTableSortColumn.Played -> compareBy<CardTableRow> { row -> row.played }
+        CardTableSortColumn.Text -> compareBy { row: CardTableRow -> row.text.lowercase() }
+        CardTableSortColumn.Seen -> compareBy { row: CardTableRow -> row.seen }
+        CardTableSortColumn.Played -> compareBy { row: CardTableRow -> row.played }
     }.thenBy { row -> row.text.lowercase() }
     val sortedRows = rows.sortedWith(if (ascending) comparator else comparator.reversed())
 

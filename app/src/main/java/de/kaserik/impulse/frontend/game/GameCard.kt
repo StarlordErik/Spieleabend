@@ -76,6 +76,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 
 @Composable
@@ -89,10 +90,7 @@ internal fun GameCard(
     hiddenCardTextIds: Set<Int> = emptySet(),
     developerMode: Boolean = false,
     onKartentextBoundsChanged: (Int, Rect) -> Unit = { _, _ -> },
-    onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextDeletedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextFavoriteStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextEditRequested: (Int) -> Unit = {},
+    cardTextActions: CardTextActions = CardTextActions(),
 ) {
     val tooltipState = rememberPlayedTooltipState(cardInstanceId)
     val einzelnerKartentext = kartentexte.singleOrNull()
@@ -103,7 +101,7 @@ internal fun GameCard(
             kartentext = einzelnerKartentext,
             onKartentextPlayed = { kartentextId ->
                 tooltipState.show()
-                onKartentextPlayedStateChanged(
+                cardTextActions.onKartentextPlayedStateChanged(
                     kartentextId,
                     true,
                 )
@@ -130,10 +128,7 @@ internal fun GameCard(
             hiddenCardTextIds = hiddenCardTextIds,
             developerMode = developerMode,
             onKartentextBoundsChanged = onKartentextBoundsChanged,
-            onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
-            onKartentextDeletedStateChanged = onKartentextDeletedStateChanged,
-            onKartentextFavoriteStateChanged = onKartentextFavoriteStateChanged,
-            onKartentextEditRequested = onKartentextEditRequested,
+            cardTextActions = cardTextActions,
             onKartentextMarkedAsPlayed = tooltipState::show,
         )
     }
@@ -163,10 +158,7 @@ private fun GameCardContent(
     hiddenCardTextIds: Set<Int> = emptySet(),
     developerMode: Boolean = false,
     onKartentextBoundsChanged: (Int, Rect) -> Unit = { _, _ -> },
-    onKartentextPlayedStateChanged: (Int, Boolean) -> Unit,
-    onKartentextDeletedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextFavoriteStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextEditRequested: (Int) -> Unit = {},
+    cardTextActions: CardTextActions = CardTextActions(),
     onKartentextMarkedAsPlayed: () -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -200,15 +192,11 @@ private fun GameCardContent(
                             textPanelColor = textPanelColors.getOrNull(index),
                             interactionsEnabled = interactionsEnabled,
                             developerMode = developerMode,
-                            onBoundsChanged = { bounds ->
-                                onKartentextBoundsChanged(kartentext.id, bounds)
-                            },
-                            onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
-                            onKartentextDeletedStateChanged = onKartentextDeletedStateChanged,
-                            onKartentextFavoriteStateChanged = onKartentextFavoriteStateChanged,
-                            onKartentextEditRequested = onKartentextEditRequested,
+                            cardTextActions = cardTextActions,
                             onKartentextMarkedAsPlayed = onKartentextMarkedAsPlayed,
-                            modifier = panelModifier,
+                            modifier = panelModifier.onGloballyPositioned { coordinates ->
+                                onKartentextBoundsChanged(kartentext.id, coordinates.boundsInRoot())
+                            },
                         )
                     }
                 }
@@ -233,7 +221,9 @@ private fun GameCardContentPreview() {
                 kartentexte = PreviewUiState.aktuelleKarte.kartentexte,
                 textPanelColors = emptyList(),
                 tooltipVisible = true,
-                onKartentextPlayedStateChanged = { _, _ -> },
+                cardTextActions = CardTextActions(
+                    onKartentextPlayedStateChanged = { _, _ -> },
+                ),
                 onKartentextMarkedAsPlayed = {},
             )
         }
@@ -278,7 +268,7 @@ private fun CardIdlePlayedEffect(
             return@LaunchedEffect
         }
 
-        delay(SINGLE_CARD_IDLE_PLAY_DELAY_MILLIS)
+        delay(SINGLE_CARD_IDLE_PLAY_DELAY_MILLIS.milliseconds)
         onKartentextPlayed(kartentext.id)
     }
 }
@@ -311,7 +301,7 @@ private fun rememberPlayedTooltipState(cardInstanceId: Long): PlayedTooltipState
         }
 
         tooltipState.visible = true
-        delay(TOOLTIP_VISIBLE_DURATION_MILLIS)
+        delay(TOOLTIP_VISIBLE_DURATION_MILLIS.milliseconds)
         tooltipState.visible = false
     }
 
@@ -360,11 +350,7 @@ internal fun CardTextPanel(
     interactionsEnabled: Boolean = true,
     markerInteractionsEnabled: Boolean = interactionsEnabled,
     developerMode: Boolean = false,
-    onBoundsChanged: (Rect) -> Unit = {},
-    onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextDeletedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextFavoriteStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextEditRequested: (Int) -> Unit = {},
+    cardTextActions: CardTextActions = CardTextActions(),
     onKartentextMarkedAsPlayed: () -> Unit = {},
 ) {
     val textStyle = when (kartentextCount) {
@@ -379,7 +365,6 @@ internal fun CardTextPanel(
 
     BoxWithConstraints(
         modifier = modifier
-            .onGloballyPositioned { coordinates -> onBoundsChanged(coordinates.boundsInRoot()) }
             .clip(RoundedCornerShape(18.dp))
             .background(backgroundColor)
             .clickable(enabled = interactionsEnabled) {
@@ -387,7 +372,7 @@ internal fun CardTextPanel(
                 if (nextPlayedState) {
                     onKartentextMarkedAsPlayed()
                 }
-                onKartentextPlayedStateChanged(
+                cardTextActions.onKartentextPlayedStateChanged(
                     kartentext.id,
                     nextPlayedState,
                 )
@@ -399,7 +384,8 @@ internal fun CardTextPanel(
         } else {
             minOf(CardTextMarkerTouchSize, maxHeight)
         }
-        val markerIconSize = minOf(CardTextMarkerIconSize, markerTouchSize * MARKER_ICON_SIZE_FRACTION)
+        val markerIconSize =
+            minOf(CardTextMarkerIconSize, markerTouchSize * MARKER_ICON_SIZE_FRACTION)
         AutoShrinkText(
             text = kartentext.text,
             modifier = Modifier.padding(
@@ -423,7 +409,7 @@ internal fun CardTextPanel(
                 touchSize = markerTouchSize,
                 iconSize = markerIconSize,
                 onCheckedChange = { checked ->
-                    onKartentextDeletedStateChanged(kartentext.id, checked)
+                    cardTextActions.onKartentextDeletedStateChanged(kartentext.id, checked)
                 },
             )
             if (developerMode) {
@@ -432,7 +418,7 @@ internal fun CardTextPanel(
                     enabled = markerInteractionsEnabled,
                     touchSize = markerTouchSize,
                     iconSize = markerIconSize,
-                    onClick = { onKartentextEditRequested(kartentext.id) },
+                    onClick = { cardTextActions.onKartentextEditRequested(kartentext.id) },
                 )
             }
         }
@@ -442,7 +428,7 @@ internal fun CardTextPanel(
             touchSize = markerTouchSize,
             iconSize = markerIconSize,
             onCheckedChange = { checked ->
-                onKartentextFavoriteStateChanged(kartentext.id, checked)
+                cardTextActions.onKartentextFavoriteStateChanged(kartentext.id, checked)
             },
             modifier = Modifier.align(Alignment.TopEnd),
         )
@@ -519,7 +505,8 @@ private fun StarToggle(
         Canvas(modifier = Modifier.size(iconSize)) {
             val path = Path()
             repeat(STAR_POINT_COUNT * 2) { index ->
-                val radius = if (index % 2 == 0) size.minDimension * 0.48f else size.minDimension * 0.21f
+                val radius =
+                    if (index % 2 == 0) size.minDimension * 0.48f else size.minDimension * 0.21f
                 val angle = -PI / 2.0 + index * PI / STAR_POINT_COUNT
                 val x = size.width / 2f + (cos(angle) * radius).toFloat()
                 val y = size.height / 2f + (sin(angle) * radius).toFloat()
@@ -569,8 +556,14 @@ private fun PencilToggle(
             rotate(degrees = -45f) {
                 drawRect(
                     color = inkColor,
-                    topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.38f, size.height * 0.12f),
-                    size = androidx.compose.ui.geometry.Size(size.width * 0.24f, size.height * 0.58f),
+                    topLeft = androidx.compose.ui.geometry.Offset(
+                        size.width * 0.38f,
+                        size.height * 0.12f
+                    ),
+                    size = androidx.compose.ui.geometry.Size(
+                        size.width * 0.24f,
+                        size.height * 0.58f
+                    ),
                     style = style,
                 )
                 val tip = Path().apply {
@@ -686,8 +679,22 @@ private fun brokenHeartPaths(
 ): Pair<Path, Path> {
     val left = Path().apply {
         moveTo(width * 0.46f, height * 0.88f)
-        cubicTo(width * 0.34f, height * 0.76f, width * 0.06f, height * 0.58f, width * 0.08f, height * 0.3f)
-        cubicTo(width * 0.1f, height * 0.06f, width * 0.39f, height * 0.02f, width * 0.5f, height * 0.24f)
+        cubicTo(
+            width * 0.34f,
+            height * 0.76f,
+            width * 0.06f,
+            height * 0.58f,
+            width * 0.08f,
+            height * 0.3f
+        )
+        cubicTo(
+            width * 0.1f,
+            height * 0.06f,
+            width * 0.39f,
+            height * 0.02f,
+            width * 0.5f,
+            height * 0.24f
+        )
         lineTo(width * 0.42f, height * 0.43f)
         lineTo(width * 0.52f, height * 0.53f)
         lineTo(width * 0.4f, height * 0.67f)
@@ -695,8 +702,22 @@ private fun brokenHeartPaths(
     }
     val right = Path().apply {
         moveTo(width * 0.54f, height * 0.88f)
-        cubicTo(width * 0.66f, height * 0.76f, width * 0.94f, height * 0.58f, width * 0.92f, height * 0.3f)
-        cubicTo(width * 0.9f, height * 0.06f, width * 0.61f, height * 0.02f, width * 0.5f, height * 0.24f)
+        cubicTo(
+            width * 0.66f,
+            height * 0.76f,
+            width * 0.94f,
+            height * 0.58f,
+            width * 0.92f,
+            height * 0.3f
+        )
+        cubicTo(
+            width * 0.9f,
+            height * 0.06f,
+            width * 0.61f,
+            height * 0.02f,
+            width * 0.5f,
+            height * 0.24f
+        )
         lineTo(width * 0.58f, height * 0.43f)
         lineTo(width * 0.48f, height * 0.53f)
         lineTo(width * 0.6f, height * 0.67f)
@@ -879,7 +900,9 @@ private fun String.appendProtectedLineStart(
             this[index]
         }
         result.append(character)
-        if (index + 1 < protectedEnd && !splitsGraphemeClusterAfter(index)) result.append(WORD_JOINER)
+        if (index + 1 < protectedEnd && !splitsGraphemeClusterAfter(index)) result.append(
+            WORD_JOINER
+        )
     }
 }
 
@@ -911,8 +934,8 @@ private fun String.splitsGraphemeClusterAfter(index: Int): Boolean {
             val previousCodePoint = codePointBefore(nextIndex)
             val nextCodePoint = codePointAt(nextIndex)
             nextCodePoint.isGraphemeContinuation() ||
-                previousCodePoint == ZERO_WIDTH_JOINER_CODE_POINT ||
-                previousCodePoint.isRegionalIndicator() && nextCodePoint.isRegionalIndicator()
+                    previousCodePoint == ZERO_WIDTH_JOINER_CODE_POINT ||
+                    previousCodePoint.isRegionalIndicator() && nextCodePoint.isRegionalIndicator()
         }
     }
 }
@@ -922,12 +945,13 @@ private fun Int.isGraphemeContinuation(): Boolean =
         Character.NON_SPACING_MARK.toInt(),
         Character.COMBINING_SPACING_MARK.toInt(),
         Character.ENCLOSING_MARK.toInt(),
-        -> true
+            -> true
+
         else -> this == ZERO_WIDTH_JOINER_CODE_POINT ||
-            this in VARIATION_SELECTOR_RANGE ||
-            this in SUPPLEMENTARY_VARIATION_SELECTOR_RANGE ||
-            this in EMOJI_MODIFIER_RANGE ||
-            this in EMOJI_TAG_RANGE
+                this in VARIATION_SELECTOR_RANGE ||
+                this in SUPPLEMENTARY_VARIATION_SELECTOR_RANGE ||
+                this in EMOJI_MODIFIER_RANGE ||
+                this in EMOJI_TAG_RANGE
     }
 
 private fun Int.isRegionalIndicator(): Boolean = this in REGIONAL_INDICATOR_RANGE

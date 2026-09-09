@@ -1,7 +1,5 @@
 package de.kaserik.impulse.common
 
-import de.kaserik.impulse.common.AppMessages
-
 enum class Sprache {
     OG,
     DE,

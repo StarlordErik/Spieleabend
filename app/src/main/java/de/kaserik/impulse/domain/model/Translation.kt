@@ -9,6 +9,6 @@ data class Translation(
     val bearbeitet: Boolean = false,
 ) {
     init {
-        require(text.isNotBlank()) { AppMessages.EmptyTranslation }
+        require(text.isNotBlank()) { AppMessages.EMPTY_TRANSLATION }
     }
 }

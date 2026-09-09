@@ -136,7 +136,7 @@ private fun DeletionStage.shouldResetNormalCandidatesAfterDraw(
 ): Boolean {
     if (normalCandidatesToResetAfterDraw.isEmpty()) return false
 
-    val selectedIds = selected.mapTo(mutableSetOf()) { candidate -> candidate.kartentext.id() }
+    val selectedIds = selected.map { candidate -> candidate.kartentext.id() }.toSet()
     val unseenDeletedAfterRefresh = candidates
         .map(planner::effectiveCandidate)
         .filter(CardTextCandidate::isUnseenAndUnplayed)
@@ -156,10 +156,10 @@ private class CardTextPoolPlanner {
     private val mutableResetSeenAndPlayedIds = linkedSetOf<Int>()
 
     val resetSeenIds: Set<Int>
-        get() = mutableResetSeenIds
+        get() = mutableResetSeenIds.toSet()
 
     val resetSeenAndPlayedIds: Set<Int>
-        get() = mutableResetSeenAndPlayedIds
+        get() = mutableResetSeenAndPlayedIds.toSet()
 
     fun drawWithExactlyOneFavorite(
         candidates: List<CardTextCandidate>,

@@ -3,6 +3,7 @@
 package de.kaserik.impulse.frontend.game
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -42,8 +43,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
@@ -70,10 +73,12 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -86,6 +91,7 @@ import de.kaserik.impulse.frontend.theme.ImpulseTheme
 import de.kaserik.impulse.frontend.theme.SignColors
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -94,48 +100,25 @@ internal fun FunFactsPlayArea(
     uiState: GameUiState,
     session: FunFactsSession,
     modifier: Modifier = Modifier,
-    swipeRegions: Collection<SwipeRegion> = emptyList(),
-    previousEnabled: Boolean = false,
-    swipeRequest: CardSwipeRequest? = null,
-    onSwipeRequestConsumed: (Long) -> Unit = {},
-    onHighlightedTargetChanged: (CardSwipeTarget?) -> Unit = {},
-    onInteractionStateChanged: (Boolean) -> Unit = {},
-    onSwipeTargetSelected: (CardSwipeTarget) -> Unit = {},
-    onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
+    swipeControls: CardSwipeControls = CardSwipeControls(),
+    cardTextActions: CardTextActions = CardTextActions(),
     developerMode: Boolean = false,
-    onKartentextDeletedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextFavoriteStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextEditRequested: (Int) -> Unit = {},
-    onQuestionTransitionStateChanged: (Boolean) -> Unit = {},
-    onCategoryTabsVisibilityChanged: (Boolean) -> Unit = {},
-    onNextCard: () -> Unit = {},
+    transitionActions: FunFactsTransitionActions = FunFactsTransitionActions(),
     gameContentHorizontalPadding: Dp = 0.dp,
 ) {
-    val nextCardAlpha = remember { Animatable(1f) }
-    val nextCardTransitionScope = rememberCoroutineScope()
-    var nextCardTransitionRunning by remember { mutableStateOf(false) }
-    var awaitingNextCardId by remember { mutableStateOf<Long?>(null) }
-    var newlySelectedQuestionId by remember { mutableStateOf<Int?>(null) }
-    var playAreaBounds by remember { mutableStateOf(Rect.Zero) }
+    val scope = rememberCoroutineScope()
+    val playState = remember { FunFactsPlayAreaState() }
     val cardTextBounds = remember(uiState.aktuelleKarte.instanceId) {
         mutableStateMapOf<Int, Rect>()
     }
     val measuredModifier = modifier
-        .graphicsLayer { alpha = nextCardAlpha.value }
+        .graphicsLayer { alpha = playState.nextCardAlpha.value }
         .onGloballyPositioned { coordinates ->
-            playAreaBounds = coordinates.boundsInRoot()
+            playState.playAreaBounds = coordinates.boundsInRoot()
         }
 
-    LaunchedEffect(uiState.aktuelleKarte.instanceId, awaitingNextCardId) {
-        val previousCardId = awaitingNextCardId ?: return@LaunchedEffect
-        if (uiState.aktuelleKarte.instanceId != previousCardId) {
-            nextCardAlpha.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(NEXT_CARD_FADE_IN_DURATION_MILLIS),
-            )
-            awaitingNextCardId = null
-            nextCardTransitionRunning = false
-        }
+    LaunchedEffect(uiState.aktuelleKarte.instanceId, playState.awaitingNextCardId) {
+        playState.revealNextCard(uiState.aktuelleKarte.instanceId)
     }
 
     if (session.selectingQuestion) {
@@ -143,30 +126,23 @@ internal fun FunFactsPlayArea(
             spielName = uiState.spielName,
             aktuelleKarte = uiState.aktuelleKarte,
             kategorien = uiState.kategorien,
-            swipeRegions = swipeRegions,
-            previousEnabled = previousEnabled,
-            swipeRequest = swipeRequest,
-            onSwipeRequestConsumed = onSwipeRequestConsumed,
-            onHighlightedTargetChanged = onHighlightedTargetChanged,
-            onInteractionStateChanged = onInteractionStateChanged,
-            onSwipeTargetSelected = onSwipeTargetSelected,
+            swipeControls = swipeControls,
             developerMode = developerMode,
-            onKartentextDeletedStateChanged = onKartentextDeletedStateChanged,
-            onKartentextFavoriteStateChanged = onKartentextFavoriteStateChanged,
-            onKartentextEditRequested = onKartentextEditRequested,
-            onKartentextPlayedStateChanged = { cardTextId, played ->
-                if (played) {
-                    onQuestionTransitionStateChanged(true)
-                    onCategoryTabsVisibilityChanged(false)
-                    newlySelectedQuestionId = cardTextId
-                    session.selectQuestion(
-                        questionId = cardTextId,
-                        origin = cardTextBounds[cardTextId]
-                            ?.relativeTo(playAreaBounds),
-                    )
-                }
-                onKartentextPlayedStateChanged(cardTextId, played)
-            },
+            cardTextActions = cardTextActions.copy(
+                onKartentextPlayedStateChanged = { cardTextId, played ->
+                    if (played) {
+                        transitionActions.onQuestionTransitionStateChanged(true)
+                        transitionActions.onCategoryTabsVisibilityChanged(false)
+                        playState.newlySelectedQuestionId = cardTextId
+                        session.selectQuestion(
+                            questionId = cardTextId,
+                            origin = cardTextBounds[cardTextId]
+                                ?.relativeTo(playState.playAreaBounds),
+                        )
+                    }
+                    cardTextActions.onKartentextPlayedStateChanged(cardTextId, played)
+                },
+            ),
             onKartentextBoundsChanged = { cardTextId, bounds ->
                 cardTextBounds[cardTextId] = bounds
             },
@@ -175,277 +151,26 @@ internal fun FunFactsPlayArea(
         return
     }
 
-    val question = uiState.aktuelleKarte.kartentexte.firstOrNull {
-        it.id == session.selectedQuestionId
-    } ?: return
-    val questionIndex = uiState.aktuelleKarte.kartentexte.indexOf(question)
-    val questionColor = uiState.aktuelleKarte.textPanelColors(
-        uiState.kategorien, CategoryTabColors, FallbackTextPanelColor,
-    )[questionIndex]
-    val categoryName = uiState.kategorien
-        .firstOrNull { category -> category.id == question.kategorieId }
-        ?.name
-        .orEmpty()
-    val transitionCard = uiState.aktuelleKarte.copy(
-        kartentexte = uiState.aktuelleKarte.kartentexte.map { cardText ->
-            if (cardText.id == question.id) cardText.copy(gespielt = false) else cardText
-        },
-    )
-    val questionOrigin = session.selectedQuestionOrigin
-    val measuredQuestionBounds = cardTextBounds[question.id]
-    LaunchedEffect(question.id, questionOrigin, measuredQuestionBounds, playAreaBounds) {
-        if (questionOrigin == null) {
-            measuredQuestionBounds
-                ?.relativeTo(playAreaBounds)
-                ?.let(session::rememberSelectedQuestionOrigin)
-        }
-    }
-    val transitionProgress = remember(question.id) {
-        Animatable(
-            if (newlySelectedQuestionId == question.id || questionOrigin == null) 0f else 1f,
-        )
-    }
-    var returningToQuestionSelection by remember(question.id) { mutableStateOf(false) }
-    LaunchedEffect(question.id, returningToQuestionSelection, questionOrigin) {
-        onQuestionTransitionStateChanged(true)
-        if (questionOrigin == null) {
-            onCategoryTabsVisibilityChanged(false)
-            return@LaunchedEffect
-        }
-        if (returningToQuestionSelection) {
-            onCategoryTabsVisibilityChanged(true)
-            transitionProgress.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(QUESTION_SLIDE_DURATION_MILLIS.toInt()),
-            )
-            session.reopenQuestionSelection()?.let { questionId ->
-                onKartentextPlayedStateChanged(questionId, false)
-            }
-        } else {
-            onCategoryTabsVisibilityChanged(false)
-            if (transitionProgress.value < 1f) {
-                transitionProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(QUESTION_SLIDE_DURATION_MILLIS.toInt()),
+    FunFactsQuestionStage(
+        uiState = uiState,
+        session = session,
+        playState = playState,
+        cardTextBounds = cardTextBounds,
+        onNextRound = {
+            scope.launch {
+                playState.startNextRound(
+                    uiState.aktuelleKarte.instanceId,
+                    session,
+                    transitionActions
                 )
             }
-            newlySelectedQuestionId = null
-        }
-        onQuestionTransitionStateChanged(false)
-    }
-
-    BoxWithConstraints(modifier = measuredModifier) {
-        val density = LocalDensity.current
-        val actionColorTabGap = with(density) { ACTION_COLOR_TAB_GAP_PX.toDp() }
-        val actionWidth = (
-            maxWidth - (ColorTabWidth + actionColorTabGap) * 2
-        ).coerceAtLeast(0.dp).coerceAtMost(MaxActionWidth)
-        val originBounds = cardTextBounds[question.id]
-        val originalWidth = questionOrigin?.let { origin ->
-            maxWidth * origin.widthFraction
-        } ?: with(density) { originBounds?.width?.toDp() } ?: 0.dp
-        val originalHeight = questionOrigin?.let { origin ->
-            maxHeight * origin.heightFraction
-        } ?: with(density) { originBounds?.height?.toDp() } ?: 0.dp
-        val compactTargetWidth = (maxWidth - SelectedQuestionHorizontalPadding * 2)
-            .coerceAtLeast(0.dp)
-            .coerceAtMost(560.dp)
-        val changesSize = uiState.aktuelleKarte.kartentexte.size < 3 ||
-            (questionOrigin == null && originBounds == null)
-        val targetWidth = if (changesSize) compactTargetWidth else originalWidth
-        val targetHeight = if (changesSize) SelectedQuestionCompactHeight else originalHeight
-        val targetX = (maxWidth - targetWidth) / 2
-        val originX = questionOrigin?.let { origin ->
-            maxWidth * origin.leftFraction
-        } ?: originBounds?.let { bounds ->
-            with(density) { (bounds.left - playAreaBounds.left).toDp() }
-        } ?: targetX
-        val originY = questionOrigin?.let { origin ->
-            maxHeight * origin.topFraction
-        } ?: originBounds?.let { bounds ->
-            with(density) { (bounds.top - playAreaBounds.top).toDp() }
-        } ?: (maxHeight - targetHeight)
-        val progress = transitionProgress.value
-        val animatedX = originX + (targetX - originX) * progress
-        val animatedY = originY + (0.dp - originY) * progress
-        val startWidth = originalWidth.takeIf { it > 0.dp } ?: targetWidth
-        val startHeight = originalHeight.takeIf { it > 0.dp } ?: targetHeight
-        val animatedWidth = if (changesSize) {
-            startWidth + (targetWidth - startWidth) * progress
-        } else {
-            originalWidth
-        }
-        val animatedHeight = if (changesSize) {
-            startHeight + (targetHeight - startHeight) * progress
-        } else {
-            originalHeight
-        }
-
-        if (questionOrigin == null || progress < 1f) {
-            GamePlayArea(
-                spielName = uiState.spielName,
-                aktuelleKarte = transitionCard,
-                kategorien = uiState.kategorien,
-                interactionsEnabled = false,
-                developerMode = developerMode,
-                hiddenCardTextIds = if (questionOrigin == null) {
-                    emptySet()
-                } else {
-                    setOf(question.id)
-                },
-                onKartentextBoundsChanged = { cardTextId, bounds ->
-                    cardTextBounds[cardTextId] = bounds
-                },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = gameContentHorizontalPadding)
-                    .graphicsLayer {
-                        alpha = if (questionOrigin == null) 1f else 1f - progress
-                    },
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { alpha = progress },
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Spacer(modifier = Modifier.height(targetHeight))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                if (session.phase == FunFactsPhase.EnterAnswer) {
-                    AnswerEntry(
-                        nameDrawing = session.draftName.snapshot(),
-                        answerDrawing = session.draftAnswer.snapshot(),
-                        selectedColorIndex = session.selectedColorIndex,
-                        availableColorIndices = session.availableColorIndices,
-                        onColorSelected = session::selectColor,
-                        onNameStrokeStarted = { point ->
-                            session.draftName.startStroke(
-                                point,
-                                StrokeWidthFractions[session.selectedStrokeWidthIndex],
-                            )
-                        },
-                        onNameStrokeContinued = session.draftName::continueStroke,
-                        onClearName = session.draftName::clear,
-                        onAnswerStrokeStarted = { point ->
-                            session.draftAnswer.startStroke(
-                                point,
-                                StrokeWidthFractions[session.selectedStrokeWidthIndex],
-                            )
-                        },
-                        onAnswerStrokeContinued = session.draftAnswer::continueStroke,
-                        onClearAnswer = session.draftAnswer::clear,
-                        selectedStrokeWidthIndex = session.selectedStrokeWidthIndex,
-                        onStrokeWidthSelected = session::selectStrokeWidth,
-                        categoryName = categoryName,
-                        onFinished = session::finishAnswer,
-                        colorTabsAlpha = progress,
-                        colorTabsInteractionsEnabled = progress >= 1f &&
-                            !returningToQuestionSelection,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    PlayerSignStack(
-                        players = session.players,
-                        activeSignId = session.activeSignId,
-                        onMoveActiveSign = session::moveActiveSign,
-                        onToggleRevealedSide = session::toggleRevealedSide,
-                        revealedSignsCanBeFlipped = session.phase == FunFactsPhase.Revealing ||
-                            session.phase == FunFactsPhase.Complete,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                    )
-                    when (session.phase) {
-                        FunFactsPhase.PositionSign -> PositioningActions(
-                            revealEnabled = session.players.size >= 2,
-                            nextPlayerEnabled = session.canAddPlayer,
-                            onNextPlayer = session::nextPlayer,
-                            onReveal = session::beginReveal,
-                            modifier = Modifier.width(actionWidth),
-                        )
-                        FunFactsPhase.FinalPositioning -> RevealButtonWithHint(
-                            showHint = session.showFirstPlayerHint,
-                            onDismissHint = session::dismissFirstPlayerHint,
-                            onReveal = session::beginReveal,
-                            modifier = Modifier.width(actionWidth),
-                        )
-                        FunFactsPhase.Revealing -> Button(
-                            onClick = session::beginReveal,
-                            modifier = Modifier.width(actionWidth),
-                        ) { Text(stringResource(R.string.reveal)) }
-                        FunFactsPhase.Complete -> Button(
-                            onClick = {
-                                nextCardTransitionScope.launch {
-                                    nextCardTransitionRunning = true
-                                    nextCardAlpha.animateTo(
-                                        targetValue = 0f,
-                                        animationSpec = tween(NEXT_CARD_FADE_OUT_DURATION_MILLIS),
-                                    )
-                                    awaitingNextCardId = uiState.aktuelleKarte.instanceId
-                                    session.startNextRound()
-                                    onCategoryTabsVisibilityChanged(true)
-                                    onNextCard()
-                                    delay(NEXT_CARD_LOAD_TIMEOUT_MILLIS)
-                                    if (awaitingNextCardId != null) {
-                                        nextCardAlpha.animateTo(
-                                            targetValue = 1f,
-                                            animationSpec = tween(NEXT_CARD_FADE_IN_DURATION_MILLIS),
-                                        )
-                                        awaitingNextCardId = null
-                                        nextCardTransitionRunning = false
-                                    }
-                                }
-                            },
-                            enabled = !nextCardTransitionRunning,
-                            modifier = Modifier.width(actionWidth),
-                        ) { Text(stringResource(R.string.next_card)) }
-                        else -> Unit
-                    }
-                }
-            }
-        }
-
-        if (questionOrigin != null) {
-            CardTextPanel(
-                kartentext = question.copy(gespielt = false),
-                index = questionIndex,
-                kartentextCount = uiState.aktuelleKarte.kartentexte.size,
-                textPanelColor = questionColor,
-                interactionsEnabled = progress >= 1f &&
-                    session.players.isEmpty() &&
-                    !returningToQuestionSelection,
-                markerInteractionsEnabled = progress >= 1f &&
-                    !returningToQuestionSelection,
-                developerMode = developerMode,
-                onKartentextDeletedStateChanged = onKartentextDeletedStateChanged,
-                onKartentextFavoriteStateChanged = onKartentextFavoriteStateChanged,
-                onKartentextEditRequested = onKartentextEditRequested,
-                onKartentextPlayedStateChanged = { _, _ ->
-                    onQuestionTransitionStateChanged(true)
-                    onCategoryTabsVisibilityChanged(true)
-                    returningToQuestionSelection = true
-                },
-                modifier = Modifier
-                    .offset {
-                        IntOffset(
-                            x = animatedX.roundToPx(),
-                            y = animatedY.roundToPx(),
-                        )
-                    }
-                    .width(animatedWidth)
-                    .height(animatedHeight),
-            )
-        }
-    }
+        },
+        modifier = measuredModifier,
+        developerMode = developerMode,
+        cardTextActions = cardTextActions,
+        transitionActions = transitionActions,
+        gameContentHorizontalPadding = gameContentHorizontalPadding,
+    )
 }
 
 @Preview(showBackground = true)
@@ -471,48 +196,35 @@ private fun FunFactsPlayAreaPreview() {
 
 @Composable
 private fun AnswerEntry(
-    nameDrawing: FunFactsDrawing,
-    answerDrawing: FunFactsDrawing,
-    selectedColorIndex: Int,
-    availableColorIndices: List<Int>,
-    onColorSelected: (Int) -> Unit,
-    onNameStrokeStarted: (androidx.compose.ui.geometry.Offset) -> Unit,
-    onNameStrokeContinued: (androidx.compose.ui.geometry.Offset) -> Unit,
-    onClearName: () -> Unit,
-    onAnswerStrokeStarted: (androidx.compose.ui.geometry.Offset) -> Unit,
-    onAnswerStrokeContinued: (androidx.compose.ui.geometry.Offset) -> Unit,
-    onClearAnswer: () -> Unit,
-    selectedStrokeWidthIndex: Int,
-    onStrokeWidthSelected: (Int) -> Unit,
+    session: FunFactsSession,
     categoryName: String,
-    onFinished: () -> Unit,
+    modifier: Modifier = Modifier,
     colorTabsAlpha: Float = 1f,
     colorTabsInteractionsEnabled: Boolean = true,
-    modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
         val maximumDrawingWidth = (
-            maxWidth - (ColorTabWidth + ColorTabSpacing) * 2
-        ).coerceAtLeast(0.dp)
+                maxWidth - (ColorTabWidth + ColorTabSpacing) * 2
+                ).coerceAtLeast(0.dp)
         val preferredDrawingHeight = maximumDrawingWidth / SIGN_ASPECT_RATIO
         val heightWithoutDrawingPadSpacing = preferredDrawingHeight * 2 +
-            DrawingControlsTopAllowance * 2 + AnswerEntrySpacing + FinishButtonHeight
+                DrawingControlsTopAllowance * 2 + AnswerEntrySpacing + FinishButtonHeight
         val drawingPadSpacing = (maxHeight - heightWithoutDrawingPadSpacing)
             .coerceAtMost(PreferredDrawingPadSpacing)
             .coerceAtLeast(MinimumDrawingPadSpacing)
         val availableDrawingHeight = (
-            maxHeight - DrawingControlsTopAllowance * 2 - drawingPadSpacing -
-                AnswerEntrySpacing - FinishButtonHeight
-        ).coerceAtLeast(0.dp) / 2f
+                maxHeight - DrawingControlsTopAllowance * 2 - drawingPadSpacing -
+                        AnswerEntrySpacing - FinishButtonHeight
+                ).coerceAtLeast(0.dp) / 2f
         val drawingWidth = minOf(
             maximumDrawingWidth,
             availableDrawingHeight * SIGN_ASPECT_RATIO,
         )
         val drawingHeight = drawingWidth / SIGN_ASPECT_RATIO
         val currentStrokeWidth = drawingHeight *
-            DEFAULT_DRAWING_STROKE_WIDTH_FRACTION
+                DEFAULT_DRAWING_STROKE_WIDTH_FRACTION
         val strokeWidthSelectorOffset = DrawingControlsTopAllowance / 2f -
-            drawingHeight * (1f - CONCAVE_TIP_HEIGHT_FRACTION) / 2f
+                drawingHeight * (1f - CONCAVE_TIP_HEIGHT_FRACTION) / 2f
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -529,41 +241,51 @@ private fun AnswerEntry(
                 ) {
                     DrawingPad(
                         label = stringResource(R.string.player_name_label),
-                        drawing = nameDrawing,
-                        onStrokeStarted = onNameStrokeStarted,
-                        onStrokeContinued = onNameStrokeContinued,
-                        onClear = onClearName,
+                        drawing = session.draftName.snapshot(),
+                        onStrokeStarted = { point ->
+                            session.draftName.startStroke(
+                                point,
+                                StrokeWidthFractions[session.selectedStrokeWidthIndex]
+                            )
+                        },
+                        onStrokeContinued = session.draftName::continueStroke,
+                        onClear = session.draftName::clear,
                         signHeight = drawingHeight,
-                        signColor = SignColors[selectedColorIndex % SignColors.size],
+                        signColor = SignColors[session.selectedColorIndex % SignColors.size],
                         modifier = Modifier.fillMaxWidth(),
                     )
                     DrawingPad(
                         label = stringResource(R.string.answer_label),
-                        drawing = answerDrawing,
-                        onStrokeStarted = onAnswerStrokeStarted,
-                        onStrokeContinued = onAnswerStrokeContinued,
-                        onClear = onClearAnswer,
+                        drawing = session.draftAnswer.snapshot(),
+                        onStrokeStarted = { point ->
+                            session.draftAnswer.startStroke(
+                                point,
+                                StrokeWidthFractions[session.selectedStrokeWidthIndex]
+                            )
+                        },
+                        onStrokeContinued = session.draftAnswer::continueStroke,
+                        onClear = session.draftAnswer::clear,
                         categoryName = categoryName,
                         signHeight = drawingHeight,
-                        signColor = SignColors[selectedColorIndex % SignColors.size],
+                        signColor = SignColors[session.selectedColorIndex % SignColors.size],
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
                 StrokeWidthSelector(
-                    selectedIndex = selectedStrokeWidthIndex,
-                    onSelected = onStrokeWidthSelected,
+                    selectedIndex = session.selectedStrokeWidthIndex,
+                    onSelected = session::selectStrokeWidth,
                     currentStrokeWidth = currentStrokeWidth,
-                    selectedColor = SignColors[selectedColorIndex % SignColors.size],
+                    selectedColor = SignColors[session.selectedColorIndex % SignColors.size],
                     modifier = Modifier
                         .align(Alignment.Center)
                         .offset(y = strokeWidthSelectorOffset),
                 )
             }
             Button(
-                onClick = onFinished,
-                enabled = nameDrawing.strokes.isNotEmpty() &&
-                    answerDrawing.strokes.isNotEmpty() &&
-                    selectedColorIndex in availableColorIndices,
+                onClick = session::finishAnswer,
+                enabled = session.draftName.snapshot().strokes.isNotEmpty() &&
+                        session.draftAnswer.snapshot().strokes.isNotEmpty() &&
+                        session.selectedColorIndex in session.availableColorIndices,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(FinishButtonHeight),
@@ -575,9 +297,9 @@ private fun AnswerEntry(
         }
         if (colorTabsAlpha > 0f) {
             SideColorTabs(
-                selectedColorIndex = selectedColorIndex,
-                availableColorIndices = availableColorIndices,
-                onColorSelected = onColorSelected,
+                selectedColorIndex = session.selectedColorIndex,
+                availableColorIndices = session.availableColorIndices,
+                onColorSelected = session::selectColor,
                 interactionsEnabled = colorTabsInteractionsEnabled,
                 modifier = Modifier
                     .fillMaxSize()
@@ -592,21 +314,14 @@ private fun AnswerEntry(
 private fun AnswerEntryPreview() {
     ImpulseTheme {
         AnswerEntry(
-            nameDrawing = PreviewDrawing,
-            answerDrawing = PreviewDrawing,
-            selectedColorIndex = 0,
-            availableColorIndices = SignColors.indices.toList(),
-            onColorSelected = {},
-            onNameStrokeStarted = {},
-            onNameStrokeContinued = {},
-            onClearName = {},
-            onAnswerStrokeStarted = {},
-            onAnswerStrokeContinued = {},
-            onClearAnswer = {},
-            selectedStrokeWidthIndex = DEFAULT_STROKE_WIDTH_INDEX,
-            onStrokeWidthSelected = {},
+            session = remember {
+                FunFactsSession().apply {
+                    draftName.restore(PreviewDrawing); draftAnswer.restore(
+                    PreviewDrawing
+                )
+                }
+            },
             categoryName = stringResource(R.string.preview_category_knowledge),
-            onFinished = {},
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 520.dp),
@@ -619,8 +334,8 @@ private fun SideColorTabs(
     selectedColorIndex: Int,
     availableColorIndices: List<Int>,
     onColorSelected: (Int) -> Unit,
-    interactionsEnabled: Boolean = true,
     modifier: Modifier = Modifier,
+    interactionsEnabled: Boolean = true,
 ) {
     BoxWithConstraints(modifier = modifier) {
         val tabHeight = ((maxHeight - ColorTabSpacing * 6) / 5).coerceAtLeast(0.dp)
@@ -670,7 +385,7 @@ private fun ColorTabColumn(
     interactionsEnabled: Boolean,
     onColorSelected: (Int) -> Unit,
     leftSide: Boolean,
-    tabHeight: androidx.compose.ui.unit.Dp,
+    tabHeight: Dp,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -686,7 +401,7 @@ private fun ColorTabColumn(
             val scale by animateFloatAsState(
                 targetValue = if (selected) 1.1f else 1f,
                 animationSpec = tween(durationMillis = 90),
-                label = AnimationLabels.ColorTabScale,
+                label = AnimationLabels.COLOR_TAB_SCALE,
             )
             Box(
                 modifier = Modifier
@@ -702,11 +417,7 @@ private fun ColorTabColumn(
                         )
                     }
                     .clip(
-                        if (leftSide) {
-                            RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp)
-                        } else {
-                            RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp)
-                        },
+                        colorTabShape(leftSide),
                     )
                     .background(if (available) SignColors[index] else AssignedColorTabColor)
                     .clickable(enabled = available && interactionsEnabled) {
@@ -737,13 +448,13 @@ private fun ColorTabColumnPreview() {
 private fun DrawingPad(
     label: String,
     drawing: FunFactsDrawing,
-    onStrokeStarted: (androidx.compose.ui.geometry.Offset) -> Unit,
-    onStrokeContinued: (androidx.compose.ui.geometry.Offset) -> Unit,
+    onStrokeStarted: (Offset) -> Unit,
+    onStrokeContinued: (Offset) -> Unit,
     onClear: () -> Unit,
     signHeight: Dp,
     signColor: Color,
-    categoryName: String? = null,
     modifier: Modifier = Modifier,
+    categoryName: String? = null,
 ) {
     BoxWithConstraints(modifier = modifier.height(signHeight + DrawingControlsTopAllowance)) {
         var labelSize by remember { mutableStateOf(IntSize.Zero) }
@@ -757,10 +468,10 @@ private fun DrawingPad(
         } else {
             val deleteStart = widthPx - deleteSize.width
             val boundaryAtDeleteStart = cornerHeightPx *
-                (2f * deleteStart / widthPx - 1f).coerceAtLeast(0f)
+                    (2f * deleteStart / widthPx - 1f).coerceAtLeast(0f)
             (
-                signTopPx + boundaryAtDeleteStart - DELETE_SIGN_GAP_PX - deleteSize.height
-            ).roundToInt().coerceAtLeast(0)
+                    signTopPx + boundaryAtDeleteStart - DELETE_SIGN_GAP_PX - deleteSize.height
+                    ).roundToInt().coerceAtLeast(0)
         }
         val labelTop = if (labelSize == IntSize.Zero || deleteSize == IntSize.Zero) {
             deleteTop
@@ -831,7 +542,7 @@ private fun DrawingPad(
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.labelSmall,
             )
         }
@@ -847,8 +558,8 @@ private fun DrawingPadPreview() {
             drawing = FunFactsDrawing(
                 strokes = listOf(
                     listOf(
-                        androidx.compose.ui.geometry.Offset(0.1f, 0.2f),
-                        androidx.compose.ui.geometry.Offset(0.9f, 0.8f),
+                        Offset(0.1f, 0.2f),
+                        Offset(0.9f, 0.8f),
                     ),
                 ),
             ),
@@ -869,9 +580,9 @@ private fun DrawingPadPreview() {
 private fun StrokeWidthSelector(
     selectedIndex: Int,
     onSelected: (Int) -> Unit,
-    currentStrokeWidth: Dp = StrokeWidthPreviewDotSize,
     selectedColor: Color,
     modifier: Modifier = Modifier,
+    currentStrokeWidth: Dp = StrokeWidthPreviewDotSize,
 ) {
     Row(
         modifier = modifier,
@@ -900,7 +611,7 @@ private fun StrokeWidthSelector(
                     Canvas(
                         modifier = Modifier.size(
                             currentStrokeWidth *
-                                (strokeWidth / DEFAULT_DRAWING_STROKE_WIDTH_FRACTION),
+                                    (strokeWidth / DEFAULT_DRAWING_STROKE_WIDTH_FRACTION),
                         ),
                     ) {
                         drawCircle(selectedColor)
@@ -963,7 +674,14 @@ private fun PositioningActions(
 @Preview(showBackground = true)
 @Composable
 private fun PositioningActionsPreview() {
-    ImpulseTheme { PositioningActions(true, true, {}, {}) }
+    ImpulseTheme {
+        PositioningActions(
+            revealEnabled = true,
+            nextPlayerEnabled = true,
+            onNextPlayer = {},
+            onReveal = {},
+        )
+    }
 }
 
 @Composable
@@ -975,7 +693,7 @@ private fun RevealButtonWithHint(
 ) {
     LaunchedEffect(showHint) {
         if (showHint) {
-            delay(FIRST_PLAYER_HINT_DURATION_MILLIS)
+            delay(FIRST_PLAYER_HINT_DURATION_MILLIS.milliseconds)
             onDismissHint()
         }
     }
@@ -984,7 +702,10 @@ private fun RevealButtonWithHint(
             .fillMaxWidth()
             .height(ActionButtonHeight),
     ) {
-        Button(onClick = onReveal, modifier = Modifier.fillMaxSize()) { Text(stringResource(R.string.reveal)) }
+        Button(
+            onClick = onReveal,
+            modifier = Modifier.fillMaxSize()
+        ) { Text(stringResource(R.string.reveal)) }
         AnimatedVisibility(
             visible = showHint,
             enter = fadeIn(tween(180)),
@@ -1016,7 +737,9 @@ private fun RevealButtonWithHint(
 @Preview(showBackground = true)
 @Composable
 private fun RevealButtonWithHintPreview() {
-    ImpulseTheme { RevealButtonWithHint(true, {}, {}) }
+    ImpulseTheme {
+        RevealButtonWithHint(showHint = true, onDismissHint = {}, onReveal = {})
+    }
 }
 
 @Composable
@@ -1024,9 +747,9 @@ private fun PlayerSignStack(
     players: List<FunFactsPlayer>,
     activeSignId: Int?,
     onMoveActiveSign: (Int) -> Unit,
+    modifier: Modifier = Modifier,
     onToggleRevealedSide: (Int) -> Unit = {},
     revealedSignsCanBeFlipped: Boolean = false,
-    modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
         modifier = modifier,
@@ -1036,10 +759,10 @@ private fun PlayerSignStack(
         val layoutSignCount = players.size.coerceAtLeast(MIN_STACK_LAYOUT_SIGN_COUNT)
         val spacesInFullStack = layoutSignCount - 1
         val stackHeightFactor = 1f +
-            CONCAVE_TIP_HEIGHT_FRACTION * spacesInFullStack
+                CONCAVE_TIP_HEIGHT_FRACTION * spacesInFullStack
         val signHeightByStack = (
-            maxHeight - tipGap * spacesInFullStack
-        ).coerceAtLeast(0.dp) / stackHeightFactor
+                maxHeight - tipGap * spacesInFullStack
+                ).coerceAtLeast(0.dp) / stackHeightFactor
         val signHeight = minOf(signHeightByStack, maxWidth / SIGN_ASPECT_RATIO)
         val signWidth = signHeight * SIGN_ASPECT_RATIO
         val spacing = tipGap - signHeight * (1f - CONCAVE_TIP_HEIGHT_FRACTION)
@@ -1088,23 +811,16 @@ private fun PlayerSign(
     player: FunFactsPlayer,
     active: Boolean,
     onMove: (Int) -> Unit,
+    modifier: Modifier = Modifier,
     onToggleRevealedSide: (Int) -> Unit = {},
     flippingEnabled: Boolean = false,
     borderWidth: Dp = 2.dp,
-    modifier: Modifier = Modifier,
 ) {
-    val signDescription = when {
-        active -> stringResource(R.string.active_sign_description)
-        flippingEnabled && player.revealed && player.answerVisible ->
-            stringResource(R.string.answer_side_description)
-        flippingEnabled && player.revealed ->
-            stringResource(R.string.name_side_description)
-        else -> stringResource(R.string.sign_description)
-    }
+    val signDescription = stringResource(playerSignDescription(player, active, flippingEnabled))
     val signColor = SignColors[player.colorIndex % SignColors.size]
     val rotation by animateFloatAsState(
         targetValue = if (player.answerVisible) 180f else 0f,
-        label = AnimationLabels.RevealSign,
+        label = AnimationLabels.REVEAL_SIGN,
     )
     val dragThreshold = with(LocalDensity.current) { 32.dp.toPx() }
     val flipping = rotation > 0.5f && rotation < 179.5f
@@ -1126,18 +842,7 @@ private fun PlayerSign(
                     clip = false,
                 )
                 .graphicsLayer { rotationY = rotation }
-                .pointerInput(player.id, active) {
-                    if (!active) return@pointerInput
-                    var accumulatedDrag = 0f
-                    detectDragGestures { change, dragAmount ->
-                        change.consume()
-                        accumulatedDrag += dragAmount.y
-                        if (abs(accumulatedDrag) >= dragThreshold) {
-                            onMove(if (accumulatedDrag < 0f) -1 else 1)
-                            accumulatedDrag = 0f
-                        }
-                    }
-                }
+                .reorderPlayerSign(player.id, active, dragThreshold, onMove)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -1256,11 +961,11 @@ private fun DrawingCanvas(
         drawing.strokes.forEachIndexed { index, stroke ->
             if (stroke.isEmpty()) return@forEachIndexed
             val strokeWidth = size.minDimension * (
-                drawing.strokeWidthFractions.getOrNull(index)
-                    ?: DEFAULT_DRAWING_STROKE_WIDTH_FRACTION
-            )
+                    drawing.strokeWidthFractions.getOrNull(index)
+                        ?: DEFAULT_DRAWING_STROKE_WIDTH_FRACTION
+                    )
             val scaledPoints = stroke.map { point ->
-                androidx.compose.ui.geometry.Offset(
+                Offset(
                     x = point.x * size.width,
                     y = point.y * size.height,
                 )
@@ -1297,11 +1002,11 @@ private fun DrawingCanvasPreview() {
     }
 }
 
-private fun androidx.compose.ui.geometry.Offset.normalized(
+private fun Offset.normalized(
     width: Int,
     height: Int,
-): androidx.compose.ui.geometry.Offset =
-    androidx.compose.ui.geometry.Offset(
+): Offset =
+    Offset(
         x = (x / width.coerceAtLeast(1)).coerceIn(0f, 1f),
         y = (y / height.coerceAtLeast(1)).coerceIn(0f, 1f),
     )
@@ -1319,12 +1024,12 @@ private fun Rect.relativeTo(container: Rect): FunFactsQuestionOrigin? {
 private val PreviewDrawing = FunFactsDrawing(
     strokes = listOf(
         listOf(
-            androidx.compose.ui.geometry.Offset(0.2f, 0.2f),
-            androidx.compose.ui.geometry.Offset(0.8f, 0.8f),
+            Offset(0.2f, 0.2f),
+            Offset(0.8f, 0.8f),
         ),
         listOf(
-            androidx.compose.ui.geometry.Offset(0.8f, 0.2f),
-            androidx.compose.ui.geometry.Offset(0.2f, 0.8f),
+            Offset(0.8f, 0.2f),
+            Offset(0.2f, 0.8f),
         ),
     ),
 )
@@ -1367,3 +1072,483 @@ private const val QUESTION_SLIDE_DURATION_MILLIS = 480L
 private const val NEXT_CARD_FADE_OUT_DURATION_MILLIS = 180
 private const val NEXT_CARD_FADE_IN_DURATION_MILLIS = 220
 private const val NEXT_CARD_LOAD_TIMEOUT_MILLIS = 1_500L
+
+private fun colorTabShape(leftSide: Boolean): RoundedCornerShape =
+    if (leftSide) {
+        RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp)
+    } else {
+        RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp)
+    }
+
+private fun playerSignDescription(
+    player: FunFactsPlayer,
+    active: Boolean,
+    flippingEnabled: Boolean
+): Int =
+    when {
+        active -> R.string.active_sign_description
+        flippingEnabled && player.revealed && player.answerVisible ->
+            R.string.answer_side_description
+
+        flippingEnabled && player.revealed ->
+            R.string.name_side_description
+
+        else -> R.string.sign_description
+    }
+
+private fun Modifier.reorderPlayerSign(
+    playerId: Int,
+    active: Boolean,
+    dragThreshold: Float,
+    onMove: (Int) -> Unit,
+): Modifier =
+    this.pointerInput(playerId, active, dragThreshold, onMove) {
+        if (!active) return@pointerInput
+        var accumulatedDrag = 0f
+        detectDragGestures { change, dragAmount ->
+            change.consume()
+            accumulatedDrag += dragAmount.y
+            if (abs(accumulatedDrag) >= dragThreshold) {
+                onMove(if (accumulatedDrag < 0f) -1 else 1)
+                accumulatedDrag = 0f
+            }
+        }
+    }
+
+internal data class FunFactsTransitionActions(
+    val onQuestionTransitionStateChanged: (Boolean) -> Unit = {},
+    val onCategoryTabsVisibilityChanged: (Boolean) -> Unit = {},
+    val onNextCard: () -> Unit = {},
+)
+
+@Stable
+private class FunFactsPlayAreaState {
+    val nextCardAlpha = Animatable(1f)
+    var nextCardTransitionRunning by mutableStateOf(false)
+        private set
+    var awaitingNextCardId by mutableStateOf<Long?>(null)
+        private set
+    var newlySelectedQuestionId by mutableStateOf<Int?>(null)
+    var playAreaBounds by mutableStateOf(Rect.Zero)
+
+    suspend fun revealNextCard(cardInstanceId: Long) {
+        val previousCardId = awaitingNextCardId ?: return
+        if (cardInstanceId != previousCardId) finishNextCardTransition()
+    }
+
+    suspend fun startNextRound(
+        cardInstanceId: Long,
+        session: FunFactsSession,
+        actions: FunFactsTransitionActions,
+    ) {
+        nextCardTransitionRunning = true
+        nextCardAlpha.animateTo(0f, tween(NEXT_CARD_FADE_OUT_DURATION_MILLIS))
+        awaitingNextCardId = cardInstanceId
+        session.startNextRound()
+        actions.onCategoryTabsVisibilityChanged(true)
+        actions.onNextCard()
+        delay(NEXT_CARD_LOAD_TIMEOUT_MILLIS.milliseconds)
+        if (awaitingNextCardId != null) finishNextCardTransition()
+    }
+
+    private suspend fun finishNextCardTransition() {
+        nextCardAlpha.animateTo(1f, tween(NEXT_CARD_FADE_IN_DURATION_MILLIS))
+        awaitingNextCardId = null
+        nextCardTransitionRunning = false
+    }
+}
+
+@Composable
+private fun FunFactsQuestionStage(
+    uiState: GameUiState,
+    session: FunFactsSession,
+    playState: FunFactsPlayAreaState,
+    cardTextBounds: MutableMap<Int, Rect>,
+    onNextRound: () -> Unit,
+    modifier: Modifier = Modifier,
+    developerMode: Boolean = false,
+    cardTextActions: CardTextActions = CardTextActions(),
+    transitionActions: FunFactsTransitionActions = FunFactsTransitionActions(),
+    gameContentHorizontalPadding: Dp = 0.dp,
+) {
+    val question = uiState.aktuelleKarte.kartentexte.firstOrNull {
+        it.id == session.selectedQuestionId
+    } ?: return
+    val questionIndex = uiState.aktuelleKarte.kartentexte.indexOf(question)
+    val questionColor = uiState.aktuelleKarte.textPanelColors(
+        uiState.kategorien, CategoryTabColors, FallbackTextPanelColor,
+    )[questionIndex]
+    val categoryName = uiState.kategorien
+        .firstOrNull { category -> category.id == question.kategorieId }
+        ?.name
+        .orEmpty()
+    val transitionCard = uiState.aktuelleKarte.copy(
+        kartentexte = uiState.aktuelleKarte.kartentexte.map { cardText ->
+            if (cardText.id == question.id) cardText.copy(gespielt = false) else cardText
+        },
+    )
+    val questionOrigin = session.selectedQuestionOrigin
+    val measuredQuestionBounds = cardTextBounds[question.id]
+    LaunchedEffect(question.id, questionOrigin, measuredQuestionBounds, playState.playAreaBounds) {
+        if (questionOrigin == null) {
+            measuredQuestionBounds
+                ?.relativeTo(playState.playAreaBounds)
+                ?.let(session::rememberSelectedQuestionOrigin)
+        }
+    }
+    val transitionProgress = remember(question.id) {
+        Animatable(
+            if (playState.newlySelectedQuestionId == question.id || questionOrigin == null) 0f else 1f,
+        )
+    }
+    var returningToQuestionSelection by remember(question.id) { mutableStateOf(false) }
+    LaunchedEffect(question.id, returningToQuestionSelection, questionOrigin) {
+        animateQuestionTransition(
+            questionOrigin = questionOrigin,
+            returningToQuestionSelection = returningToQuestionSelection,
+            transitionProgress = transitionProgress,
+            session = session,
+            playState = playState,
+            transitionActions = transitionActions,
+            cardTextActions = cardTextActions,
+        )
+    }
+
+    val hiddenCardTextIds = if (questionOrigin == null) emptySet() else setOf(question.id)
+    val backdropAlpha = if (questionOrigin == null) 1f else 1f - transitionProgress.value
+    BoxWithConstraints(modifier = modifier) {
+        val density = LocalDensity.current
+        val actionColorTabGap = with(density) { ACTION_COLOR_TAB_GAP_PX.toDp() }
+        val actionWidth = (
+                maxWidth - (ColorTabWidth + actionColorTabGap) * 2
+                ).coerceAtLeast(0.dp).coerceAtMost(MaxActionWidth)
+        val progress = transitionProgress.value
+        val placement = questionPlacement(
+            container = DpSize(maxWidth, maxHeight),
+            questionOrigin = questionOrigin,
+            originBounds = cardTextBounds[question.id],
+            playAreaBounds = playState.playAreaBounds,
+            cardTextCount = uiState.aktuelleKarte.kartentexte.size,
+            density = density,
+            progress = progress,
+        )
+
+        if (questionOrigin == null || progress < 1f) {
+            GamePlayArea(
+                spielName = uiState.spielName,
+                aktuelleKarte = transitionCard,
+                kategorien = uiState.kategorien,
+                interactionsEnabled = false,
+                developerMode = developerMode,
+                hiddenCardTextIds = hiddenCardTextIds,
+                onKartentextBoundsChanged = { cardTextId, bounds ->
+                    cardTextBounds[cardTextId] = bounds
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = gameContentHorizontalPadding)
+                    .graphicsLayer {
+                        alpha = backdropAlpha
+                    },
+            )
+        }
+
+        FunFactsRoundControls(
+            session = session,
+            categoryName = categoryName,
+            questionHeight = placement.targetHeight,
+            actionWidth = actionWidth,
+            progress = progress,
+            returningToQuestionSelection = returningToQuestionSelection,
+            nextRoundEnabled = !playState.nextCardTransitionRunning,
+            onNextRound = onNextRound,
+        )
+
+        if (questionOrigin != null) {
+            CardTextPanel(
+                kartentext = question.copy(gespielt = false),
+                index = questionIndex,
+                kartentextCount = uiState.aktuelleKarte.kartentexte.size,
+                textPanelColor = questionColor,
+                interactionsEnabled = progress >= 1f &&
+                        session.players.isEmpty() &&
+                        !returningToQuestionSelection,
+                markerInteractionsEnabled = progress >= 1f &&
+                        !returningToQuestionSelection,
+                developerMode = developerMode,
+                cardTextActions = cardTextActions.copy(
+                    onKartentextPlayedStateChanged = { _, _ ->
+                        transitionActions.onQuestionTransitionStateChanged(true)
+                        transitionActions.onCategoryTabsVisibilityChanged(true)
+                        returningToQuestionSelection = true
+                    },
+                ),
+                modifier = Modifier
+                    .offset {
+                        IntOffset(
+                            x = placement.offset.x.roundToPx(),
+                            y = placement.offset.y.roundToPx(),
+                        )
+                    }
+                    .width(placement.size.width)
+                    .height(placement.size.height),
+            )
+        }
+    }
+}
+
+internal data class QuestionPlacement(
+    val offset: DpOffset,
+    val size: DpSize,
+    val targetHeight: Dp,
+)
+
+internal fun questionPlacement(
+    container: DpSize,
+    questionOrigin: FunFactsQuestionOrigin?,
+    originBounds: Rect?,
+    playAreaBounds: Rect,
+    cardTextCount: Int,
+    density: Density,
+    progress: Float,
+): QuestionPlacement {
+    val maxWidth = container.width
+    val maxHeight = container.height
+    val originalWidth = questionOrigin?.let { origin ->
+        maxWidth * origin.widthFraction
+    } ?: with(density) { originBounds?.width?.toDp() } ?: 0.dp
+    val originalHeight = questionOrigin?.let { origin ->
+        maxHeight * origin.heightFraction
+    } ?: with(density) { originBounds?.height?.toDp() } ?: 0.dp
+    val compactTargetWidth = (maxWidth - SelectedQuestionHorizontalPadding * 2)
+        .coerceAtLeast(0.dp)
+        .coerceAtMost(560.dp)
+    val changesSize = cardTextCount < 3 ||
+            (questionOrigin == null && originBounds == null)
+    val targetWidth = if (changesSize) compactTargetWidth else originalWidth
+    val targetHeight = if (changesSize) SelectedQuestionCompactHeight else originalHeight
+    val targetX = (maxWidth - targetWidth) / 2
+    val originX = questionOrigin?.let { origin ->
+        maxWidth * origin.leftFraction
+    } ?: originBounds?.let { bounds ->
+        with(density) { (bounds.left - playAreaBounds.left).toDp() }
+    } ?: targetX
+    val originY = questionOrigin?.let { origin ->
+        maxHeight * origin.topFraction
+    } ?: originBounds?.let { bounds ->
+        with(density) { (bounds.top - playAreaBounds.top).toDp() }
+    } ?: (maxHeight - targetHeight)
+    val animatedX = originX + (targetX - originX) * progress
+    val animatedY = originY + (0.dp - originY) * progress
+    val startWidth = originalWidth.takeIf { it > 0.dp } ?: targetWidth
+    val startHeight = originalHeight.takeIf { it > 0.dp } ?: targetHeight
+    val animatedWidth = if (changesSize) {
+        startWidth + (targetWidth - startWidth) * progress
+    } else {
+        originalWidth
+    }
+    val animatedHeight = if (changesSize) {
+        startHeight + (targetHeight - startHeight) * progress
+    } else {
+        originalHeight
+    }
+
+    return QuestionPlacement(
+        offset = DpOffset(animatedX, animatedY),
+        size = DpSize(animatedWidth, animatedHeight),
+        targetHeight = targetHeight,
+    )
+}
+
+@Composable
+private fun FunFactsRoundControls(
+    session: FunFactsSession,
+    categoryName: String,
+    questionHeight: Dp,
+    actionWidth: Dp,
+    progress: Float,
+    returningToQuestionSelection: Boolean,
+    nextRoundEnabled: Boolean,
+    onNextRound: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .graphicsLayer { alpha = progress },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Spacer(modifier = Modifier.height(questionHeight))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            if (session.phase == FunFactsPhase.EnterAnswer) {
+                AnswerEntry(
+                    session = session,
+                    categoryName = categoryName,
+                    colorTabsAlpha = progress,
+                    colorTabsInteractionsEnabled = progress >= 1f &&
+                            !returningToQuestionSelection,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                PlayerSignStack(
+                    players = session.players,
+                    activeSignId = session.activeSignId,
+                    onMoveActiveSign = session::moveActiveSign,
+                    onToggleRevealedSide = session::toggleRevealedSide,
+                    revealedSignsCanBeFlipped = session.phase == FunFactsPhase.Revealing ||
+                            session.phase == FunFactsPhase.Complete,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                )
+                FunFactsPhaseActions(
+                    session = session,
+                    nextRoundEnabled = nextRoundEnabled,
+                    onNextRound = onNextRound,
+                    modifier = Modifier.width(actionWidth),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FunFactsPhaseActions(
+    session: FunFactsSession,
+    nextRoundEnabled: Boolean,
+    onNextRound: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when (session.phase) {
+        FunFactsPhase.PositionSign -> PositioningActions(
+            revealEnabled = session.players.size >= 2,
+            nextPlayerEnabled = session.canAddPlayer,
+            onNextPlayer = session::nextPlayer,
+            onReveal = session::beginReveal,
+            modifier = modifier,
+        )
+
+        FunFactsPhase.FinalPositioning -> RevealButtonWithHint(
+            showHint = session.showFirstPlayerHint,
+            onDismissHint = session::dismissFirstPlayerHint,
+            onReveal = session::beginReveal,
+            modifier = modifier,
+        )
+
+        FunFactsPhase.Revealing -> Button(
+            onClick = session::beginReveal,
+            modifier = modifier,
+        ) { Text(stringResource(R.string.reveal)) }
+
+        FunFactsPhase.Complete -> Button(
+            onClick = onNextRound,
+            enabled = nextRoundEnabled,
+            modifier = modifier,
+        ) { Text(stringResource(R.string.next_card)) }
+
+        else -> Unit
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun FunFactsQuestionStagePreview() {
+    ImpulseTheme {
+        FunFactsQuestionStage(
+            uiState = PreviewUiState,
+            session = remember { previewSelectedQuestionSession() },
+            playState = remember { FunFactsPlayAreaState() },
+            cardTextBounds = remember { mutableStateMapOf() },
+            onNextRound = {},
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun FunFactsRoundControlsPreview() {
+    ImpulseTheme {
+        FunFactsRoundControls(
+            session = remember { previewSelectedQuestionSession() },
+            categoryName = stringResource(R.string.preview_category_knowledge),
+            questionHeight = SelectedQuestionCompactHeight,
+            actionWidth = 280.dp,
+            progress = 1f,
+            returningToQuestionSelection = false,
+            nextRoundEnabled = true,
+            onNextRound = {},
+            modifier = Modifier.width(360.dp).height(640.dp),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun FunFactsPhaseActionsPreview() {
+    ImpulseTheme {
+        FunFactsPhaseActions(
+            session = remember {
+                previewSelectedQuestionSession().apply {
+                    draftName.restore(PreviewDrawing)
+                    draftAnswer.restore(PreviewDrawing)
+                    finishAnswer()
+                }
+            },
+            nextRoundEnabled = true,
+            onNextRound = {},
+        )
+    }
+}
+
+private fun previewSelectedQuestionSession(): FunFactsSession =
+    FunFactsSession().apply {
+        selectQuestion(
+            questionId = 101,
+            origin = FunFactsQuestionOrigin(0.15f, 0.35f, 0.7f, 0.2f),
+        )
+    }
+
+private suspend fun animateQuestionTransition(
+    questionOrigin: FunFactsQuestionOrigin?,
+    returningToQuestionSelection: Boolean,
+    transitionProgress: Animatable<Float, AnimationVector1D>,
+    session: FunFactsSession,
+    playState: FunFactsPlayAreaState,
+    transitionActions: FunFactsTransitionActions,
+    cardTextActions: CardTextActions,
+) {
+
+    transitionActions.onQuestionTransitionStateChanged(true)
+    if (questionOrigin == null) {
+        transitionActions.onCategoryTabsVisibilityChanged(false)
+        return
+    }
+    if (returningToQuestionSelection) {
+        transitionActions.onCategoryTabsVisibilityChanged(true)
+        transitionProgress.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(QUESTION_SLIDE_DURATION_MILLIS.toInt()),
+        )
+        session.reopenQuestionSelection()?.let { questionId ->
+            cardTextActions.onKartentextPlayedStateChanged(questionId, false)
+        }
+    } else {
+        transitionActions.onCategoryTabsVisibilityChanged(false)
+        if (transitionProgress.value < 1f) {
+            transitionProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(QUESTION_SLIDE_DURATION_MILLIS.toInt()),
+            )
+        }
+        playState.newlySelectedQuestionId = null
+    }
+    transitionActions.onQuestionTransitionStateChanged(false)
+}

@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.kaserik.impulse.common.GAME_ID_ARG
-import de.kaserik.impulse.common.Sprache
 import de.kaserik.impulse.domain.repository.AppSettingsRepository
 import de.kaserik.impulse.domain.usecase.GetGameUseCase
 import javax.inject.Inject

@@ -198,10 +198,7 @@ def draw_title(draw: ImageDraw.ImageDraw, spec: ArtSpec) -> None:
     )
     font, lines = fit_text(draw, spec.title, box, TITLE_FONTS, min_size=44, max_size=int(height * 0.23))
     bbox = draw.multiline_textbbox((0, 0), "\n".join(lines), font=font, spacing=int(font.size * 0.12))
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    x = box[0] + (box[2] - box[0] - text_width) / 2
-    y = box[1] + (box[3] - box[1] - text_height) / 2
+    x, y = centered_text_position(box, bbox)
 
     shadow = with_alpha(spec.dark, 180)
     for dx, dy in ((4, 4), (0, 3)):
@@ -242,10 +239,7 @@ def draw_strapline(draw: ImageDraw.ImageDraw, spec: ArtSpec) -> None:
         max_lines=2,
     )
     bbox = draw.multiline_textbbox((0, 0), "\n".join(lines), font=font, spacing=4)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    x = box[0] + (box[2] - box[0] - text_width) / 2
-    y = box[1] + (box[3] - box[1] - text_height) / 2
+    x, y = centered_text_position(box, bbox)
     draw.multiline_text(
         (x, y),
         "\n".join(lines),
@@ -428,7 +422,7 @@ def wrap_text(
 
     for word in words[1:]:
         candidate = f"{current} {word}"
-        if text_width(draw, candidate, font) <= max_width:
+        if measure_text_width(draw, candidate, font) <= max_width:
             current = candidate
             continue
         lines.append(current)
@@ -441,7 +435,7 @@ def wrap_text(
 
     merged = lines[: max_lines - 1]
     merged.append(" ".join(lines[max_lines - 1 :]))
-    while merged and text_width(draw, merged[-1], font) > max_width and " " in merged[-1]:
+    while merged and measure_text_width(draw, merged[-1], font) > max_width and " " in merged[-1]:
         last_words = merged[-1].split()
         merged[-1] = " ".join(last_words[:-1])
         overflow = last_words[-1]
@@ -453,11 +447,23 @@ def wrap_text(
     return merged[:max_lines]
 
 
-def text_width(
+def centered_text_position(
+    box: tuple[int, int, int, int],
+    text_bounds: tuple[float, float, float, float],
+) -> tuple[float, float]:
+    width = text_bounds[2] - text_bounds[0]
+    height = text_bounds[3] - text_bounds[1]
+    return (
+        box[0] + (box[2] - box[0] - width) / 2,
+        box[1] + (box[3] - box[1] - height) / 2,
+    )
+
+
+def measure_text_width(
     draw: ImageDraw.ImageDraw,
     text: str,
     font: ImageFont.FreeTypeFont,
-) -> int:
+) -> float:
     bbox = draw.textbbox((0, 0), text, font=font)
     return bbox[2] - bbox[0]
 
@@ -467,11 +473,16 @@ def load_font(font_names: Iterable[str], size: int) -> ImageFont.FreeTypeFont:
         font_path = FONT_DIR / font_name
         if font_path.exists():
             return ImageFont.truetype(font_path.as_posix(), size)
-    return ImageFont.load_default()
+    # Sonar's bundled Pillow signature does not yet include load_default(size).
+    fallback_font = ImageFont.load_default()
+    if not isinstance(fallback_font, ImageFont.FreeTypeFont):
+        raise RuntimeError("Box art generation requires Pillow with FreeType support.")
+    return fallback_font.font_variant(size=size)
 
 
 def with_alpha(color_hex: str, alpha: int) -> tuple[int, int, int, int]:
-    return (*ImageColor.getrgb(color_hex), alpha)
+    rgb = ImageColor.getrgb(color_hex)
+    return rgb[0], rgb[1], rgb[2], alpha
 
 
 if __name__ == "__main__":

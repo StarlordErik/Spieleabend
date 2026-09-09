@@ -2,11 +2,6 @@
 
 package de.kaserik.impulse.frontend.game
 
-import android.annotation.SuppressLint
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
-import android.content.pm.ActivityInfo
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -26,10 +21,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -51,9 +44,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.kaserik.impulse.R
-import de.kaserik.impulse.domain.model.BearbeiteteKartentexteModus
-import de.kaserik.impulse.domain.model.FavoritenModus
-import de.kaserik.impulse.domain.model.GeloeschteKartentexteModus
+import de.kaserik.impulse.frontend.settings.GameSettingsActions
+import de.kaserik.impulse.frontend.settings.GameSettingsState
 import de.kaserik.impulse.frontend.settings.GameSettingsDialog
 import de.kaserik.impulse.frontend.theme.CategoryTabColors
 import de.kaserik.impulse.frontend.theme.FallbackTextPanelColor
@@ -79,21 +71,27 @@ fun GameScreen(
                 modifier = modifier,
                 developerMode = developerMode,
                 onShowCards = onShowCards,
-                onKategorieSelected = viewModel::selectKategorie,
-                onRandomSelected = viewModel::selectRandom,
-                onPreviousSelected = viewModel::selectPrevious,
-                onResetSeenCards = viewModel::resetSeenCards,
-                onResetAllCards = viewModel::resetAllCards,
-                onTextsPerCardChanged = viewModel::setTextsPerCard,
-                onResetTextsPerCard = viewModel::resetTextsPerCard,
-                onKartentextPlayedStateChanged = viewModel::setKartentextGespielt,
-                onKartentextDeletedStateChanged = viewModel::setKartentextGeloescht,
-                onKartentextFavoriteStateChanged = viewModel::setKartentextFavorit,
+                navigationActions = GameNavigationActions(
+                    onKategorieSelected = viewModel::selectKategorie,
+                    onRandomSelected = viewModel::selectRandom,
+                    onPreviousSelected = viewModel::selectPrevious,
+                ),
+                settingsActions = GameSettingsActions(
+                    onResetSeenCards = viewModel::resetSeenCards,
+                    onResetAllCards = viewModel::resetAllCards,
+                    onTextsPerCardChanged = viewModel::setTextsPerCard,
+                    onResetTextsPerCard = viewModel::resetTextsPerCard,
+                    onDeletedCardTextsModeChanged = viewModel::setGeloeschteKartentexteModus,
+                    onFavoritesModeChanged = viewModel::setFavoritenModus,
+                    onEditedCardTextsModeChanged = viewModel::setBearbeiteteKartentexteModus,
+                    onFunFactsModeChanged = viewModel::setFunFactsModeEnabled,
+                ),
+                cardTextActions = CardTextActions(
+                    onKartentextPlayedStateChanged = viewModel::setKartentextGespielt,
+                    onKartentextDeletedStateChanged = viewModel::setKartentextGeloescht,
+                    onKartentextFavoriteStateChanged = viewModel::setKartentextFavorit,
+                ),
                 onCustomCardTextChanged = viewModel::setEigeneKartentextLokalisierung,
-                onDeletedCardTextsModeChanged = viewModel::setGeloeschteKartentexteModus,
-                onFavoritesModeChanged = viewModel::setFavoritenModus,
-                onEditedCardTextsModeChanged = viewModel::setBearbeiteteKartentexteModus,
-                onFunFactsModeChanged = viewModel::setFunFactsModeEnabled,
                 funFactsSession = viewModel.funFactsSession,
             )
         }
@@ -136,7 +134,6 @@ private fun GameLoadingContent(
     }
 }
 
-@SuppressLint("SourceLockedOrientationActivity")
 @Composable
 @Suppress("CyclomaticComplexMethod", "LongMethod")
 private fun GameScreenContent(
@@ -144,54 +141,32 @@ private fun GameScreenContent(
     modifier: Modifier = Modifier,
     developerMode: Boolean = false,
     onShowCards: () -> Unit = {},
-    onKategorieSelected: (Int) -> Unit = {},
-    onRandomSelected: () -> Unit = {},
-    onPreviousSelected: () -> Unit = {},
-    onResetSeenCards: () -> Unit = {},
-    onResetAllCards: () -> Unit = {},
-    onTextsPerCardChanged: (Int) -> Unit = {},
-    onResetTextsPerCard: () -> Unit = {},
-    onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextDeletedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextFavoriteStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
+    navigationActions: GameNavigationActions = GameNavigationActions(),
+    settingsActions: GameSettingsActions = GameSettingsActions(),
+    cardTextActions: CardTextActions = CardTextActions(),
     onCustomCardTextChanged: (Int, String?) -> Unit = { _, _ -> },
-    onDeletedCardTextsModeChanged: (GeloeschteKartentexteModus) -> Unit = {},
-    onFavoritesModeChanged: (FavoritenModus) -> Unit = {},
-    onEditedCardTextsModeChanged: (BearbeiteteKartentexteModus) -> Unit = {},
-    onFunFactsModeChanged: (Boolean) -> Unit = {},
     funFactsSession: FunFactsSession? = null,
 ) {
     val accessibilityLabel = stringResource(R.string.game_settings)
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var editingCardTextId by rememberSaveable { mutableStateOf<Int?>(null) }
-    var highlightedTarget by remember { mutableStateOf<CardSwipeTarget?>(null) }
-    var swipeInteractionLocked by remember { mutableStateOf(false) }
+    val swipeState = remember { GameScreenSwipeState() }
     var funFactsQuestionTransitionActive by remember { mutableStateOf(false) }
     var funFactsCategoryTabsVisible by remember { mutableStateOf(true) }
-    var nextSwipeRequestId by remember { mutableLongStateOf(0L) }
-    var swipeRequest by remember { mutableStateOf<CardSwipeRequest?>(null) }
-    val tabBounds = remember { mutableStateMapOf<CardSwipeTarget, Rect>() }
     val funFactsActive = uiState.spielId == FUN_FACTS_GAME_ID && uiState.funFactsModeEnabled
     val activeFunFactsSession = funFactsSession ?: remember { FunFactsSession() }
-    val context = LocalContext.current
-    val requestCardSwipe: (CardSwipeTarget) -> Unit = { target ->
-        if (swipeRequest == null && !swipeInteractionLocked) {
-            nextSwipeRequestId += 1
-            swipeRequest = CardSwipeRequest(id = nextSwipeRequestId, target = target)
-        }
-    }
-    val consumeCardSwipeRequest: (Long) -> Unit = { requestId ->
-        if (swipeRequest?.id == requestId) swipeRequest = null
-    }
-    DisposableEffect(context, funFactsActive) {
-        val activity = context.findActivity().takeIf { funFactsActive }
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        onDispose {
-            if (activity?.isChangingConfigurations == false) {
-                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            }
-        }
-    }
+    val swipeControls = CardSwipeControls(
+        swipeRegions = swipeState.tabBounds.map { (target, bounds) -> SwipeRegion(target, bounds) },
+        previousEnabled = uiState.hasPreviousCard,
+        swipeRequest = swipeState.swipeRequest,
+        onSwipeRequestConsumed = swipeState::consumeRequest,
+        onHighlightedTargetChanged = { swipeState.highlightedTarget = it },
+        onInteractionStateChanged = { swipeState.swipeInteractionLocked = it },
+        onSwipeTargetSelected = navigationActions::select,
+    )
+    val editableCardTextActions = cardTextActions.copy(
+        onKartentextEditRequested = { editingCardTextId = it },
+    )
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -213,31 +188,18 @@ private fun GameScreenContent(
                 FunFactsPlayArea(
                     uiState = uiState,
                     session = activeFunFactsSession,
-                    swipeRegions = tabBounds.map { (target, bounds) -> SwipeRegion(target, bounds) },
-                    previousEnabled = uiState.hasPreviousCard,
-                    swipeRequest = swipeRequest,
-                    onSwipeRequestConsumed = consumeCardSwipeRequest,
-                    onHighlightedTargetChanged = { highlightedTarget = it },
-                    onInteractionStateChanged = { swipeInteractionLocked = it },
-                    onSwipeTargetSelected = { target ->
-                        when (target) {
-                            CardSwipeTarget.Random -> onRandomSelected()
-                            CardSwipeTarget.Previous -> onPreviousSelected()
-                            is CardSwipeTarget.Category -> onKategorieSelected(target.id)
-                        }
-                    },
-                    onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
+                    swipeControls = swipeControls,
+                    cardTextActions = editableCardTextActions,
                     developerMode = developerMode,
-                    onKartentextDeletedStateChanged = onKartentextDeletedStateChanged,
-                    onKartentextFavoriteStateChanged = onKartentextFavoriteStateChanged,
-                    onKartentextEditRequested = { cardTextId -> editingCardTextId = cardTextId },
-                    onQuestionTransitionStateChanged = { active ->
-                        funFactsQuestionTransitionActive = active
-                    },
-                    onCategoryTabsVisibilityChanged = { visible ->
-                        funFactsCategoryTabsVisible = visible
-                    },
-                    onNextCard = onRandomSelected,
+                    transitionActions = FunFactsTransitionActions(
+                        onQuestionTransitionStateChanged = { active ->
+                            funFactsQuestionTransitionActive = active
+                        },
+                        onCategoryTabsVisibilityChanged = { visible ->
+                            funFactsCategoryTabsVisible = visible
+                        },
+                        onNextCard = navigationActions.onRandomSelected,
+                    ),
                     gameContentHorizontalPadding = horizontalPadding,
                     modifier = Modifier
                         .fillMaxSize()
@@ -251,24 +213,9 @@ private fun GameScreenContent(
                     spielName = uiState.spielName,
                     aktuelleKarte = uiState.aktuelleKarte,
                     kategorien = uiState.kategorien,
-                    swipeRegions = tabBounds.map { (target, bounds) -> SwipeRegion(target, bounds) },
-                    previousEnabled = uiState.hasPreviousCard,
-                    swipeRequest = swipeRequest,
-                    onSwipeRequestConsumed = consumeCardSwipeRequest,
-                    onHighlightedTargetChanged = { highlightedTarget = it },
-                    onInteractionStateChanged = { swipeInteractionLocked = it },
-                    onSwipeTargetSelected = { target ->
-                        when (target) {
-                            CardSwipeTarget.Random -> onRandomSelected()
-                            CardSwipeTarget.Previous -> onPreviousSelected()
-                            is CardSwipeTarget.Category -> onKategorieSelected(target.id)
-                        }
-                    },
-                    onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
+                    swipeControls = swipeControls,
+                    cardTextActions = editableCardTextActions,
                     developerMode = developerMode,
-                    onKartentextDeletedStateChanged = onKartentextDeletedStateChanged,
-                    onKartentextFavoriteStateChanged = onKartentextFavoriteStateChanged,
-                    onKartentextEditRequested = { cardTextId -> editingCardTextId = cardTextId },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(
@@ -282,8 +229,8 @@ private fun GameScreenContent(
 
             val categoryTabsVisible =
                 !funFactsActive ||
-                activeFunFactsSession.selectingQuestion ||
-                funFactsCategoryTabsVisible
+                        activeFunFactsSession.selectingQuestion ||
+                        funFactsCategoryTabsVisible
             AnimatedVisibility(
                 visible = categoryTabsVisible,
                 modifier = Modifier.fillMaxSize(),
@@ -293,19 +240,21 @@ private fun GameScreenContent(
                 CategoryTabs(
                     kategorien = uiState.kategorien,
                     modifier = Modifier.fillMaxSize(),
-                    highlightedTarget = highlightedTarget,
-                    previousEnabled = uiState.hasPreviousCard,
-                    interactionsEnabled = !swipeInteractionLocked &&
-                        !funFactsQuestionTransitionActive,
-                    dimWhenInteractionsDisabled = !funFactsActive,
-                    onKategorieSelected = { kategorieId ->
-                        requestCardSwipe(CardSwipeTarget.Category(kategorieId))
-                    },
-                    onRandomSelected = { requestCardSwipe(CardSwipeTarget.Random) },
-                    onPreviousSelected = { requestCardSwipe(CardSwipeTarget.Previous) },
-                    onTabBoundsChanged = { target, bounds ->
-                        if (tabBounds[target] != bounds) tabBounds[target] = bounds
-                    },
+                    state = CategoryTabsState(
+                        highlightedTarget = swipeState.highlightedTarget,
+                        previousEnabled = uiState.hasPreviousCard,
+                        interactionsEnabled = !swipeState.swipeInteractionLocked &&
+                                !funFactsQuestionTransitionActive,
+                        dimWhenInteractionsDisabled = !funFactsActive,
+                    ),
+                    actions = CategoryTabsActions(
+                        onKategorieSelected = { kategorieId ->
+                            swipeState.requestSwipe(CardSwipeTarget.Category(kategorieId))
+                        },
+                        onRandomSelected = { swipeState.requestSwipe(CardSwipeTarget.Random) },
+                        onPreviousSelected = { swipeState.requestSwipe(CardSwipeTarget.Previous) },
+                        onTabBoundsChanged = swipeState::updateTabBounds,
+                    ),
                 )
             }
 
@@ -327,33 +276,28 @@ private fun GameScreenContent(
 
     if (showSettings) {
         GameSettingsDialog(
-            textsPerCard = uiState.texteProKarte,
-            defaultTextsPerCard = uiState.standardTexteProKarte,
-            developerMode = developerMode,
-            supportsFunFactsMode = uiState.spielId == FUN_FACTS_GAME_ID,
-            funFactsModeEnabled = uiState.funFactsModeEnabled,
-            deletedCardTextsMode = uiState.geloeschteKartentexteModus,
-            favoritesMode = uiState.favoritenModus,
-            editedCardTextsMode = uiState.bearbeiteteKartentexteModus,
-            onFunFactsModeChanged = onFunFactsModeChanged,
-            onDeletedCardTextsModeChanged = onDeletedCardTextsModeChanged,
-            onFavoritesModeChanged = onFavoritesModeChanged,
-            onEditedCardTextsModeChanged = onEditedCardTextsModeChanged,
+            settings = GameSettingsState(
+                textsPerCard = uiState.texteProKarte,
+                defaultTextsPerCard = uiState.standardTexteProKarte,
+                developerMode = developerMode,
+                supportsFunFactsMode = uiState.spielId == FUN_FACTS_GAME_ID,
+                funFactsModeEnabled = uiState.funFactsModeEnabled,
+                deletedCardTextsMode = uiState.geloeschteKartentexteModus,
+                favoritesMode = uiState.favoritenModus,
+                editedCardTextsMode = uiState.bearbeiteteKartentexteModus,
+            ),
+            settingsActions = settingsActions,
             onRestartFunFactsGame = {
                 activeFunFactsSession.selectedQuestionId?.let { questionId ->
-                    onKartentextPlayedStateChanged(questionId, false)
+                    cardTextActions.onKartentextPlayedStateChanged(questionId, false)
                 }
                 activeFunFactsSession.restartGame()
                 funFactsQuestionTransitionActive = false
                 funFactsCategoryTabsVisible = true
-                highlightedTarget = null
-                swipeInteractionLocked = false
+                swipeState.highlightedTarget = null
+                swipeState.swipeInteractionLocked = false
                 showSettings = false
             },
-            onResetSeenCards = onResetSeenCards,
-            onResetAllCards = onResetAllCards,
-            onTextsPerCardChanged = onTextsPerCardChanged,
-            onResetTextsPerCard = onResetTextsPerCard,
             onShowCards = {
                 showSettings = false
                 onShowCards()
@@ -382,11 +326,6 @@ private fun GameScreenContent(
     }
 }
 
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
-}
 
 @Preview(showBackground = true)
 @Composable
@@ -407,21 +346,12 @@ internal fun GamePlayArea(
     aktuelleKarte: GameCardUiModel,
     kategorien: List<GameKategorieUiModel>,
     modifier: Modifier = Modifier,
-    swipeRegions: Collection<SwipeRegion> = emptyList(),
-    previousEnabled: Boolean = false,
-    swipeRequest: CardSwipeRequest? = null,
-    onSwipeRequestConsumed: (Long) -> Unit = {},
-    onHighlightedTargetChanged: (CardSwipeTarget?) -> Unit = {},
-    onInteractionStateChanged: (Boolean) -> Unit = {},
-    onSwipeTargetSelected: (CardSwipeTarget) -> Unit = {},
+    swipeControls: CardSwipeControls = CardSwipeControls(),
     interactionsEnabled: Boolean = true,
     hiddenCardTextIds: Set<Int> = emptySet(),
     developerMode: Boolean = false,
     onKartentextBoundsChanged: (Int, Rect) -> Unit = { _, _ -> },
-    onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextDeletedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextFavoriteStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
-    onKartentextEditRequested: (Int) -> Unit = {},
+    cardTextActions: CardTextActions = CardTextActions(),
 ) {
     Column(
         modifier = modifier,
@@ -449,13 +379,13 @@ internal fun GamePlayArea(
         ) {
             SwipeableGameCard(
                 cardInstanceId = aktuelleKarte.instanceId,
-                swipeRegions = swipeRegions,
-                previousEnabled = previousEnabled,
-                swipeRequest = swipeRequest,
-                onSwipeRequestConsumed = onSwipeRequestConsumed,
-                onHighlightedTargetChanged = onHighlightedTargetChanged,
-                onInteractionStateChanged = onInteractionStateChanged,
-                onTargetSelected = onSwipeTargetSelected,
+                swipeRegions = swipeControls.swipeRegions,
+                previousEnabled = swipeControls.previousEnabled,
+                swipeRequest = swipeControls.swipeRequest,
+                onSwipeRequestConsumed = swipeControls.onSwipeRequestConsumed,
+                onHighlightedTargetChanged = swipeControls.onHighlightedTargetChanged,
+                onInteractionStateChanged = swipeControls.onInteractionStateChanged,
+                onTargetSelected = swipeControls.onSwipeTargetSelected,
                 modifier = Modifier
                     .widthIn(max = 560.dp)
                     .heightIn(max = 720.dp)
@@ -473,10 +403,7 @@ internal fun GamePlayArea(
                     hiddenCardTextIds = hiddenCardTextIds,
                     developerMode = developerMode,
                     onKartentextBoundsChanged = onKartentextBoundsChanged,
-                    onKartentextPlayedStateChanged = onKartentextPlayedStateChanged,
-                    onKartentextDeletedStateChanged = onKartentextDeletedStateChanged,
-                    onKartentextFavoriteStateChanged = onKartentextFavoriteStateChanged,
-                    onKartentextEditRequested = onKartentextEditRequested,
+                    cardTextActions = cardTextActions,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -515,3 +442,28 @@ internal fun GameCardUiModel.textPanelColors(
     }
 
 internal const val FUN_FACTS_GAME_ID = 149
+
+@Stable
+private class GameScreenSwipeState {
+    var highlightedTarget by mutableStateOf<CardSwipeTarget?>(null)
+    var swipeInteractionLocked by mutableStateOf(false)
+    var swipeRequest by mutableStateOf<CardSwipeRequest?>(null)
+        private set
+    val tabBounds = mutableStateMapOf<CardSwipeTarget, Rect>()
+    private var nextRequestId = 0L
+
+    fun requestSwipe(target: CardSwipeTarget) {
+        if (swipeRequest == null && !swipeInteractionLocked) {
+            nextRequestId += 1
+            swipeRequest = CardSwipeRequest(id = nextRequestId, target = target)
+        }
+    }
+
+    fun consumeRequest(requestId: Long) {
+        if (swipeRequest?.id == requestId) swipeRequest = null
+    }
+
+    fun updateTabBounds(target: CardSwipeTarget, bounds: Rect) {
+        if (tabBounds[target] != bounds) tabBounds[target] = bounds
+    }
+}

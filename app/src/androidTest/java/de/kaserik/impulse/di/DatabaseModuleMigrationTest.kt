@@ -182,7 +182,7 @@ class DatabaseModuleMigrationTest {
     }
 
     private companion object {
-        private const val DATABASE_NAME = DatabaseFiles.Name
+        private const val DATABASE_NAME = DatabaseFiles.NAME
         private const val MIGRATION_DATABASE_NAME = "migration-2-to-3.db"
     }
 }

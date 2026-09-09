@@ -166,7 +166,7 @@ private fun CardTableHeader(
 @Preview(showBackground = true)
 @Composable
 private fun CardTableHeaderPreview() {
-    ImpulseTheme { CardTableHeader(PreviewCardTextsState.categories.first(), {}) }
+    ImpulseTheme { CardTableHeader(PreviewCardTextsState.categories.first()) {} }
 }
 
 @Composable

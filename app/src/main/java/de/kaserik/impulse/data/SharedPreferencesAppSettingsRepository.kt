@@ -5,11 +5,11 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.kaserik.impulse.common.AppMessages
-import de.kaserik.impulse.common.PreferenceKeys.DeveloperModeKey
-import de.kaserik.impulse.common.PreferenceKeys.FunFactsModeKey
-import de.kaserik.impulse.common.PreferenceKeys.FunFactsSessionKey
-import de.kaserik.impulse.common.PreferenceKeys.LanguageKey
-import de.kaserik.impulse.common.PreferenceKeys.PreferencesName
+import de.kaserik.impulse.common.PreferenceKeys.DEVELOPER_MODE_KEY
+import de.kaserik.impulse.common.PreferenceKeys.FUN_FACTS_MODE_KEY
+import de.kaserik.impulse.common.PreferenceKeys.FUN_FACTS_SESSION_KEY
+import de.kaserik.impulse.common.PreferenceKeys.LANGUAGE_KEY
+import de.kaserik.impulse.common.PreferenceKeys.PREFERENCES_NAME
 import de.kaserik.impulse.common.Sprache
 import de.kaserik.impulse.domain.repository.AppSettingsRepository
 import java.util.Locale
@@ -23,31 +23,18 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 class SharedPreferencesAppSettingsRepository @Inject constructor(
     @ApplicationContext context: Context,
 ) : AppSettingsRepository {
-    private val preferences = context.getSharedPreferences(PreferencesName, Context.MODE_PRIVATE)
+    private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
     override val developerMode: Flow<Boolean> =
-        callbackFlow {
-            val listener =
-                SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
-                    if (key == DeveloperModeKey) {
-                        trySend(sharedPreferences.getBoolean(DeveloperModeKey, false))
-                    }
-                }
-
-            trySend(preferences.getBoolean(DeveloperModeKey, false))
-            preferences.registerOnSharedPreferenceChangeListener(listener)
-            awaitClose {
-                preferences.unregisterOnSharedPreferenceChangeListener(listener)
-            }
-        }.distinctUntilChanged()
+        booleanPreferenceFlow(DEVELOPER_MODE_KEY, defaultValue = false)
 
     override val funFactsModeEnabled: Flow<Boolean> =
-        booleanPreferenceFlow(FunFactsModeKey, defaultValue = true)
+        booleanPreferenceFlow(FUN_FACTS_MODE_KEY, defaultValue = true)
 
     override val language: Flow<Sprache> =
         callbackFlow {
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
-                if (changedKey == LanguageKey) trySend(readLanguage())
+                if (changedKey == LANGUAGE_KEY) trySend(readLanguage())
             }
             trySend(readLanguage())
             preferences.registerOnSharedPreferenceChangeListener(listener)
@@ -55,23 +42,23 @@ class SharedPreferencesAppSettingsRepository @Inject constructor(
         }.distinctUntilChanged()
 
     override suspend fun setDeveloperMode(enabled: Boolean) {
-        preferences.edit { putBoolean(DeveloperModeKey, enabled) }
+        preferences.edit { putBoolean(DEVELOPER_MODE_KEY, enabled) }
     }
 
     override suspend fun setFunFactsModeEnabled(enabled: Boolean) {
-        preferences.edit { putBoolean(FunFactsModeKey, enabled) }
+        preferences.edit { putBoolean(FUN_FACTS_MODE_KEY, enabled) }
     }
 
     override suspend fun setLanguage(language: Sprache) {
         require(language.auswaehlbar) { AppMessages.unsupportedLanguage(language) }
-        preferences.edit { putString(LanguageKey, language.name) }
+        preferences.edit { putString(LANGUAGE_KEY, language.name) }
     }
 
     override fun getFunFactsSession(): String? =
-        preferences.getString(FunFactsSessionKey, null)
+        preferences.getString(FUN_FACTS_SESSION_KEY, null)
 
     override fun setFunFactsSession(serializedSession: String) {
-        preferences.edit { putString(FunFactsSessionKey, serializedSession) }
+        preferences.edit { putString(FUN_FACTS_SESSION_KEY, serializedSession) }
     }
 
     private fun booleanPreferenceFlow(
@@ -88,7 +75,7 @@ class SharedPreferencesAppSettingsRepository @Inject constructor(
         }.distinctUntilChanged()
 
     private fun readLanguage(): Sprache {
-        val storedLanguage = preferences.getString(LanguageKey, null)
+        val storedLanguage = preferences.getString(LANGUAGE_KEY, null)
             ?.let { value -> Sprache.entries.firstOrNull { language -> language.name == value } }
         if (storedLanguage?.auswaehlbar == true) {
             return storedLanguage

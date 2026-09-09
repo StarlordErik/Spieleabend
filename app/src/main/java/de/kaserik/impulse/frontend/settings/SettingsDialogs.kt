@@ -118,29 +118,15 @@ private fun AppSettingsDialogPreview() {
 @Composable
 @Suppress("LongMethod")
 fun GameSettingsDialog(
-    textsPerCard: Int,
-    defaultTextsPerCard: Int,
-    developerMode: Boolean,
-    supportsFunFactsMode: Boolean = false,
-    funFactsModeEnabled: Boolean = false,
-    deletedCardTextsMode: GeloeschteKartentexteModus = GeloeschteKartentexteModus.ALS_LETZTE,
-    favoritesMode: FavoritenModus = FavoritenModus.UNBEACHTET,
-    editedCardTextsMode: BearbeiteteKartentexteModus = BearbeiteteKartentexteModus.UNBEACHTET,
-    onFunFactsModeChanged: (Boolean) -> Unit = {},
-    onDeletedCardTextsModeChanged: (GeloeschteKartentexteModus) -> Unit = {},
-    onFavoritesModeChanged: (FavoritenModus) -> Unit = {},
-    onEditedCardTextsModeChanged: (BearbeiteteKartentexteModus) -> Unit = {},
+    settings: GameSettingsState,
+    settingsActions: GameSettingsActions = GameSettingsActions(),
     onRestartFunFactsGame: () -> Unit = {},
-    onResetSeenCards: () -> Unit,
-    onResetAllCards: () -> Unit,
-    onTextsPerCardChanged: (Int) -> Unit,
-    onResetTextsPerCard: () -> Unit,
     onShowCards: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     var infoText by remember { mutableStateOf<Int?>(null) }
-    var sliderValue by remember { mutableFloatStateOf(textsPerCard.toFloat()) }
-    LaunchedEffect(textsPerCard) { sliderValue = textsPerCard.toFloat() }
+    var sliderValue by remember { mutableFloatStateOf(settings.textsPerCard.toFloat()) }
+    LaunchedEffect(settings.textsPerCard) { sliderValue = settings.textsPerCard.toFloat() }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -150,26 +136,29 @@ fun GameSettingsDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                if (supportsFunFactsMode) {
+                if (settings.supportsFunFactsMode) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.game_mode), style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                stringResource(R.string.game_mode),
+                                style = MaterialTheme.typography.titleSmall
+                            )
                             Text(
                                 stringResource(
-                                    if (funFactsModeEnabled) R.string.mode_fun_facts else R.string.mode_basic,
+                                    if (settings.funFactsModeEnabled) R.string.mode_fun_facts else R.string.mode_basic,
                                 ),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
                         Switch(
-                            checked = funFactsModeEnabled,
-                            onCheckedChange = onFunFactsModeChanged,
+                            checked = settings.funFactsModeEnabled,
+                            onCheckedChange = settingsActions.onFunFactsModeChanged,
                         )
                     }
-                    if (funFactsModeEnabled) {
+                    if (settings.funFactsModeEnabled) {
                         Button(
                             onClick = onRestartFunFactsGame,
                             modifier = Modifier.fillMaxWidth(),
@@ -179,43 +168,52 @@ fun GameSettingsDialog(
                     }
                     HorizontalDivider()
                 }
-                Text(stringResource(R.string.deleted_card_texts), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(R.string.deleted_card_texts),
+                    style = MaterialTheme.typography.titleSmall
+                )
                 GeloeschteKartentexteModus.entries.forEach { mode ->
                     SettingsRadioOption(
                         label = stringResource(mode.displayNameRes()),
-                        selected = deletedCardTextsMode == mode,
-                        onClick = { onDeletedCardTextsModeChanged(mode) },
+                        selected = settings.deletedCardTextsMode == mode,
+                        onClick = { settingsActions.onDeletedCardTextsModeChanged(mode) },
                     )
                 }
                 HorizontalDivider()
-                Text(stringResource(R.string.favorites), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(R.string.favorites),
+                    style = MaterialTheme.typography.titleSmall
+                )
                 FavoritenModus.entries.forEach { mode ->
                     SettingsRadioOption(
                         label = stringResource(mode.displayNameRes()),
-                        selected = favoritesMode == mode,
-                        onClick = { onFavoritesModeChanged(mode) },
+                        selected = settings.favoritesMode == mode,
+                        onClick = { settingsActions.onFavoritesModeChanged(mode) },
                     )
                 }
-                if (developerMode) {
+                if (settings.developerMode) {
                     HorizontalDivider()
-                    Text(stringResource(R.string.edited_card_texts), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        stringResource(R.string.edited_card_texts),
+                        style = MaterialTheme.typography.titleSmall
+                    )
                     BearbeiteteKartentexteModus.entries.forEach { mode ->
                         SettingsRadioOption(
                             label = stringResource(mode.displayNameRes()),
-                            selected = editedCardTextsMode == mode,
-                            onClick = { onEditedCardTextsModeChanged(mode) },
+                            selected = settings.editedCardTextsMode == mode,
+                            onClick = { settingsActions.onEditedCardTextsModeChanged(mode) },
                         )
                     }
                 }
                 HorizontalDivider()
                 SettingsActionRow(
                     label = stringResource(R.string.reset_seen_cards),
-                    onClick = onResetSeenCards,
+                    onClick = settingsActions.onResetSeenCards,
                     onInfoClick = { infoText = R.string.reset_seen_info },
                 )
                 SettingsActionRow(
                     label = stringResource(R.string.reset_all_cards),
-                    onClick = onResetAllCards,
+                    onClick = settingsActions.onResetAllCards,
                     onInfoClick = { infoText = R.string.game_reset_info },
                 )
                 HorizontalDivider()
@@ -236,7 +234,7 @@ fun GameSettingsDialog(
                             .coerceIn(MIN_TEXTS_PER_CARD, MAX_TEXTS_PER_CARD)
                             .toFloat()
                     },
-                    onValueChangeFinished = { onTextsPerCardChanged(sliderValue.roundToInt()) },
+                    onValueChangeFinished = { settingsActions.onTextsPerCardChanged(sliderValue.roundToInt()) },
                     valueRange = MIN_TEXTS_PER_CARD.toFloat()..MAX_TEXTS_PER_CARD.toFloat(),
                     steps = 3,
                 )
@@ -246,18 +244,23 @@ fun GameSettingsDialog(
                 ) {
                     TextButton(
                         onClick = {
-                            sliderValue = defaultTextsPerCard.toFloat()
-                            onResetTextsPerCard()
+                            sliderValue = settings.defaultTextsPerCard.toFloat()
+                            settingsActions.onResetTextsPerCard()
                         },
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text(stringResource(R.string.restore_default_text_count, defaultTextsPerCard))
+                        Text(
+                            stringResource(
+                                R.string.restore_default_text_count,
+                                settings.defaultTextsPerCard
+                            )
+                        )
                     }
                     TextButton(onClick = { infoText = R.string.text_count_default_info }) {
                         Text(stringResource(R.string.symbol_information))
                     }
                 }
-                if (developerMode) {
+                if (settings.developerMode) {
                     HorizontalDivider()
                     Button(onClick = onShowCards, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.show_cards))
@@ -278,13 +281,17 @@ fun GameSettingsDialog(
 private fun GameSettingsDialogPreview() {
     ImpulseTheme {
         GameSettingsDialog(
-            textsPerCard = 3,
-            defaultTextsPerCard = 2,
-            developerMode = true,
-            onResetSeenCards = {},
-            onResetAllCards = {},
-            onTextsPerCardChanged = {},
-            onResetTextsPerCard = {},
+            settings = GameSettingsState(
+                textsPerCard = 3,
+                defaultTextsPerCard = 2,
+                developerMode = true,
+            ),
+            settingsActions = GameSettingsActions(
+                onResetSeenCards = {},
+                onResetAllCards = {},
+                onTextsPerCardChanged = {},
+                onResetTextsPerCard = {},
+            ),
             onShowCards = {},
             onDismiss = {},
         )
@@ -328,7 +335,10 @@ private fun SettingsRadioOption(
 @Composable
 private fun SettingsRadioOptionPreview() {
     ImpulseTheme {
-        SettingsRadioOption(label = stringResource(R.string.preview_unconsidered), selected = true, onClick = {})
+        SettingsRadioOption(
+            label = stringResource(R.string.preview_unconsidered),
+            selected = true,
+            onClick = {})
     }
 }
 
@@ -336,7 +346,10 @@ private fun SettingsRadioOptionPreview() {
 @Composable
 private fun SettingsActionRowPreview() {
     ImpulseTheme {
-        SettingsActionRow(label = stringResource(R.string.preview_action), onClick = {}, onInfoClick = {})
+        SettingsActionRow(
+            label = stringResource(R.string.preview_action),
+            onClick = {},
+            onInfoClick = {})
     }
 }
 
@@ -356,7 +369,11 @@ private fun SettingsInfoDialog(
 @Preview(showBackground = true)
 @Composable
 private fun SettingsInfoDialogPreview() {
-    ImpulseTheme { SettingsInfoDialog(text = stringResource(R.string.reset_seen_info), onDismiss = {}) }
+    ImpulseTheme {
+        SettingsInfoDialog(
+            text = stringResource(R.string.reset_seen_info),
+            onDismiss = {})
+    }
 }
 
 private const val MIN_TEXTS_PER_CARD = 1

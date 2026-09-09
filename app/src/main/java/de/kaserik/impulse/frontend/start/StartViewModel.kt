@@ -3,7 +3,6 @@ package de.kaserik.impulse.frontend.start
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.kaserik.impulse.common.Sprache
 import de.kaserik.impulse.domain.repository.AppSettingsRepository
 import de.kaserik.impulse.domain.usecase.GetGamesUseCase
 import javax.inject.Inject

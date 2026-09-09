@@ -1,7 +1,7 @@
 import java.io.File
 import java.util.Locale
 
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
+// Shared build configuration for all modules.
 buildscript {
     repositories {
         google()
@@ -15,6 +15,7 @@ buildscript {
 }
 
 plugins {
+    id("impulse.rohdaten-db")
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.compose.compiler) apply false
     alias(libs.plugins.detekt) apply false
@@ -50,5 +51,3 @@ allprojects {
 
     layout.buildDirectory.set(localBuildRoot.resolve(projectBuildDir))
 }
-
-apply(from = "gradle/rohdaten-db.gradle.kts")

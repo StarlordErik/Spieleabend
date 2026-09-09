@@ -131,8 +131,8 @@ internal fun assetImagePathFromMetadataPath(imagePath: String?): String? {
     val assetPath =
         when {
             normalizedPath == null -> null
-            normalizedPath.startsWith(AssetPaths.Images) -> normalizedPath
-            normalizedPath.startsWith(AssetPaths.SourceAssets) -> normalizedPath.removePrefix(AssetPaths.SourceAssets)
+            normalizedPath.startsWith(AssetPaths.IMAGES) -> normalizedPath
+            normalizedPath.startsWith(AssetPaths.SOURCE_ASSETS) -> normalizedPath.removePrefix(AssetPaths.SOURCE_ASSETS)
             else -> {
                 val fileName =
                     normalizedPath
@@ -140,7 +140,7 @@ internal fun assetImagePathFromMetadataPath(imagePath: String?): String? {
                         .substringAfterLast('\\')
                         .takeIf(String::isNotEmpty)
 
-                fileName?.let { name -> AssetPaths.Images + name }
+                fileName?.let { name -> AssetPaths.IMAGES + name }
             }
         }
 
@@ -153,31 +153,31 @@ val boardGameShelfItems: List<BoardGameShelfItem>
         previewShelfItem(
             id = 1,
             name = stringResource(R.string.preview_game_conversation),
-            imagePath = AssetPaths.Conversation,
+            imagePath = AssetPaths.CONVERSATION,
             index = 0,
         ),
         previewShelfItem(
             id = 75,
             name = stringResource(R.string.preview_game_couples),
-            imagePath = AssetPaths.Couples,
+            imagePath = AssetPaths.COUPLES,
             index = 1,
         ),
         previewShelfItem(
             id = 149,
             name = stringResource(R.string.mode_fun_facts),
-            imagePath = AssetPaths.FunFacts,
+            imagePath = AssetPaths.FUN_FACTS,
             index = 2,
         ),
         previewShelfItem(
             id = 337,
             name = stringResource(R.string.preview_game_privacy),
-            imagePath = AssetPaths.Privacy,
+            imagePath = AssetPaths.PRIVACY,
             index = 3,
         ),
         previewShelfItem(
             id = 699,
             name = stringResource(R.string.preview_game_strangers),
-            imagePath = AssetPaths.Strangers,
+            imagePath = AssetPaths.STRANGERS,
             index = 4,
         ),
     )

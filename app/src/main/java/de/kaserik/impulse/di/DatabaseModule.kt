@@ -35,9 +35,9 @@ object DatabaseModule {
         )
             .createFromAsset(DATABASE_ASSET_PATH)
             .addMigrations(Migration2To3, Migration3To4)
-            // `fallbackToDestructiveMigration()` already covers downgrades.
-            // Chaining `fallbackToDestructiveMigrationOnDowngrade()` afterwards would
-            // re-enable required migrations for upgrades and break 1 -> 2 installs.
+            // This fallback also covers downgrades. Adding the downgrade-specific
+            // fallback would require migrations for upgrades again and prevent
+            // opening a database from version 1.
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
@@ -69,6 +69,6 @@ object DatabaseModule {
     fun provideSpielZiehEinstellungDao(database: ImpulseDatabase): SpielZiehEinstellungDao =
         database.spielZiehEinstellungDao()
 
-    private const val DATABASE_NAME = DatabaseFiles.Name
-    private const val DATABASE_ASSET_PATH = DatabaseFiles.Name
+    private const val DATABASE_NAME = DatabaseFiles.NAME
+    private const val DATABASE_ASSET_PATH = DatabaseFiles.NAME
 }

@@ -23,32 +23,32 @@ data class Kategorie(
     init {
         val originaleKartentextIds = originaleKartentexte.map { kartentext -> kartentext.id() }
         require(originaleKartentextIds.distinct().size == originaleKartentextIds.size) {
-            AppMessages.DuplicateOriginalCardText
+            AppMessages.DUPLICATE_ORIGINAL_CARD_TEXT
         }
 
         val hinzugefuegteKartentextIds = hinzugefuegteKartentexte.map { kartentext -> kartentext.id() }
         require(hinzugefuegteKartentextIds.distinct().size == hinzugefuegteKartentextIds.size) {
-            AppMessages.DuplicateAddedCardText
+            AppMessages.DUPLICATE_ADDED_CARD_TEXT
         }
 
         val inaktiveKartentextIds = inaktiveKartentexte.map { kartentext -> kartentext.id() }
         require(inaktiveKartentextIds.distinct().size == inaktiveKartentextIds.size) {
-            AppMessages.DuplicateInactiveCardText
+            AppMessages.DUPLICATE_INACTIVE_CARD_TEXT
         }
 
         val doppelteKartentextIds = originaleKartentextIds.intersect(hinzugefuegteKartentextIds.toSet())
         require(doppelteKartentextIds.isEmpty()) {
-            AppMessages.OverlappingCardTexts
+            AppMessages.OVERLAPPING_CARD_TEXTS
         }
 
         val bekannteKartentextIds = (originaleKartentextIds + hinzugefuegteKartentextIds).toSet()
         require(inaktiveKartentextIds.all { kartentextId -> kartentextId in bekannteKartentextIds }) {
-            AppMessages.UnknownInactiveCardText
+            AppMessages.UNKNOWN_INACTIVE_CARD_TEXT
         }
 
         val kartentextIds = bekannteKartentextIds.toList()
         require(kartentextIds.distinct().size == kartentextIds.size) {
-            AppMessages.DuplicateCardText
+            AppMessages.DUPLICATE_CARD_TEXT
         }
     }
 }

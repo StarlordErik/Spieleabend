@@ -2,41 +2,41 @@ package de.kaserik.impulse.common
 
 // Non-translatable identifiers and formats shared by app infrastructure.
 internal object DatabaseFiles {
-    const val Name = "impulse.db"
+    const val NAME = "impulse.db"
 }
 
 internal object PreferenceKeys {
-    const val PreferencesName = "app_settings"
-    const val DeveloperModeKey = "developer_mode"
-    const val FunFactsModeKey = "fun_facts_mode_enabled"
-    const val FunFactsSessionKey = "fun_facts_session"
-    const val LanguageKey = "language"
+    const val PREFERENCES_NAME = "app_settings"
+    const val DEVELOPER_MODE_KEY = "developer_mode"
+    const val FUN_FACTS_MODE_KEY = "fun_facts_mode_enabled"
+    const val FUN_FACTS_SESSION_KEY = "fun_facts_session"
+    const val LANGUAGE_KEY = "language"
 }
 
 internal object AssetPaths {
-    const val Images = "images/"
-    const val SourceAssets = "app/src/main/assets/"
-    const val Conversation = "${Images}game_box_side_erzaehlt_euch_mehr.png"
-    const val Couples = "${Images}game_box_side_erzaehlt_euch_mehr_fuer_paare.png"
-    const val FunFacts = "${Images}game_box_side_fun_facts.png"
-    const val Privacy = "${Images}game_box_side_privacy.png"
-    const val Strangers = "${Images}game_box_side_were_not_really_strangers.png"
+    const val IMAGES = "images/"
+    const val SOURCE_ASSETS = "app/src/main/assets/"
+    const val CONVERSATION = "${IMAGES}game_box_side_erzaehlt_euch_mehr.png"
+    const val COUPLES = "${IMAGES}game_box_side_erzaehlt_euch_mehr_fuer_paare.png"
+    const val FUN_FACTS = "${IMAGES}game_box_side_fun_facts.png"
+    const val PRIVACY = "${IMAGES}game_box_side_privacy.png"
+    const val STRANGERS = "${IMAGES}game_box_side_were_not_really_strangers.png"
 }
 
 internal object AnimationLabels {
-    const val CategoryTabScale = "category-tab-scale"
-    const val ColorTabScale = "color-tab-scale"
-    const val RevealSign = "Schild aufdecken"
+    const val CATEGORY_TAB_SCALE = "category-tab-scale"
+    const val COLOR_TAB_SCALE = "color-tab-scale"
+    const val REVEAL_SIGN = "Schild aufdecken"
 }
 
 const val GAME_ID_ARG = "gameId"
 
 internal object NavigationRoutes {
-    const val Start = "start"
-    const val GamePrefix = "game/"
-    const val CardsPrefix = "cards/"
-    const val Game = "$GamePrefix{$GAME_ID_ARG}"
-    const val Cards = "$CardsPrefix{$GAME_ID_ARG}"
+    const val START = "start"
+    const val GAME_PREFIX = "game/"
+    const val CARDS_PREFIX = "cards/"
+    const val GAME = "$GAME_PREFIX{$GAME_ID_ARG}"
+    const val CARDS = "$CARDS_PREFIX{$GAME_ID_ARG}"
 }
 
 internal object SessionFormat {

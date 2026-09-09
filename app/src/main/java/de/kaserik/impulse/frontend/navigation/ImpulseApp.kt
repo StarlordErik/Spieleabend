@@ -98,18 +98,18 @@ private sealed interface AppDestination {
     val route: String
 
     data object Start : AppDestination {
-        override val route = NavigationRoutes.Start
+        override val route = NavigationRoutes.START
     }
 
     data object Game : AppDestination {
-        override val route = NavigationRoutes.Game
+        override val route = NavigationRoutes.GAME
 
-        fun createRoute(gameId: Int): String = NavigationRoutes.GamePrefix + Uri.encode(gameId.toString())
+        fun createRoute(gameId: Int): String = NavigationRoutes.GAME_PREFIX + Uri.encode(gameId.toString())
     }
 
     data object Cards : AppDestination {
-        override val route = NavigationRoutes.Cards
+        override val route = NavigationRoutes.CARDS
 
-        fun createRoute(gameId: Int): String = NavigationRoutes.CardsPrefix + Uri.encode(gameId.toString())
+        fun createRoute(gameId: Int): String = NavigationRoutes.CARDS_PREFIX + Uri.encode(gameId.toString())
     }
 }

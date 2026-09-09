@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
@@ -59,14 +60,8 @@ import kotlin.math.roundToInt
 internal fun CategoryTabs(
     kategorien: List<GameKategorieUiModel>,
     modifier: Modifier = Modifier,
-    highlightedTarget: CardSwipeTarget? = null,
-    previousEnabled: Boolean = false,
-    interactionsEnabled: Boolean = true,
-    dimWhenInteractionsDisabled: Boolean = true,
-    onKategorieSelected: (Int) -> Unit = {},
-    onRandomSelected: () -> Unit = {},
-    onPreviousSelected: () -> Unit = {},
-    onTabBoundsChanged: (CardSwipeTarget, androidx.compose.ui.geometry.Rect) -> Unit = { _, _ -> },
+    state: CategoryTabsState = CategoryTabsState(),
+    actions: CategoryTabsActions = CategoryTabsActions(),
 ) {
     val categoryColors = CategoryTabColors
     val randomTabColor = MaterialTheme.colorScheme.onBackground
@@ -93,17 +88,11 @@ internal fun CategoryTabs(
             constraints = constraints,
             randomTabHeight = randomTabHeight.toDp(),
             normalTabHeight = normalTabHeight,
-            highlightedTarget = highlightedTarget,
-            previousEnabled = previousEnabled,
-            interactionsEnabled = interactionsEnabled,
-            dimWhenInteractionsDisabled = dimWhenInteractionsDisabled,
+            state = state,
             categoryColors = categoryColors,
             randomTabColor = randomTabColor,
             randomTabContentColor = randomTabContentColor,
-            onKategorieSelected = onKategorieSelected,
-            onRandomSelected = onRandomSelected,
-            onPreviousSelected = onPreviousSelected,
-            onTabBoundsChanged = onTabBoundsChanged,
+            actions = actions,
         )
 
         val previousTabY = (layoutHeight - measuredTabs.previousTab.height - tabSpacing)
@@ -111,7 +100,7 @@ internal fun CategoryTabs(
         val randomTabY = ((layoutHeight - measuredTabs.randomTab.height) / 2)
             .coerceAtLeast(0)
         val normalTabsTotalHeight = measuredTabs.normalTabs.sumOf { tab -> tab.placeable.height } +
-            (measuredTabs.normalTabs.size - 1).coerceAtLeast(0) * tabSpacing
+                (measuredTabs.normalTabs.size - 1).coerceAtLeast(0) * tabSpacing
         val centeredNormalTabsY = ((layoutHeight - normalTabsTotalHeight) / 2).coerceAtLeast(0)
 
         layout(width = layoutWidth, height = layoutHeight) {
@@ -171,16 +160,13 @@ private fun CategoryTabsPreview() {
 @Suppress("LongMethod")
 private fun CategoryTab(
     tab: GameKategorieUiModel,
-    side: CategoryTabSide,
-    color: Color,
+    style: CategoryTabStyle,
     modifier: Modifier = Modifier,
-    contentColor: Color = CategoryTabContentColor,
-    fixedHeight: Dp? = null,
     highlighted: Boolean = false,
     enabled: Boolean = true,
     visuallyEnabled: Boolean = enabled,
     target: CardSwipeTarget? = null,
-    onBoundsChanged: (CardSwipeTarget, androidx.compose.ui.geometry.Rect) -> Unit = { _, _ -> },
+    onBoundsChanged: (CardSwipeTarget, Rect) -> Unit = { _, _ -> },
     onClick: (() -> Unit)? = null,
 ) {
     val labelText = tab.name.uppercase()
@@ -194,7 +180,7 @@ private fun CategoryTab(
         style = baseTextStyle,
         maxLines = 1,
     ).size.width
-    val tabHeight = fixedHeight
+    val tabHeight = style.fixedHeight
         ?: dynamicCategoryTabHeight(
             measuredTextWidthPx = measuredTextWidthPx,
             density = density,
@@ -210,11 +196,14 @@ private fun CategoryTab(
     val scale by animateFloatAsState(
         targetValue = if (highlighted) HIGHLIGHTED_TAB_SCALE else 1f,
         animationSpec = tween(durationMillis = TAB_HIGHLIGHT_ANIMATION_MILLIS),
-        label = AnimationLabels.CategoryTabScale,
+        label = AnimationLabels.CATEGORY_TAB_SCALE,
     )
 
     Box(
-        modifier = (if (onClick == null) modifier else modifier.clickable(enabled = enabled, onClick = onClick))
+        modifier = (if (onClick == null) modifier else modifier.clickable(
+            enabled = enabled,
+            onClick = onClick
+        ))
             .then(
                 if (target == null) {
                     Modifier
@@ -231,20 +220,20 @@ private fun CategoryTab(
                 scaleY = scale
                 alpha = if (visuallyEnabled) 1f else DISABLED_TAB_ALPHA
                 transformOrigin = TransformOrigin(
-                    pivotFractionX = if (side == CategoryTabSide.Left) 0f else 1f,
+                    pivotFractionX = if (style.side == CategoryTabSide.Left) 0f else 1f,
                     pivotFractionY = 0.5f,
                 )
             }
-            .clip(categoryTabShape(side))
-            .background(color),
+            .clip(categoryTabShape(style.side))
+            .background(style.color),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = labelText,
             modifier = Modifier
                 .requiredWidth(fittedLabel.width)
-                .graphicsLayer(rotationZ = side.labelRotation),
-            color = contentColor,
+                .graphicsLayer(rotationZ = style.side.labelRotation),
+            color = style.contentColor ?: CategoryTabContentColor,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Visible,
@@ -265,16 +254,20 @@ private fun CategoryTabPreview() {
         ) {
             CategoryTab(
                 tab = PreviewUiState.kategorien.first(),
-                side = CategoryTabSide.Left,
-                color = CategoryTabColors.first(),
+                style = CategoryTabStyle(
+                    side = CategoryTabSide.Left,
+                    color = CategoryTabColors.first(),
+                ),
             )
             CategoryTab(
                 tab = GameKategorieUiModel(
                     id = -1,
                     name = stringResource(R.string.previous_card),
                 ),
-                side = CategoryTabSide.Right,
-                color = CategoryTabColors.last(),
+                style = CategoryTabStyle(
+                    side = CategoryTabSide.Right,
+                    color = CategoryTabColors.last(),
+                ),
             )
         }
     }
@@ -286,10 +279,10 @@ private fun dynamicCategoryTabHeight(
 ): Dp =
     with(density) {
         (
-            measuredTextWidthPx.toDp() +
-                CategoryTabTextExtraWidth +
-                CategoryTabLabelVerticalPadding * 2
-            ).coerceAtLeast(MinimumCategoryTabHeight)
+                measuredTextWidthPx.toDp() +
+                        CategoryTabTextExtraWidth +
+                        CategoryTabLabelVerticalPadding * 2
+                ).coerceAtLeast(MinimumCategoryTabHeight)
     }
 
 private fun fittedCategoryTabLabel(
@@ -335,69 +328,49 @@ private fun SubcomposeMeasureScope.measureCategoryTabs(
     constraints: Constraints,
     randomTabHeight: Dp,
     normalTabHeight: Dp,
-    highlightedTarget: CardSwipeTarget?,
-    previousEnabled: Boolean,
-    interactionsEnabled: Boolean,
-    dimWhenInteractionsDisabled: Boolean,
+    state: CategoryTabsState = CategoryTabsState(),
     categoryColors: List<Color>,
     randomTabColor: Color,
     randomTabContentColor: Color,
-    onKategorieSelected: (Int) -> Unit,
-    onRandomSelected: () -> Unit,
-    onPreviousSelected: () -> Unit,
-    onTabBoundsChanged: (CardSwipeTarget, androidx.compose.ui.geometry.Rect) -> Unit,
+    actions: CategoryTabsActions = CategoryTabsActions(),
 ): MeasuredCategoryTabs {
     val measureConstraints = constraints.copy(minWidth = 0, minHeight = 0)
     val previousTab = subcompose(CategoryTabSlot.PreviousCard) {
         CategoryTab(
             tab = PreviousCardTab,
-            side = CategoryTabSide.Right,
-            color = PreviousCardTabColor,
-            highlighted = highlightedTarget == CardSwipeTarget.Previous,
-            enabled = previousEnabled && interactionsEnabled,
-            visuallyEnabled = previousEnabled &&
-                (interactionsEnabled || !dimWhenInteractionsDisabled),
+            style = CategoryTabStyle(
+                side = CategoryTabSide.Right,
+                color = PreviousCardTabColor,
+            ),
+            highlighted = state.highlightedTarget == CardSwipeTarget.Previous,
+            enabled = state.previousEnabled && state.interactionsEnabled,
+            visuallyEnabled = state.previousEnabled &&
+                    (state.interactionsEnabled || !state.dimWhenInteractionsDisabled),
             target = CardSwipeTarget.Previous,
-            onBoundsChanged = onTabBoundsChanged,
-            onClick = onPreviousSelected,
+            onBoundsChanged = actions.onTabBoundsChanged,
+            onClick = actions.onPreviousSelected,
         )
     }.single().measure(measureConstraints)
     val randomTab = subcompose(CategoryTabSlot.Random) {
         CategoryTab(
             tab = RandomTab,
-            side = CategoryTabSide.Right,
-            color = randomTabColor,
-            contentColor = randomTabContentColor,
-            fixedHeight = randomTabHeight,
-            highlighted = highlightedTarget == CardSwipeTarget.Random,
-            enabled = interactionsEnabled,
-            visuallyEnabled = interactionsEnabled || !dimWhenInteractionsDisabled,
+            style = CategoryTabStyle(
+                side = CategoryTabSide.Right,
+                color = randomTabColor,
+                contentColor = randomTabContentColor,
+                fixedHeight = randomTabHeight,
+            ),
+            highlighted = state.highlightedTarget == CardSwipeTarget.Random,
+            enabled = state.interactionsEnabled,
+            visuallyEnabled = state.interactionsEnabled || !state.dimWhenInteractionsDisabled,
             target = CardSwipeTarget.Random,
-            onBoundsChanged = onTabBoundsChanged,
-            onClick = onRandomSelected,
+            onBoundsChanged = actions.onTabBoundsChanged,
+            onClick = actions.onRandomSelected,
         )
     }.single().measure(measureConstraints)
-    val normalTabs = kategorien.mapIndexed { index, tab ->
-        val side = CategoryTabSide.Left
-        val color = categoryTabColor(index, categoryColors)
-        MeasuredCategoryTab(
-            side = side,
-            placeable = subcompose(NormalCategoryTabSlot(index = index, id = tab.id)) {
-                CategoryTab(
-                    tab = tab,
-                    side = side,
-                    color = color,
-                    fixedHeight = normalTabHeight,
-                    highlighted = highlightedTarget == CardSwipeTarget.Category(tab.id),
-                    enabled = interactionsEnabled,
-                    visuallyEnabled = interactionsEnabled || !dimWhenInteractionsDisabled,
-                    target = CardSwipeTarget.Category(tab.id),
-                    onBoundsChanged = onTabBoundsChanged,
-                    onClick = { onKategorieSelected(tab.id) },
-                )
-            }.single().measure(measureConstraints),
-        )
-    }
+    val normalTabs = measureNormalCategoryTabs(
+        kategorien, measureConstraints, normalTabHeight, state, actions, categoryColors,
+    )
 
     return MeasuredCategoryTabs(
         previousTab = previousTab,
@@ -466,3 +439,56 @@ private val PreviousCardTab: GameKategorieUiModel
         name = stringResource(R.string.previous_card),
     )
 
+
+internal data class CategoryTabsState(
+    val highlightedTarget: CardSwipeTarget? = null,
+    val previousEnabled: Boolean = false,
+    val interactionsEnabled: Boolean = true,
+    val dimWhenInteractionsDisabled: Boolean = true,
+)
+
+internal data class CategoryTabsActions(
+    val onKategorieSelected: (Int) -> Unit = {},
+    val onRandomSelected: () -> Unit = {},
+    val onPreviousSelected: () -> Unit = {},
+    val onTabBoundsChanged: (CardSwipeTarget, Rect) -> Unit = { _, _ -> },
+)
+
+private data class CategoryTabStyle(
+    val side: CategoryTabSide,
+    val color: Color,
+    val contentColor: Color? = null,
+    val fixedHeight: Dp? = null,
+)
+
+private fun SubcomposeMeasureScope.measureNormalCategoryTabs(
+    kategorien: List<GameKategorieUiModel>,
+    measureConstraints: Constraints,
+    normalTabHeight: Dp,
+    state: CategoryTabsState,
+    actions: CategoryTabsActions,
+    categoryColors: List<Color>,
+): List<MeasuredCategoryTab> =
+    kategorien.mapIndexed { index, tab ->
+        val side = CategoryTabSide.Left
+        val color = categoryTabColor(index, categoryColors)
+        MeasuredCategoryTab(
+            side = side,
+            placeable = subcompose(NormalCategoryTabSlot(index = index, id = tab.id)) {
+                CategoryTab(
+                    tab = tab,
+                    style = CategoryTabStyle(
+                        side = side,
+                        color = color,
+                        fixedHeight = normalTabHeight,
+                    ),
+                    highlighted = state.highlightedTarget == CardSwipeTarget.Category(tab.id),
+                    enabled = state.interactionsEnabled,
+                    visuallyEnabled = state.interactionsEnabled || !state.dimWhenInteractionsDisabled,
+                    target = CardSwipeTarget.Category(tab.id),
+                    onBoundsChanged = actions.onTabBoundsChanged,
+                    onClick = { actions.onKategorieSelected(tab.id) },
+                )
+            }.single().measure(measureConstraints),
+        )
+    }

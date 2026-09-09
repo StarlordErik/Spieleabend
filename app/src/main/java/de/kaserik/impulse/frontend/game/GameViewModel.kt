@@ -28,6 +28,7 @@ import de.kaserik.impulse.domain.usecase.ShowPreviousCardUseCase
 import de.kaserik.impulse.domain.usecase.UpdateCardTextSettingsUseCase
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,7 +54,7 @@ class GameViewModel @Inject constructor(
     private val appSettingsRepository: AppSettingsRepository,
 ) : ViewModel() {
     private val gameIdArg: String? = savedStateHandle[GAME_ID_ARG]
-    private val gameId: Int = gameIdArg?.toIntOrNull() ?: DefaultGameId
+    private val gameId: Int = gameIdArg?.toIntOrNull() ?: DEFAULT_GAME_ID
     private var sprache: Sprache = Sprache.DE
     private val cardChangeMutex = Mutex()
     private var funFactsModeEnabled = true
@@ -260,7 +261,7 @@ class GameViewModel @Inject constructor(
     private fun scheduleFunFactsPersistence() {
         funFactsPersistenceJob?.cancel()
         funFactsPersistenceJob = viewModelScope.launch {
-            delay(FUN_FACTS_PERSISTENCE_DELAY_MILLIS)
+            delay(FUN_FACTS_PERSISTENCE_DELAY_MILLIS.milliseconds)
             appSettingsRepository.setFunFactsSession(funFactsSession.serialize())
         }
     }
@@ -301,7 +302,7 @@ class GameViewModel @Inject constructor(
         )
 
     private companion object {
-        const val DefaultGameId = 1
+        const val DEFAULT_GAME_ID = 1
         const val MIN_TEXTS_PER_CARD = 1
         const val MAX_TEXTS_PER_CARD = 5
         const val FUN_FACTS_PERSISTENCE_DELAY_MILLIS = 250L

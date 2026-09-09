@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import de.kaserik.impulse.R
 
-// Values live in res/values/colors.xml and are resolved for the current configuration.
+// Resource values are resolved for the current configuration.
 
 internal val CardBackground: Color
     @Composable get() = colorResource(R.color.card_background)

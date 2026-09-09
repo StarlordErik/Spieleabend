@@ -1,13 +1,3 @@
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath("org.xerial:sqlite-jdbc:3.50.3.0")
-    }
-}
-
 import org.gradle.api.GradleException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -115,7 +105,7 @@ val legacyOutputDatabase = layout.projectDirectory.file("app/src/main/assets/dat
 val roomImplFile =
     project(":app").layout.buildDirectory.file(
         "generated/ksp/debug/kotlin/de/kaserik/impulse/data/ImpulseDatabase_Impl.kt",
-    ).get().asFile.toPath()
+    )
 
 tasks.register("writeRawDataDatabase") {
     group = "data"
@@ -124,9 +114,10 @@ tasks.register("writeRawDataDatabase") {
 
     doLast {
         Class.forName("org.sqlite.JDBC")
+        val generatedRoomFile = roomImplFile.get().asFile.toPath()
         val expected = parseRawData(rawDataDirectory)
-        val schemaStatements = extractSchemaStatements(roomImplFile)
-        val roomVersion = extractRoomVersion(roomImplFile)
+        val schemaStatements = extractSchemaStatements(generatedRoomFile)
+        val roomVersion = extractRoomVersion(generatedRoomFile)
 
         outputDatabase.parent.createDirectories()
         legacyOutputDatabase.deleteIfExists()
@@ -160,8 +151,9 @@ tasks.register("verifyRawDataDatabase") {
 
     doLast {
         Class.forName("org.sqlite.JDBC")
+        val generatedRoomFile = roomImplFile.get().asFile.toPath()
         val expected = parseRawData(rawDataDirectory).normalized()
-        val roomVersion = extractRoomVersion(roomImplFile)
+        val roomVersion = extractRoomVersion(generatedRoomFile)
         val actual =
             DriverManager.getConnection("jdbc:sqlite:${outputDatabase.absolutePathString()}").use { connection ->
                 connection.createStatement().use { statement ->

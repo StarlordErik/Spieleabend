@@ -28,40 +28,40 @@ data class Spiel(
 
     init {
         require(texteProKarte > 0) {
-            AppMessages.EmptyCard
+            AppMessages.EMPTY_CARD
         }
         require(standardTexteProKarte > 0) {
-            AppMessages.EmptyDefaultCard
+            AppMessages.EMPTY_DEFAULT_CARD
         }
 
         val originaleKategorieIds = originaleKategorien.map { kategorie -> kategorie.id() }
         require(originaleKategorieIds.distinct().size == originaleKategorieIds.size) {
-            AppMessages.DuplicateOriginalCategory
+            AppMessages.DUPLICATE_ORIGINAL_CATEGORY
         }
 
         val hinzugefuegteKategorieIds = hinzugefuegteKategorien.map { kategorie -> kategorie.id() }
         require(hinzugefuegteKategorieIds.distinct().size == hinzugefuegteKategorieIds.size) {
-            AppMessages.DuplicateAddedCategory
+            AppMessages.DUPLICATE_ADDED_CATEGORY
         }
 
         val inaktiveKategorieIds = inaktiveKategorien.map { kategorie -> kategorie.id() }
         require(inaktiveKategorieIds.distinct().size == inaktiveKategorieIds.size) {
-            AppMessages.DuplicateInactiveCategory
+            AppMessages.DUPLICATE_INACTIVE_CATEGORY
         }
 
         val doppelteKategorieIds = originaleKategorieIds.intersect(hinzugefuegteKategorieIds.toSet())
         require(doppelteKategorieIds.isEmpty()) {
-            AppMessages.OverlappingCategories
+            AppMessages.OVERLAPPING_CATEGORIES
         }
 
         val bekannteKategorieIds = (originaleKategorieIds + hinzugefuegteKategorieIds).toSet()
         require(inaktiveKategorieIds.all { kategorieId -> kategorieId in bekannteKategorieIds }) {
-            AppMessages.UnknownInactiveCategory
+            AppMessages.UNKNOWN_INACTIVE_CATEGORY
         }
 
         val kategorieIds = bekannteKategorieIds.toList()
         require(kategorieIds.distinct().size == kategorieIds.size) {
-            AppMessages.DuplicateCategory
+            AppMessages.DUPLICATE_CATEGORY
         }
     }
 }

@@ -10,12 +10,12 @@ data class Lokalisierung(
 ) {
     init {
         require(translationen.any { translation -> translation.sprache == Sprache.OG }) {
-            AppMessages.MissingOriginalTranslation
+            AppMessages.MISSING_ORIGINAL_TRANSLATION
         }
 
         val sprachen = translationen.map { it.sprache }
         require(sprachen.distinct().size == sprachen.size) {
-            AppMessages.DuplicateTranslationLanguage
+            AppMessages.DUPLICATE_TRANSLATION_LANGUAGE
         }
     }
 

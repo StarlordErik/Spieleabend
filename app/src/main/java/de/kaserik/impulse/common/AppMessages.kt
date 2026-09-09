@@ -2,43 +2,43 @@ package de.kaserik.impulse.common
 
 // Diagnostic messages stay usable by the domain model without an Android Context.
 internal object AppMessages {
-    const val EmptyTranslation =
+    const val EMPTY_TRANSLATION =
         "Der Text einer Translation darf nicht leer sein."
-    const val EmptyOwnCardText =
+    const val EMPTY_OWN_CARD_TEXT =
         "Ein eigener Kartentext darf nicht leer sein."
-    const val InvalidTextCount =
+    const val INVALID_TEXT_COUNT =
         "Die Anzahl der Kartentexte pro Karte muss zwischen 1 und 5 liegen."
-    const val MissingOriginalTranslation =
+    const val MISSING_ORIGINAL_TRANSLATION =
         "Eine Lokalisierung braucht eine OG-Translation."
-    const val DuplicateTranslationLanguage =
+    const val DUPLICATE_TRANSLATION_LANGUAGE =
         "Eine Lokalisierung darf pro Sprache nur eine Translation enthalten."
-    const val EmptyCard =
+    const val EMPTY_CARD =
         "Ein Spiel muss mindestens einen Kartentext pro Karte anzeigen."
-    const val EmptyDefaultCard =
+    const val EMPTY_DEFAULT_CARD =
         "Der Standard eines Spiels muss mindestens einen Kartentext pro Karte anzeigen."
-    const val DuplicateOriginalCategory =
+    const val DUPLICATE_ORIGINAL_CATEGORY =
         "Ein Spiel darf eine originale Kategorie nur einmal referenzieren."
-    const val DuplicateAddedCategory =
+    const val DUPLICATE_ADDED_CATEGORY =
         "Ein Spiel darf eine hinzugefügte Kategorie nur einmal referenzieren."
-    const val DuplicateInactiveCategory =
+    const val DUPLICATE_INACTIVE_CATEGORY =
         "Ein Spiel darf eine inaktive Kategorie nur einmal referenzieren."
-    const val OverlappingCategories =
+    const val OVERLAPPING_CATEGORIES =
         "Ein Spiel darf eine Kategorie nicht gleichzeitig original und hinzugefügt referenzieren."
-    const val UnknownInactiveCategory =
+    const val UNKNOWN_INACTIVE_CATEGORY =
         "Ein Spiel darf nur referenzierte Kategorien als inaktiv markieren."
-    const val DuplicateCategory =
+    const val DUPLICATE_CATEGORY =
         "Ein Spiel darf eine Kategorie nur einmal referenzieren."
-    const val DuplicateOriginalCardText =
+    const val DUPLICATE_ORIGINAL_CARD_TEXT =
         "Eine Kategorie darf einen originalen Kartentext nur einmal referenzieren."
-    const val DuplicateAddedCardText =
+    const val DUPLICATE_ADDED_CARD_TEXT =
         "Eine Kategorie darf einen hinzugefügten Kartentext nur einmal referenzieren."
-    const val DuplicateInactiveCardText =
+    const val DUPLICATE_INACTIVE_CARD_TEXT =
         "Eine Kategorie darf einen inaktiven Kartentext nur einmal referenzieren."
-    const val OverlappingCardTexts =
+    const val OVERLAPPING_CARD_TEXTS =
         "Eine Kategorie darf einen Kartentext nicht gleichzeitig original und hinzugefügt referenzieren."
-    const val UnknownInactiveCardText =
+    const val UNKNOWN_INACTIVE_CARD_TEXT =
         "Eine Kategorie darf nur referenzierte Kartentexte als inaktiv markieren."
-    const val DuplicateCardText =
+    const val DUPLICATE_CARD_TEXT =
         "Eine Kategorie darf einen Kartentext nur einmal referenzieren."
 
     fun unsupportedOwnLanguage(language: Sprache): String =

@@ -90,13 +90,13 @@ class GameRepositoryImpl @Inject constructor(
             CardHistoryState(
                 card = card,
                 instanceId = cardInstanceId,
-                hasPrevious = kartenverlaufDao.neuesteKarten(gameId, PreviousCheckLimit).size > 1,
+                hasPrevious = kartenverlaufDao.neuesteKarten(gameId, PREVIOUS_CHECK_LIMIT).size > 1,
             )
         }
 
     override suspend fun getCurrentCard(gameId: Int): CardHistoryState? =
         database.withTransaction {
-            val cards = database.kartenverlaufDao().neuesteKarten(gameId, PreviousCheckLimit)
+            val cards = database.kartenverlaufDao().neuesteKarten(gameId, PREVIOUS_CHECK_LIMIT)
             val currentCard = cards.firstOrNull() ?: return@withTransaction null
             currentCard.toHistoryState(
                 spiel = spielEntity(gameId).toDomain(),
@@ -107,13 +107,13 @@ class GameRepositoryImpl @Inject constructor(
     override suspend fun popCurrentCard(gameId: Int): CardHistoryState? =
         database.withTransaction {
             val kartenverlaufDao = database.kartenverlaufDao()
-            val cards = kartenverlaufDao.neuesteKarten(gameId, PreviousCheckLimit)
-            if (cards.size < PreviousCheckLimit) {
+            val cards = kartenverlaufDao.neuesteKarten(gameId, PREVIOUS_CHECK_LIMIT)
+            if (cards.size < PREVIOUS_CHECK_LIMIT) {
                 return@withTransaction null
             }
 
             kartenverlaufDao.deleteKarte(cards.first().id)
-            val remainingCards = kartenverlaufDao.neuesteKarten(gameId, PreviousCheckLimit)
+            val remainingCards = kartenverlaufDao.neuesteKarten(gameId, PREVIOUS_CHECK_LIMIT)
             remainingCards.first().toHistoryState(
                 spiel = spielEntity(gameId).toDomain(),
                 hasPrevious = remainingCards.size > 1,
@@ -164,7 +164,7 @@ class GameRepositoryImpl @Inject constructor(
         text: String?,
     ) {
         require(language.auswaehlbar) { AppMessages.uneditableLanguage(language) }
-        require(text == null || text.isNotBlank()) { AppMessages.EmptyOwnCardText }
+        require(text == null || text.isNotBlank()) { AppMessages.EMPTY_OWN_CARD_TEXT }
 
         database.withTransaction {
             requireNotNull(database.kartentextDao().kartentext(cardTextId)) {
@@ -211,7 +211,7 @@ class GameRepositoryImpl @Inject constructor(
         value: Int?,
     ) {
         require(value == null || value in AllowedTextsPerCard) {
-            AppMessages.InvalidTextCount
+            AppMessages.INVALID_TEXT_COUNT
         }
 
         database.withTransaction {
@@ -335,7 +335,7 @@ class GameRepositoryImpl @Inject constructor(
         val kartenverlaufDao = database.kartenverlaufDao()
         val oldCardIds = kartenverlaufDao.aeltereKartenIds(
             spielId = gameId,
-            behalten = MaxStoredCards,
+            behalten = MAX_STORED_CARDS,
         )
         if (oldCardIds.isNotEmpty()) {
             kartenverlaufDao.deleteKarten(oldCardIds)
@@ -447,8 +447,8 @@ class GameRepositoryImpl @Inject constructor(
     )
 
     private companion object {
-        const val MaxStoredCards = 11
-        const val PreviousCheckLimit = 2
+        const val MAX_STORED_CARDS = 11
+        const val PREVIOUS_CHECK_LIMIT = 2
         val AllowedTextsPerCard = 1..5
     }
 }

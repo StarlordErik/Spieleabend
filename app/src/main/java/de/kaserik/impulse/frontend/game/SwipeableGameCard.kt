@@ -114,35 +114,29 @@ internal fun SwipeableGameCard(
                 coordinates = layoutCoordinates
                 cardWidth = layoutCoordinates.size.width
             }
-            .pointerInput(cardInstanceId, swipeRegions, previousEnabled, interactionLocked, cardWidth) {
+            .pointerInput(
+                cardInstanceId,
+                swipeRegions,
+                previousEnabled,
+                interactionLocked,
+                cardWidth
+            ) {
                 if (interactionLocked) return@pointerInput
 
                 detectHorizontalDragGestures(
                     onDragStart = { localPosition ->
-                        startPositionInRoot = coordinates?.localToRoot(localPosition) ?: Offset.Unspecified
+                        startPositionInRoot =
+                            coordinates?.localToRoot(localPosition) ?: Offset.Unspecified
                     },
                     onHorizontalDrag = { change, dragAmount ->
                         change.consume()
                         translationX += dragAmount
-                        val direction = cardSwipeDirection(
-                            dragOffsetX = translationX,
-                            velocityX = 0f,
-                            velocityThresholdPxPerSecond = SWIPE_VELOCITY_THRESHOLD,
+                        val target = dragSwipeTarget(
+                            translationX = translationX,
+                            startPositionInRoot = startPositionInRoot,
+                            swipeRegions = swipeRegions,
+                            previousEnabled = previousEnabled,
                         )
-                        val target = if (
-                            direction == null ||
-                            !startPositionInRoot.x.isFinite() ||
-                            !startPositionInRoot.y.isFinite()
-                        ) {
-                            null
-                        } else {
-                            resolveCardSwipeTarget(
-                                startPositionInRoot = startPositionInRoot,
-                                direction = direction,
-                                regions = swipeRegions,
-                                previousEnabled = previousEnabled,
-                            )
-                        }
                         updateHighlight(target)
                     },
                     onDragCancel = {
@@ -163,14 +157,14 @@ internal fun SwipeableGameCard(
                             velocityThresholdPxPerSecond = SWIPE_VELOCITY_THRESHOLD,
                         )
                         val shouldCommit = target != null && direction != null &&
-                            isCardSwipeCommitThresholdReached(
-                                dragOffsetX = translationX,
-                                velocityX = 0f,
-                                cardWidthPx = cardWidth.toFloat(),
-                                minimumDistancePx = MinimumSwipeDistance.toPx(),
-                                distanceFraction = SWIPE_DISTANCE_FRACTION,
-                                velocityThresholdPxPerSecond = SWIPE_VELOCITY_THRESHOLD,
-                            )
+                                isCardSwipeCommitThresholdReached(
+                                    dragOffsetX = translationX,
+                                    velocityX = 0f,
+                                    cardWidthPx = cardWidth.toFloat(),
+                                    minimumDistancePx = MinimumSwipeDistance.toPx(),
+                                    distanceFraction = SWIPE_DISTANCE_FRACTION,
+                                    velocityThresholdPxPerSecond = SWIPE_VELOCITY_THRESHOLD,
+                                )
                         updateHighlight(null)
 
                         if (shouldCommit) {
@@ -229,3 +223,24 @@ private const val OFFSCREEN_DISTANCE_FACTOR = 1.4f
 private const val OUTGOING_ANIMATION_MILLIS = 180
 private const val INCOMING_ANIMATION_MILLIS = 220
 private const val RETURN_ANIMATION_MILLIS = 160
+
+private fun dragSwipeTarget(
+    translationX: Float,
+    startPositionInRoot: Offset,
+    swipeRegions: Collection<SwipeRegion>,
+    previousEnabled: Boolean,
+): CardSwipeTarget? {
+    val direction = cardSwipeDirection(
+        dragOffsetX = translationX,
+        velocityX = 0f,
+        velocityThresholdPxPerSecond = SWIPE_VELOCITY_THRESHOLD,
+    )
+    if (direction == null || !startPositionInRoot.x.isFinite() || !startPositionInRoot.y.isFinite()) return null
+
+    return resolveCardSwipeTarget(
+        startPositionInRoot = startPositionInRoot,
+        direction = direction,
+        regions = swipeRegions,
+        previousEnabled = previousEnabled,
+    )
+}
