@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -87,8 +88,10 @@ import de.kaserik.impulse.common.AnimationLabels
 import de.kaserik.impulse.frontend.theme.AssignedColorTabColor
 import de.kaserik.impulse.frontend.theme.CategoryTabColors
 import de.kaserik.impulse.frontend.theme.FallbackTextPanelColor
+import de.kaserik.impulse.frontend.theme.GameTableBrush
 import de.kaserik.impulse.frontend.theme.ImpulseTheme
 import de.kaserik.impulse.frontend.theme.SignColors
+import de.kaserik.impulse.frontend.theme.TableBackground
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds
@@ -281,19 +284,7 @@ private fun AnswerEntry(
                         .offset(y = strokeWidthSelectorOffset),
                 )
             }
-            Button(
-                onClick = session::finishAnswer,
-                enabled = session.draftName.snapshot().strokes.isNotEmpty() &&
-                        session.draftAnswer.snapshot().strokes.isNotEmpty() &&
-                        session.selectedColorIndex in session.availableColorIndices,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(FinishButtonHeight),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-            ) { Text(stringResource(R.string.done)) }
+            FinishAnswerButton(session = session, modifier = Modifier.fillMaxWidth())
         }
         if (colorTabsAlpha > 0f) {
             SideColorTabs(
@@ -307,6 +298,154 @@ private fun AnswerEntry(
             )
         }
     }
+}
+
+@Composable
+internal fun FunFactsLandscapeDrawing(
+    uiState: GameUiState,
+    session: FunFactsSession,
+    target: FunFactsLandscapeTarget,
+    modifier: Modifier = Modifier,
+) {
+    val question = uiState.aktuelleKarte.kartentexte.firstOrNull {
+        it.id == session.selectedQuestionId
+    }
+    val categoryName = uiState.kategorien.firstOrNull { it.id == question?.kategorieId }
+        ?.name.orEmpty()
+    Surface(modifier = modifier.fillMaxSize(), color = TableBackground) {
+        LandscapeDrawingEntry(
+            session = session,
+            target = target,
+            categoryName = categoryName,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(GameTableBrush)
+                .safeDrawingPadding()
+                .padding(horizontal = ColorTabWidth + ColorTabSpacing, vertical = 24.dp),
+        )
+    }
+}
+
+@Composable
+private fun LandscapeDrawingEntry(
+    session: FunFactsSession,
+    target: FunFactsLandscapeTarget,
+    categoryName: String,
+    modifier: Modifier = Modifier,
+) {
+    val density = LocalDensity.current
+    var deleteSize by remember { mutableStateOf(IntSize.Zero) }
+    val answering = target == FunFactsLandscapeTarget.Answer
+    val draft = if (answering) session.draftAnswer else session.draftName
+    BoxWithConstraints(modifier = modifier) {
+        val layout = landscapeDrawingPadLayout(
+            availableSize = DpSize(maxWidth, maxHeight),
+            deleteButtonWidth = with(density) { deleteSize.width.toDp() },
+            deleteSignGap = with(density) { DELETE_SIGN_GAP_PX.toDp() },
+        )
+        DrawingPad(
+            label = stringResource(if (answering) R.string.answer_label else R.string.player_name_label),
+            drawing = draft.snapshot(),
+            onStrokeStarted = { point ->
+                draft.startStroke(point, StrokeWidthFractions[session.selectedStrokeWidthIndex])
+            },
+            onStrokeContinued = draft::continueStroke,
+            onClear = draft::clear,
+            signHeight = layout.signSize.height,
+            signColor = SignColors[session.selectedColorIndex % SignColors.size],
+            categoryName = categoryName.takeIf { answering },
+            modifier = Modifier
+                .offset(x = layout.drawingPadOffset.x, y = layout.drawingPadOffset.y)
+                .width(layout.signSize.width),
+            controls = DrawingPadControls(
+                topAllowance = layout.controlsTopAllowance,
+                finishSession = session.takeIf { answering },
+                onDeleteSizeChanged = { deleteSize = it },
+            ),
+        )
+        StrokeWidthSelector(
+            selectedIndex = session.selectedStrokeWidthIndex,
+            onSelected = session::selectStrokeWidth,
+            selectedColor = SignColors[session.selectedColorIndex % SignColors.size],
+            currentStrokeWidth = layout.signSize.height * DEFAULT_DRAWING_STROKE_WIDTH_FRACTION,
+            vertical = true,
+            modifier = Modifier.offset(
+                x = layout.strokeWidthSelectorOffset.x,
+                y = layout.strokeWidthSelectorOffset.y,
+            ),
+        )
+    }
+}
+
+internal data class LandscapeDrawingPadLayout(
+    val signSize: DpSize,
+    val controlsTopAllowance: Dp,
+    val drawingPadOffset: DpOffset,
+    val strokeWidthSelectorOffset: DpOffset,
+)
+
+internal fun landscapeDrawingPadLayout(
+    availableSize: DpSize,
+    deleteButtonWidth: Dp,
+    deleteSignGap: Dp,
+): LandscapeDrawingPadLayout {
+    val sideControlsWidth = StrokeWidthButtonSize + StrokeWidthButtonSpacing
+    val controlsHeight = DrawingControlHeight + deleteSignGap
+    val slopeAtDeleteStart = deleteButtonWidth * (2f * TOP_CORNER_HEIGHT_FRACTION / SIGN_ASPECT_RATIO)
+    // The labels fit above the sloping edge; reserve extra height only when they need it.
+    val heightWithControls = maxOf(
+        availableSize.height - controlsHeight,
+        (availableSize.height - controlsHeight - slopeAtDeleteStart) / (1f - TOP_CORNER_HEIGHT_FRACTION),
+    )
+    val signHeight = minOf(
+        (availableSize.width - sideControlsWidth) / SIGN_ASPECT_RATIO,
+        availableSize.height,
+        heightWithControls,
+    ).coerceAtLeast(0.dp)
+    val signWidth = signHeight * SIGN_ASPECT_RATIO
+    val boundaryAtDeleteStart = (signHeight * TOP_CORNER_HEIGHT_FRACTION - slopeAtDeleteStart)
+        .coerceAtLeast(0.dp)
+    val controlsTopAllowance = (controlsHeight - boundaryAtDeleteStart).coerceAtLeast(0.dp)
+    // Keep the sign centered whenever the buttons fit in the existing right margin.
+    val drawingPadX = minOf(
+        (availableSize.width - signWidth) / 2f,
+        availableSize.width - signWidth - sideControlsWidth,
+    ).coerceAtLeast(0.dp)
+    val drawingPadY = ((availableSize.height - signHeight - controlsTopAllowance) / 2f)
+        .coerceAtLeast(0.dp)
+    val selectorHeight = StrokeWidthButtonSize * StrokeWidthFractions.size +
+            StrokeWidthButtonSpacing * (StrokeWidthFractions.size - 1)
+    val sideCenterY = drawingPadY + controlsTopAllowance +
+            signHeight * ((TOP_CORNER_HEIGHT_FRACTION + 1f) / 2f)
+    val selectorY = (sideCenterY - selectorHeight / 2f)
+        .coerceIn(0.dp, (availableSize.height - selectorHeight).coerceAtLeast(0.dp))
+    return LandscapeDrawingPadLayout(
+        signSize = DpSize(signWidth, signHeight),
+        controlsTopAllowance = controlsTopAllowance,
+        drawingPadOffset = DpOffset(drawingPadX, drawingPadY),
+        strokeWidthSelectorOffset = DpOffset(drawingPadX + signWidth + StrokeWidthButtonSpacing, selectorY),
+    )
+}
+
+private data class DrawingPadControls(
+    val topAllowance: Dp = DrawingControlsTopAllowance,
+    val finishSession: FunFactsSession? = null,
+    val onDeleteSizeChanged: (IntSize) -> Unit = {},
+)
+
+@Composable
+private fun FinishAnswerButton(session: FunFactsSession, modifier: Modifier = Modifier) {
+    Button(
+        onClick = session::finishAnswer,
+        enabled = session.draftName.strokes.isNotEmpty() &&
+                session.draftAnswer.strokes.isNotEmpty() &&
+                session.selectedColorIndex in session.availableColorIndices,
+        modifier = modifier.height(FinishButtonHeight),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+        ),
+    ) { Text(stringResource(R.string.done)) }
 }
 
 @Preview(showBackground = true)
@@ -325,6 +464,35 @@ private fun AnswerEntryPreview() {
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 520.dp),
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 780, heightDp = 360)
+@Composable
+private fun LandscapeNameDrawingPreview() {
+    ImpulseTheme {
+        FunFactsLandscapeDrawing(
+            uiState = PreviewUiState,
+            session = remember { previewSelectedQuestionSession() },
+            target = FunFactsLandscapeTarget.Name,
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 780, heightDp = 360)
+@Composable
+private fun LandscapeAnswerDrawingPreview() {
+    ImpulseTheme {
+        FunFactsLandscapeDrawing(
+            uiState = PreviewUiState,
+            session = remember {
+                previewSelectedQuestionSession().apply {
+                    draftName.restore(PreviewDrawing)
+                    draftAnswer.restore(PreviewDrawing)
+                }
+            },
+            target = FunFactsLandscapeTarget.Answer,
         )
     }
 }
@@ -455,13 +623,14 @@ private fun DrawingPad(
     signColor: Color,
     modifier: Modifier = Modifier,
     categoryName: String? = null,
+    controls: DrawingPadControls = DrawingPadControls(),
 ) {
-    BoxWithConstraints(modifier = modifier.height(signHeight + DrawingControlsTopAllowance)) {
+    BoxWithConstraints(modifier = modifier.height(signHeight + controls.topAllowance)) {
         var labelSize by remember { mutableStateOf(IntSize.Zero) }
         var deleteSize by remember { mutableStateOf(IntSize.Zero) }
         val density = LocalDensity.current
         val widthPx = constraints.maxWidth.toFloat().coerceAtLeast(1f)
-        val signTopPx = with(density) { DrawingControlsTopAllowance.toPx() }
+        val signTopPx = with(density) { controls.topAllowance.toPx() }
         val cornerHeightPx = with(density) { signHeight.toPx() } * TOP_CORNER_HEIGHT_FRACTION
         val deleteTop = if (deleteSize == IntSize.Zero) {
             0
@@ -527,24 +696,36 @@ private fun DrawingPad(
                 .align(Alignment.TopEnd)
                 .height(DrawingControlHeight)
                 .offset { IntOffset(x = 0, y = deleteTop) }
-                .onSizeChanged { size -> deleteSize = size },
+                .onSizeChanged { size ->
+                    deleteSize = size
+                    controls.onDeleteSizeChanged(size)
+                },
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
         ) {
             Text(stringResource(R.string.delete))
         }
-        categoryName?.takeIf(String::isNotBlank)?.let { name ->
-            Text(
-                text = name,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth(CATEGORY_LABEL_WIDTH_FRACTION)
-                    .padding(bottom = 1.dp),
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelSmall,
-            )
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth(CATEGORY_LABEL_WIDTH_FRACTION)
+                .padding(bottom = 1.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            categoryName?.takeIf(String::isNotBlank)?.let { name ->
+                Text(
+                    text = name,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            if (controls.finishSession != null) {
+                FinishAnswerButton(session = controls.finishSession, modifier = Modifier.fillMaxWidth())
+            }
         }
     }
 }
@@ -583,12 +764,9 @@ private fun StrokeWidthSelector(
     selectedColor: Color,
     modifier: Modifier = Modifier,
     currentStrokeWidth: Dp = StrokeWidthPreviewDotSize,
+    vertical: Boolean = false,
 ) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(StrokeWidthButtonSpacing),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    val buttons: @Composable () -> Unit = {
         StrokeWidthFractions.forEachIndexed { index, strokeWidth ->
             val strokeDescription = stringResource(R.string.stroke_width_description, index + 1)
             val selected = index == selectedIndex
@@ -611,7 +789,8 @@ private fun StrokeWidthSelector(
                     Canvas(
                         modifier = Modifier.size(
                             currentStrokeWidth *
-                                    (strokeWidth / DEFAULT_DRAWING_STROKE_WIDTH_FRACTION),
+                                    (strokeWidth / DEFAULT_DRAWING_STROKE_WIDTH_FRACTION) *
+                                    DRAWING_STROKE_WIDTH_SCALE,
                         ),
                     ) {
                         drawCircle(selectedColor)
@@ -619,6 +798,19 @@ private fun StrokeWidthSelector(
                 }
             }
         }
+    }
+    if (vertical) {
+        Column(
+            modifier = modifier,
+            verticalArrangement = Arrangement.spacedBy(StrokeWidthButtonSpacing),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) { buttons() }
+    } else {
+        Row(
+            modifier = modifier,
+            horizontalArrangement = Arrangement.spacedBy(StrokeWidthButtonSpacing),
+            verticalAlignment = Alignment.CenterVertically,
+        ) { buttons() }
     }
 }
 
@@ -902,9 +1094,9 @@ private fun PlayerSignPreview() {
 
 private val WideCaretShape = GenericShape { size, _ ->
     val vertices = listOf(
-        Offset(0f, size.height * 0.28f),
+        Offset(0f, size.height * TOP_CORNER_HEIGHT_FRACTION),
         Offset(size.width * 0.5f, 0f),
-        Offset(size.width, size.height * 0.28f),
+        Offset(size.width, size.height * TOP_CORNER_HEIGHT_FRACTION),
         Offset(size.width, size.height),
         Offset(size.width * 0.5f, size.height * 0.72f),
         Offset(0f, size.height),
@@ -960,7 +1152,7 @@ private fun DrawingCanvas(
     Canvas(modifier = modifier) {
         drawing.strokes.forEachIndexed { index, stroke ->
             if (stroke.isEmpty()) return@forEachIndexed
-            val strokeWidth = size.minDimension * (
+            val strokeWidth = size.minDimension * DRAWING_STROKE_WIDTH_SCALE * (
                     drawing.strokeWidthFractions.getOrNull(index)
                         ?: DEFAULT_DRAWING_STROKE_WIDTH_FRACTION
                     )
@@ -1066,6 +1258,7 @@ private const val SIGN_CORNER_RADIUS_FRACTION = 0.04f
 private const val CATEGORY_LABEL_WIDTH_FRACTION = 0.42f
 private const val MIDDLE_STROKE_WIDTH_FRACTION =
     DEFAULT_DRAWING_STROKE_WIDTH_FRACTION * 1.5f
+private const val DRAWING_STROKE_WIDTH_SCALE = 0.9f
 private const val SIGN_BORDER_DARKENING_FACTOR = 0.78f
 private const val FIRST_PLAYER_HINT_DURATION_MILLIS = 5_000L
 private const val QUESTION_SLIDE_DURATION_MILLIS = 480L

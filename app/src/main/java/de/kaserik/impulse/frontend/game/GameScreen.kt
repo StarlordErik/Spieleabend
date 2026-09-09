@@ -155,6 +155,22 @@ private fun GameScreenContent(
     var funFactsCategoryTabsVisible by remember { mutableStateOf(true) }
     val funFactsActive = uiState.spielId == FUN_FACTS_GAME_ID && uiState.funFactsModeEnabled
     val activeFunFactsSession = funFactsSession ?: remember { FunFactsSession() }
+    val landscapeTarget = rememberFunFactsLandscapeTarget(
+        rotationEnabled = funFactsActive &&
+                activeFunFactsSession.phase == FunFactsPhase.EnterAnswer &&
+                !funFactsQuestionTransitionActive && !showSettings && editingCardTextId == null,
+        hasName = activeFunFactsSession.draftName.strokes.isNotEmpty(),
+    )
+    if (landscapeTarget != null) {
+        FunFactsLandscapeDrawing(
+            uiState = uiState,
+            session = activeFunFactsSession,
+            target = landscapeTarget,
+            modifier = modifier,
+        )
+        return
+    }
+
     val swipeControls = CardSwipeControls(
         swipeRegions = swipeState.tabBounds.map { (target, bounds) -> SwipeRegion(target, bounds) },
         previousEnabled = uiState.hasPreviousCard,
