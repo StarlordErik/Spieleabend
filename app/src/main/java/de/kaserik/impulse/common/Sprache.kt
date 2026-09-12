@@ -20,6 +20,6 @@ enum class Sprache {
         }
 
     companion object {
-        val AuswaehlbareSprachen: List<Sprache> = listOf(DE, EN, ERIK)
+        val AuswaehlbareSprachen: List<Sprache> = listOf(DE, EN)
     }
 }

@@ -38,7 +38,9 @@ data class Lokalisierung(
             )
         }
 
-        require(inSprache.auswaehlbar) { AppMessages.unsupportedLanguage(inSprache) }
+        require(inSprache.auswaehlbar || inSprache == Sprache.ERIK) {
+            AppMessages.unsupportedLanguage(inSprache)
+        }
 
         translationenNachSprache[inSprache.eigeneSprache()]?.let { eigeneTranslation ->
             return LokalisierterText(
@@ -74,7 +76,7 @@ data class Lokalisierung(
         }
 
     fun hatEigeneLokalisierungFuer(sprache: Sprache): Boolean =
-        sprache.auswaehlbar && translationen.any { translation ->
+        (sprache.auswaehlbar || sprache == Sprache.ERIK) && translationen.any { translation ->
             translation.sprache == sprache.eigeneSprache()
         }
 }

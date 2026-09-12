@@ -46,6 +46,10 @@ interface GameRepository {
         text: String?,
     )
 
+    suspend fun applyErikCardTextTranslations(gameId: Int?, overwriteExisting: Boolean)
+
+    suspend fun resetCustomCardTextTranslations(gameId: Int?)
+
     suspend fun resetSeenCards(gameId: Int)
 
     suspend fun resetAllCards(gameId: Int)

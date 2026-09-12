@@ -8,6 +8,31 @@ import org.junit.Test
 
 class LocalizationFallbackTest {
     @Test
+    fun erikBleibtInternUndIstKeineAuswaehlbareSprache() {
+        assertEquals(listOf(Sprache.DE, Sprache.EN), Sprache.AuswaehlbareSprachen)
+        assertFalse(Sprache.ERIK.auswaehlbar)
+        assertEquals(Sprache.EIGENE_DE, Sprache.ERIK.eigeneSprache())
+    }
+
+    @Test
+    fun deutschVerwendetErikErstNachUebernahmeAlsEigeneLokalisierung() {
+        val original = localization(
+            ogLanguage = Sprache.DE,
+            Sprache.DE to "Deutsch",
+            Sprache.ERIK to "Erik",
+        )
+        assertEquals("Deutsch", original.text(Sprache.DE))
+        assertFalse(original.lokalisierterText(Sprache.DE).eigeneLokalisierung)
+
+        val edited = original.copy(
+            translationen = original.translationen + Translation(Sprache.EIGENE_DE, "Erik", bearbeitet = true),
+        )
+        assertEquals("Erik", edited.text(Sprache.DE))
+        assertTrue(edited.lokalisierterText(Sprache.DE).eigeneLokalisierung)
+        assertTrue(edited.hatEigeneLokalisierungFuer(Sprache.DE))
+    }
+
+    @Test
     fun eigeneDeLokalisierungUeberschreibtAuchErik() {
         val localization = localization(
             ogLanguage = Sprache.DE,

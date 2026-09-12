@@ -17,4 +17,8 @@ interface AppSettingsRepository {
     fun getFunFactsSession(): String?
 
     fun setFunFactsSession(serializedSession: String)
+
+    fun getLastDrawCategoryId(gameId: Int): Int?
+
+    fun setLastDrawCategoryId(gameId: Int, categoryId: Int?)
 }

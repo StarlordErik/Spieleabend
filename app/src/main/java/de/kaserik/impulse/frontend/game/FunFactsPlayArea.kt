@@ -131,21 +131,19 @@ internal fun FunFactsPlayArea(
             kategorien = uiState.kategorien,
             swipeControls = swipeControls,
             developerMode = developerMode,
-            cardTextActions = cardTextActions.copy(
-                onKartentextPlayedStateChanged = { cardTextId, played ->
-                    if (played) {
-                        transitionActions.onQuestionTransitionStateChanged(true)
-                        transitionActions.onCategoryTabsVisibilityChanged(false)
-                        playState.newlySelectedQuestionId = cardTextId
-                        session.selectQuestion(
-                            questionId = cardTextId,
-                            origin = cardTextBounds[cardTextId]
-                                ?.relativeTo(playState.playAreaBounds),
-                        )
-                    }
-                    cardTextActions.onKartentextPlayedStateChanged(cardTextId, played)
-                },
-            ),
+            cardTextActions = cardTextActions.withPlayedStateHandler { cardTextId, played ->
+                if (played) {
+                    transitionActions.onQuestionTransitionStateChanged(true)
+                    transitionActions.onCategoryTabsVisibilityChanged(false)
+                    playState.newlySelectedQuestionId = cardTextId
+                    session.selectQuestion(
+                        questionId = cardTextId,
+                        origin = cardTextBounds[cardTextId]
+                            ?.relativeTo(playState.playAreaBounds),
+                    )
+                }
+                cardTextActions.onKartentextPlayedStateChanged(cardTextId, played)
+            },
             onKartentextBoundsChanged = { cardTextId, bounds ->
                 cardTextBounds[cardTextId] = bounds
             },
@@ -446,6 +444,47 @@ private fun FinishAnswerButton(session: FunFactsSession, modifier: Modifier = Mo
             contentColor = MaterialTheme.colorScheme.onPrimary,
         ),
     ) { Text(stringResource(R.string.done)) }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun FunFactsLandscapeDrawingPreview() {
+    ImpulseTheme {
+        FunFactsLandscapeDrawing(
+            uiState = PreviewUiState,
+            session = remember { FunFactsSession() },
+            target = FunFactsLandscapeTarget.Name,
+            modifier = Modifier.size(width = 800.dp, height = 360.dp),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LandscapeDrawingEntryPreview() {
+    ImpulseTheme {
+        LandscapeDrawingEntry(
+            session = remember { FunFactsSession().apply { draftAnswer.restore(PreviewDrawing) } },
+            target = FunFactsLandscapeTarget.Answer,
+            categoryName = stringResource(R.string.preview_category_knowledge),
+            modifier = Modifier.size(width = 800.dp, height = 360.dp),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun FinishAnswerButtonPreview() {
+    ImpulseTheme {
+        FinishAnswerButton(
+            session = remember {
+                FunFactsSession().apply {
+                    draftName.restore(PreviewDrawing)
+                    draftAnswer.restore(PreviewDrawing)
+                }
+            },
+        )
+    }
 }
 
 @Preview(showBackground = true)
@@ -1469,13 +1508,11 @@ private fun FunFactsQuestionStage(
                 markerInteractionsEnabled = progress >= 1f &&
                         !returningToQuestionSelection,
                 developerMode = developerMode,
-                cardTextActions = cardTextActions.copy(
-                    onKartentextPlayedStateChanged = { _, _ ->
-                        transitionActions.onQuestionTransitionStateChanged(true)
-                        transitionActions.onCategoryTabsVisibilityChanged(true)
-                        returningToQuestionSelection = true
-                    },
-                ),
+                cardTextActions = cardTextActions.withPlayedStateHandler { _, _ ->
+                    transitionActions.onQuestionTransitionStateChanged(true)
+                    transitionActions.onCategoryTabsVisibilityChanged(true)
+                    returningToQuestionSelection = true
+                },
                 modifier = Modifier
                     .offset {
                         IntOffset(

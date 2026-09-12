@@ -24,4 +24,10 @@ data class GameSettingsActions(
     val onResetAllCards: () -> Unit = {},
     val onTextsPerCardChanged: (Int) -> Unit = {},
     val onResetTextsPerCard: () -> Unit = {},
+    val customTranslationActions: CustomTranslationActions = CustomTranslationActions(),
+)
+
+data class CustomTranslationActions(
+    val onApplyErikTranslations: (Boolean) -> Unit = {},
+    val onResetCustomTranslations: () -> Unit = {},
 )

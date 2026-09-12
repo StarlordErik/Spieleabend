@@ -15,6 +15,24 @@
     <string name="deleted_card_texts">Gelöschte Kartentexte</string>
     <string name="favorites">Favoriten</string>
     <string name="edited_card_texts">Bearbeitete Kartentexte</string>
+    <string name="custom_translation_actions">Erik-Texte übernehmen oder Bearbeitungen zurücksetzen</string>
+    <string name="apply_erik_translations">Erik-Texte übernehmen</string>
+    <string name="erik_import_all_info">Übernimmt alle vorhandenen Erik-Kartentexte aus allen Spielen als eigene deutsche Bearbeitungen.</string>
+    <string name="erik_import_game_info">Übernimmt alle vorhandenen Erik-Kartentexte dieses Spiels als eigene deutsche Bearbeitungen.</string>
+    <string name="erik_import_missing_only">Nur fehlende eigene deutsche Texte ergänzen</string>
+    <string name="erik_import_overwrite">Auch vorhandene eigene deutsche Texte überschreiben</string>
+    <string name="erik_import_german_info">Die übernommenen Texte werden bei Sprache Deutsch angezeigt und lassen sich wie eigene Bearbeitungen ändern oder zurücksetzen.</string>
+    <string name="apply_translations">Übernehmen</string>
+    <string name="reset_custom_translations">Alle Bearbeitungen zurücksetzen</string>
+    <string name="reset_custom_all_info">Alle eigenen deutschen und englischen Kartentexte aller Spiele löschen, einschließlich übernommener Erik-Texte? Danach werden wieder die mitgelieferten Texte angezeigt.</string>
+    <string name="reset_custom_game_info">Alle eigenen deutschen und englischen Kartentexte dieses Spiels löschen, einschließlich übernommener Erik-Texte? Danach werden wieder die mitgelieferten Texte angezeigt.</string>
+    <string name="reset_translations">Zurücksetzen</string>
+    <string name="expanded">Aufgeklappt</string>
+    <string name="collapsed">Zugeklappt</string>
+    <string name="expand">Aufklappen</string>
+    <string name="collapse">Zuklappen</string>
+    <string name="symbol_expand" translatable="false">▾</string>
+    <string name="symbol_collapse" translatable="false">▴</string>
     <string name="reset_seen_cards">Gesehene Karten zurücksetzen</string>
     <string name="texts_per_card">Kartentexte pro Karte: %1$d</string>
     <string name="restore_default_text_count">Standard (%1$d) wiederherstellen</string>
@@ -42,6 +60,8 @@
     <string name="mode_edited_only">Ausschließlich bearbeitete</string>
     <string name="edit_card_text_title">Kartentext bearbeiten (%1$s)</string>
     <string name="own_translation_info">Gespeichert wird nur deine eigene Lokalisierung.</string>
+    <string name="add_translation">Übersetzung hinzufügen</string>
+    <string name="add_translation_info">Für %1$s fehlt eine Übersetzung. Gib unten deine eigene Übersetzung des folgenden Textes ein.</string>
     <string name="own_card_text">Eigener Kartentext</string>
     <string name="save">Speichern</string>
     <string name="delete_own_translation">Eigene löschen</string>

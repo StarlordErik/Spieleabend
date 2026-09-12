@@ -20,6 +20,7 @@ import de.kaserik.impulse.frontend.cards.CardTextsScreen
 import de.kaserik.impulse.frontend.game.GameScreen
 import de.kaserik.impulse.frontend.settings.AppSettingsDialog
 import de.kaserik.impulse.frontend.settings.AppSettingsViewModel
+import de.kaserik.impulse.frontend.settings.CustomTranslationActions
 import de.kaserik.impulse.frontend.start.StartScreen
 import de.kaserik.impulse.frontend.start.StartScreenUiState
 import de.kaserik.impulse.frontend.start.StartViewModel
@@ -62,6 +63,10 @@ fun ImpulseApp(
                     onDeveloperModeChanged = appSettingsViewModel::setDeveloperMode,
                     onLanguageChanged = appSettingsViewModel::setLanguage,
                     onResetAllCards = appSettingsViewModel::resetAllCards,
+                    customTranslationActions = CustomTranslationActions(
+                        onApplyErikTranslations = appSettingsViewModel::applyErikTranslations,
+                        onResetCustomTranslations = appSettingsViewModel::resetCustomTranslations,
+                    ),
                     onDismiss = { showSettings = false },
                 )
             }

@@ -33,6 +33,15 @@ interface LokalisierungDao {
         sprache: de.kaserik.impulse.common.Sprache,
     )
 
+    @Query(CardTextTranslationQueries.ERIK_TRANSLATIONS)
+    suspend fun erikCardTextTranslations(
+        spielId: Int?,
+        ueberschreiben: Boolean,
+    ): List<TranslationEntity>
+
+    @Query(CardTextTranslationQueries.RESET_CUSTOM_TRANSLATIONS)
+    suspend fun resetCustomCardTextTranslations(spielId: Int?)
+
     @Query("SELECT * FROM lokalisierung WHERE id = :lokalisierungId LIMIT 1")
     suspend fun lokalisierung(lokalisierungId: Int): LokalisierungEntity?
 

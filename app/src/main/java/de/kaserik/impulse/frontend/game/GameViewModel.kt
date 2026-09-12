@@ -16,8 +16,7 @@ import de.kaserik.impulse.domain.model.GezogeneKarte
 import de.kaserik.impulse.domain.model.Spiel
 import de.kaserik.impulse.domain.repository.AppSettingsRepository
 import de.kaserik.impulse.domain.usecase.DrawCardResult
-import de.kaserik.impulse.domain.usecase.DrawNextCardFromCategoryUseCase
-import de.kaserik.impulse.domain.usecase.DrawNextRandomCardUseCase
+import de.kaserik.impulse.domain.usecase.DrawNextCardUseCase
 import de.kaserik.impulse.domain.usecase.GetOrDrawInitialCardUseCase
 import de.kaserik.impulse.domain.usecase.ResetAllCardsForGameUseCase
 import de.kaserik.impulse.domain.usecase.ResetSeenCardsUseCase
@@ -41,8 +40,7 @@ import kotlinx.coroutines.sync.withLock
 @Suppress("TooManyFunctions")
 class GameViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val drawNextCardFromCategory: DrawNextCardFromCategoryUseCase,
-    private val drawNextRandomCard: DrawNextRandomCardUseCase,
+    private val drawNextCard: DrawNextCardUseCase,
     private val getOrDrawInitialCard: GetOrDrawInitialCardUseCase,
     private val showPreviousCard: ShowPreviousCardUseCase,
     private val setCardTextPlayedState: SetCardTextPlayedStateUseCase,
@@ -55,6 +53,7 @@ class GameViewModel @Inject constructor(
 ) : ViewModel() {
     private val gameIdArg: String? = savedStateHandle[GAME_ID_ARG]
     private val gameId: Int = gameIdArg?.toIntOrNull() ?: DEFAULT_GAME_ID
+    private var lastDrawCategoryId = appSettingsRepository.getLastDrawCategoryId(gameId)
     private var sprache: Sprache = Sprache.DE
     private val cardChangeMutex = Mutex()
     private var funFactsModeEnabled = true
@@ -98,12 +97,7 @@ class GameViewModel @Inject constructor(
     fun selectKategorie(kategorieId: Int) {
         viewModelScope.launch {
             cardChangeMutex.withLock {
-                showCard(
-                    drawNextCardFromCategory(
-                        gameId = gameId,
-                        kategorieId = kategorieId,
-                    ),
-                )
+                drawCard(kategorieId)
             }
         }
     }
@@ -111,9 +105,28 @@ class GameViewModel @Inject constructor(
     fun selectRandom() {
         viewModelScope.launch {
             cardChangeMutex.withLock {
-                showCard(drawNextRandomCard(gameId))
+                drawCard(categoryId = null)
             }
         }
+    }
+
+    fun selectNextFromLastCategory() {
+        viewModelScope.launch {
+            cardChangeMutex.withLock { drawFromLastCategory() }
+        }
+    }
+
+    private suspend fun drawFromLastCategory() {
+        val state = _uiState.value as? GameScreenUiState.Loaded ?: return
+        val categoryId = lastDrawCategoryId?.takeIf { id -> state.game.kategorien.any { it.id == id } }
+        drawCard(categoryId)
+    }
+
+    private suspend fun drawCard(categoryId: Int?) {
+        val nextCard = drawNextCard(gameId, categoryId)
+        lastDrawCategoryId = categoryId
+        appSettingsRepository.setLastDrawCategoryId(gameId, categoryId)
+        showCard(nextCard)
     }
 
     fun setFunFactsModeEnabled(enabled: Boolean) {
@@ -158,6 +171,17 @@ class GameViewModel @Inject constructor(
     fun setKartentextGespielt(
         cardTextId: Int,
         gespielt: Boolean,
+    ) = updatePlayedState(cardTextId, gespielt, drawNext = false)
+
+    fun setKartentextManuellGespielt(
+        cardTextId: Int,
+        gespielt: Boolean,
+    ) = updatePlayedState(cardTextId, gespielt, drawNext = gespielt)
+
+    private fun updatePlayedState(
+        cardTextId: Int,
+        gespielt: Boolean,
+        drawNext: Boolean,
     ) {
         val currentState = _uiState.value as? GameScreenUiState.Loaded
         val aktuellerKartentext =
@@ -175,10 +199,15 @@ class GameViewModel @Inject constructor(
                 )
 
             viewModelScope.launch {
-                setCardTextPlayedState(
-                    cardTextId = cardTextId,
-                    gespielt = gespielt,
-                )
+                cardChangeMutex.withLock {
+                    setCardTextPlayedState(cardTextId = cardTextId, gespielt = gespielt)
+                    val latestState = _uiState.value as? GameScreenUiState.Loaded
+                    if (drawNext && latestState?.game?.aktuelleKarte?.instanceId ==
+                        currentState.game.aktuelleKarte.instanceId
+                    ) {
+                        drawFromLastCategory()
+                    }
+                }
             }
         }
     }
@@ -222,6 +251,24 @@ class GameViewModel @Inject constructor(
         viewModelScope.launch {
             cardChangeMutex.withLock {
                 updateCardTextSettings.setCustomTranslation(cardTextId, sprache, text)
+                showCard(getOrDrawInitialCard(gameId))
+            }
+        }
+    }
+
+    fun applyErikTranslations(overwriteExisting: Boolean) {
+        viewModelScope.launch {
+            cardChangeMutex.withLock {
+                updateCardTextSettings.applyErikTranslations(gameId, overwriteExisting)
+                showCard(getOrDrawInitialCard(gameId))
+            }
+        }
+    }
+
+    fun resetCustomTranslations() {
+        viewModelScope.launch {
+            cardChangeMutex.withLock {
+                updateCardTextSettings.resetCustomTranslations(gameId)
                 showCard(getOrDrawInitialCard(gameId))
             }
         }

@@ -26,6 +26,13 @@ class UpdateCardTextSettingsUseCase @Inject constructor(
         text: String?,
     ) = repository.setCustomCardTextTranslation(cardTextId, language, text)
 
+    suspend fun applyErikTranslations(
+        gameId: Int?,
+        overwriteExisting: Boolean,
+    ) = repository.applyErikCardTextTranslations(gameId, overwriteExisting)
+
+    suspend fun resetCustomTranslations(gameId: Int?) = repository.resetCustomCardTextTranslations(gameId)
+
     suspend fun setDeletedMode(
         gameId: Int,
         mode: GeloeschteKartentexteModus,

@@ -475,6 +475,10 @@ class DrawNextCardUseCaseTest {
 
         override suspend fun resetAllCardsForAllGames() = Unit
 
+        override suspend fun applyErikCardTextTranslations(gameId: Int?, overwriteExisting: Boolean) = Unit
+
+        override suspend fun resetCustomCardTextTranslations(gameId: Int?) = Unit
+
         override suspend fun setTextsPerCardOverride(gameId: Int, value: Int?) {
             spiel = spiel.copy(texteProKarte = value ?: spiel.standardTexteProKarte)
         }

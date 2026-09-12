@@ -11,6 +11,7 @@ internal object PreferenceKeys {
     const val FUN_FACTS_MODE_KEY = "fun_facts_mode_enabled"
     const val FUN_FACTS_SESSION_KEY = "fun_facts_session"
     const val LANGUAGE_KEY = "language"
+    const val LAST_DRAW_CATEGORY_PREFIX = "last_draw_category_"
 }
 
 internal object AssetPaths {

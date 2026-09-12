@@ -1,8 +1,8 @@
 package de.kaserik.impulse.frontend.game
 
-import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import androidx.activity.compose.LocalActivity
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -11,14 +11,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-
-internal enum class FunFactsLandscapeTarget {
-    Name,
-    Answer,
-}
+import de.kaserik.impulse.R
+import de.kaserik.impulse.frontend.theme.ImpulseTheme
 
 internal fun landscapeDrawingTarget(
     previousTarget: FunFactsLandscapeTarget?,
@@ -43,20 +42,6 @@ internal fun rememberFunFactsLandscapeTarget(
     val target = landscapeDrawingTarget(previousTarget, rotationEnabled, isLandscape, hasName)
     SideEffect { previousTarget = target }
 
-    DisposableEffect(activity, rotationEnabled) {
-        activity?.requestedOrientation = if (rotationEnabled) {
-            ActivityInfo.SCREEN_ORIENTATION_SENSOR
-        } else {
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        }
-        onDispose {
-            // A rotation recreates the activity; keep its orientation request during that handoff.
-            if (activity != null && !activity.isChangingConfigurations) {
-                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            }
-        }
-    }
-
     val fullscreen = target != null
     DisposableEffect(activity, fullscreen) {
         val controller = activity?.window?.let { window ->
@@ -78,4 +63,17 @@ internal fun rememberFunFactsLandscapeTarget(
         }
     }
     return target
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun RememberFunFactsLandscapeTargetPreview() {
+    ImpulseTheme {
+        val target = rememberFunFactsLandscapeTarget(rotationEnabled = false, hasName = false)
+        Text(
+            stringResource(
+                if (target == FunFactsLandscapeTarget.Answer) R.string.answer_label else R.string.player_name_label,
+            ),
+        )
+    }
 }

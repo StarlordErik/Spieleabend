@@ -36,6 +36,7 @@ import de.kaserik.impulse.common.Sprache
 import de.kaserik.impulse.domain.model.BearbeiteteKartentexteModus
 import de.kaserik.impulse.domain.model.FavoritenModus
 import de.kaserik.impulse.domain.model.GeloeschteKartentexteModus
+import de.kaserik.impulse.frontend.game.CardTextMarker
 import de.kaserik.impulse.frontend.resources.displayNameRes
 import de.kaserik.impulse.frontend.theme.ImpulseTheme
 import kotlin.math.roundToInt
@@ -48,6 +49,7 @@ fun AppSettingsDialog(
     onLanguageChanged: (Sprache) -> Unit,
     onResetAllCards: () -> Unit,
     onDismiss: () -> Unit,
+    customTranslationActions: CustomTranslationActions = CustomTranslationActions(),
 ) {
     var infoText by remember { mutableStateOf<Int?>(null) }
 
@@ -67,6 +69,9 @@ fun AppSettingsDialog(
                         onClick = { onLanguageChanged(availableLanguage) },
                     )
                 }
+                HorizontalDivider()
+                Text(stringResource(R.string.edited_card_texts), style = MaterialTheme.typography.titleSmall)
+                CustomTranslationSettings(allGames = true, actions = customTranslationActions)
                 HorizontalDivider()
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -168,43 +173,7 @@ fun GameSettingsDialog(
                     }
                     HorizontalDivider()
                 }
-                Text(
-                    stringResource(R.string.deleted_card_texts),
-                    style = MaterialTheme.typography.titleSmall
-                )
-                GeloeschteKartentexteModus.entries.forEach { mode ->
-                    SettingsRadioOption(
-                        label = stringResource(mode.displayNameRes()),
-                        selected = settings.deletedCardTextsMode == mode,
-                        onClick = { settingsActions.onDeletedCardTextsModeChanged(mode) },
-                    )
-                }
-                HorizontalDivider()
-                Text(
-                    stringResource(R.string.favorites),
-                    style = MaterialTheme.typography.titleSmall
-                )
-                FavoritenModus.entries.forEach { mode ->
-                    SettingsRadioOption(
-                        label = stringResource(mode.displayNameRes()),
-                        selected = settings.favoritesMode == mode,
-                        onClick = { settingsActions.onFavoritesModeChanged(mode) },
-                    )
-                }
-                if (settings.developerMode) {
-                    HorizontalDivider()
-                    Text(
-                        stringResource(R.string.edited_card_texts),
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    BearbeiteteKartentexteModus.entries.forEach { mode ->
-                        SettingsRadioOption(
-                            label = stringResource(mode.displayNameRes()),
-                            selected = settings.editedCardTextsMode == mode,
-                            onClick = { settingsActions.onEditedCardTextsModeChanged(mode) },
-                        )
-                    }
-                }
+                CardTextSymbolSettings(settings, settingsActions)
                 HorizontalDivider()
                 SettingsActionRow(
                     label = stringResource(R.string.reset_seen_cards),
@@ -276,6 +245,93 @@ fun GameSettingsDialog(
     }
 }
 
+@Composable
+private fun CardTextSymbolSettings(
+    settings: GameSettingsState,
+    settingsActions: GameSettingsActions,
+) {
+    ExpandableSymbolSettings(
+        label = stringResource(R.string.deleted_card_texts),
+        summary = stringResource(settings.deletedCardTextsMode.displayNameRes()),
+        marker = CardTextMarker.BROKEN_HEART,
+    ) {
+        GeloeschteKartentexteModus.entries.forEach { mode ->
+            SettingsRadioOption(
+                label = stringResource(mode.displayNameRes()),
+                selected = settings.deletedCardTextsMode == mode,
+                onClick = { settingsActions.onDeletedCardTextsModeChanged(mode) },
+            )
+        }
+    }
+    HorizontalDivider()
+    ExpandableSymbolSettings(
+        label = stringResource(R.string.favorites),
+        summary = stringResource(settings.favoritesMode.displayNameRes()),
+        marker = CardTextMarker.STAR,
+    ) {
+        FavoritenModus.entries.forEach { mode ->
+            SettingsRadioOption(
+                label = stringResource(mode.displayNameRes()),
+                selected = settings.favoritesMode == mode,
+                onClick = { settingsActions.onFavoritesModeChanged(mode) },
+            )
+        }
+    }
+    HorizontalDivider()
+    EditedCardTextSettings(settings, settingsActions)
+}
+
+@Composable
+private fun EditedCardTextSettings(
+    settings: GameSettingsState,
+    settingsActions: GameSettingsActions,
+) {
+    ExpandableSymbolSettings(
+        label = stringResource(R.string.edited_card_texts),
+        summary = if (settings.developerMode) {
+            stringResource(settings.editedCardTextsMode.displayNameRes())
+        } else {
+            stringResource(R.string.custom_translation_actions)
+        },
+        marker = CardTextMarker.PENCIL,
+    ) {
+        if (settings.developerMode) {
+            BearbeiteteKartentexteModus.entries.forEach { mode ->
+                SettingsRadioOption(
+                    label = stringResource(mode.displayNameRes()),
+                    selected = settings.editedCardTextsMode == mode,
+                    onClick = { settingsActions.onEditedCardTextsModeChanged(mode) },
+                )
+            }
+        }
+        CustomTranslationSettings(allGames = false, actions = settingsActions.customTranslationActions)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun CardTextSymbolSettingsPreview() {
+    ImpulseTheme {
+        Column {
+            CardTextSymbolSettings(
+                settings = GameSettingsState(textsPerCard = 1, defaultTextsPerCard = 1, developerMode = true),
+                settingsActions = GameSettingsActions(),
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun EditedCardTextSettingsPreview() {
+    ImpulseTheme {
+        EditedCardTextSettings(
+            settings = GameSettingsState(textsPerCard = 1, defaultTextsPerCard = 1, developerMode = true),
+            settingsActions = GameSettingsActions(),
+        )
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun GameSettingsDialogPreview() {
@@ -314,7 +370,7 @@ private fun SettingsActionRow(
 }
 
 @Composable
-private fun SettingsRadioOption(
+internal fun SettingsRadioOption(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,

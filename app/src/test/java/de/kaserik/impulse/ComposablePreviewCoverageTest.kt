@@ -52,11 +52,12 @@ class ComposablePreviewCoverageTest {
         return composableFunctions
             .asSequence()
             .filterNot { sourceFunction -> sourceFunction.hasPreview }
-            .filterNot { sourceFunction -> "${sourceFunction.name}Preview" in previewFunctionNames }
+            .filterNot { sourceFunction -> sourceFunction.previewName in previewFunctionNames }
             .map { sourceFunction ->
                 MissingPreview(
                     filePath = relativeTo(moduleRoot).path,
                     functionName = sourceFunction.name,
+                    previewName = sourceFunction.previewName,
                     line = sourceFunction.line,
                 )
             }
@@ -71,12 +72,12 @@ class ComposablePreviewCoverageTest {
         }
 
     private fun List<MissingPreview>.failureMessage(): String = buildString {
-        appendLine("Each @Composable must have a sibling @Preview function named <ComposableName>Preview.")
+        appendLine("Each @Composable must have a sibling @Preview named <CapitalizedComposableName>Preview.")
         appendLine("Missing previews:")
         this@failureMessage.forEach { missingPreview ->
             appendLine(
                 "${missingPreview.filePath}:${missingPreview.line} " +
-                    "${missingPreview.functionName} -> ${missingPreview.functionName}Preview",
+                    "${missingPreview.functionName} -> ${missingPreview.previewName}",
             )
         }
     }
@@ -88,11 +89,13 @@ class ComposablePreviewCoverageTest {
     ) {
         val isComposable: Boolean = composableAnnotationRegex.containsMatchIn(annotations)
         val hasPreview: Boolean = previewAnnotationRegex.containsMatchIn(annotations)
+        val previewName: String = name.replaceFirstChar { it.uppercaseChar() } + "Preview"
     }
 
     private data class MissingPreview(
         val filePath: String,
         val functionName: String,
+        val previewName: String,
         val line: Int,
     )
 

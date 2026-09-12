@@ -9,6 +9,7 @@ import de.kaserik.impulse.common.PreferenceKeys.DEVELOPER_MODE_KEY
 import de.kaserik.impulse.common.PreferenceKeys.FUN_FACTS_MODE_KEY
 import de.kaserik.impulse.common.PreferenceKeys.FUN_FACTS_SESSION_KEY
 import de.kaserik.impulse.common.PreferenceKeys.LANGUAGE_KEY
+import de.kaserik.impulse.common.PreferenceKeys.LAST_DRAW_CATEGORY_PREFIX
 import de.kaserik.impulse.common.PreferenceKeys.PREFERENCES_NAME
 import de.kaserik.impulse.common.Sprache
 import de.kaserik.impulse.domain.repository.AppSettingsRepository
@@ -61,6 +62,18 @@ class SharedPreferencesAppSettingsRepository @Inject constructor(
         preferences.edit { putString(FUN_FACTS_SESSION_KEY, serializedSession) }
     }
 
+    override fun getLastDrawCategoryId(gameId: Int): Int? {
+        val key = LAST_DRAW_CATEGORY_PREFIX + gameId
+        return if (preferences.contains(key)) preferences.getInt(key, 0) else null
+    }
+
+    override fun setLastDrawCategoryId(gameId: Int, categoryId: Int?) {
+        preferences.edit {
+            val key = LAST_DRAW_CATEGORY_PREFIX + gameId
+            if (categoryId == null) remove(key) else putInt(key, categoryId)
+        }
+    }
+
     private fun booleanPreferenceFlow(
         key: String,
         defaultValue: Boolean,
@@ -77,13 +90,13 @@ class SharedPreferencesAppSettingsRepository @Inject constructor(
     private fun readLanguage(): Sprache {
         val storedLanguage = preferences.getString(LANGUAGE_KEY, null)
             ?.let { value -> Sprache.entries.firstOrNull { language -> language.name == value } }
-        if (storedLanguage?.auswaehlbar == true) {
-            return storedLanguage
+        return when {
+            storedLanguage == Sprache.ERIK -> Sprache.DE
+            storedLanguage?.auswaehlbar == true -> storedLanguage
+            else -> Sprache.AuswaehlbareSprachen.firstOrNull { language ->
+                language.name == Locale.getDefault().language.uppercase(ROOT)
+            } ?: Sprache.DE
         }
-
-        return Sprache.AuswaehlbareSprachen.firstOrNull { language ->
-            language.name == Locale.getDefault().language.uppercase(ROOT)
-        } ?: Sprache.DE
     }
 
 }

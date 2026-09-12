@@ -23,6 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +46,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.kaserik.impulse.R
 import de.kaserik.impulse.frontend.settings.GameSettingsActions
+import de.kaserik.impulse.frontend.settings.CustomTranslationActions
 import de.kaserik.impulse.frontend.settings.GameSettingsState
 import de.kaserik.impulse.frontend.settings.GameSettingsDialog
 import de.kaserik.impulse.frontend.theme.CategoryTabColors
@@ -75,6 +77,7 @@ fun GameScreen(
                     onKategorieSelected = viewModel::selectKategorie,
                     onRandomSelected = viewModel::selectRandom,
                     onPreviousSelected = viewModel::selectPrevious,
+                    onNextSelected = viewModel::selectNextFromLastCategory,
                 ),
                 settingsActions = GameSettingsActions(
                     onResetSeenCards = viewModel::resetSeenCards,
@@ -85,9 +88,14 @@ fun GameScreen(
                     onFavoritesModeChanged = viewModel::setFavoritenModus,
                     onEditedCardTextsModeChanged = viewModel::setBearbeiteteKartentexteModus,
                     onFunFactsModeChanged = viewModel::setFunFactsModeEnabled,
+                    customTranslationActions = CustomTranslationActions(
+                        onApplyErikTranslations = viewModel::applyErikTranslations,
+                        onResetCustomTranslations = viewModel::resetCustomTranslations,
+                    ),
                 ),
                 cardTextActions = CardTextActions(
                     onKartentextPlayedStateChanged = viewModel::setKartentextGespielt,
+                    onKartentextManuallyPlayedStateChanged = viewModel::setKartentextManuellGespielt,
                     onKartentextDeletedStateChanged = viewModel::setKartentextGeloescht,
                     onKartentextFavoriteStateChanged = viewModel::setKartentextFavorit,
                 ),
@@ -184,108 +192,110 @@ private fun GameScreenContent(
         onKartentextEditRequested = { editingCardTextId = it },
     )
 
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = TableBackground,
-    ) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(GameTableBrush)
-                .safeDrawingPadding(),
+    CompositionLocalProvider(LocalCardTimerPaused provides (showSettings || editingCardTextId != null)) {
+        Surface(
+            modifier = modifier.fillMaxSize(),
+            color = TableBackground,
         ) {
-            val horizontalPadding = if (maxWidth < CompactWidthBreakpoint) {
-                CompactHorizontalPadding
-            } else {
-                ExpandedHorizontalPadding
-            }
-
-            if (funFactsActive) {
-                FunFactsPlayArea(
-                    uiState = uiState,
-                    session = activeFunFactsSession,
-                    swipeControls = swipeControls,
-                    cardTextActions = editableCardTextActions,
-                    developerMode = developerMode,
-                    transitionActions = FunFactsTransitionActions(
-                        onQuestionTransitionStateChanged = { active ->
-                            funFactsQuestionTransitionActive = active
-                        },
-                        onCategoryTabsVisibilityChanged = { visible ->
-                            funFactsCategoryTabsVisible = visible
-                        },
-                        onNextCard = navigationActions.onRandomSelected,
-                    ),
-                    gameContentHorizontalPadding = horizontalPadding,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            top = 24.dp,
-                            bottom = 24.dp,
-                        ),
-                )
-            } else {
-                GamePlayArea(
-                    spielName = uiState.spielName,
-                    aktuelleKarte = uiState.aktuelleKarte,
-                    kategorien = uiState.kategorien,
-                    swipeControls = swipeControls,
-                    cardTextActions = editableCardTextActions,
-                    developerMode = developerMode,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            start = horizontalPadding,
-                            top = 24.dp,
-                            end = horizontalPadding,
-                            bottom = 24.dp,
-                        ),
-                )
-            }
-
-            val categoryTabsVisible =
-                !funFactsActive ||
-                        activeFunFactsSession.selectingQuestion ||
-                        funFactsCategoryTabsVisible
-            AnimatedVisibility(
-                visible = categoryTabsVisible,
-                modifier = Modifier.fillMaxSize(),
-                enter = fadeIn(tween(CATEGORY_TAB_TRANSITION_DURATION_MILLIS)),
-                exit = fadeOut(tween(CATEGORY_TAB_TRANSITION_DURATION_MILLIS)),
-            ) {
-                CategoryTabs(
-                    kategorien = uiState.kategorien,
-                    modifier = Modifier.fillMaxSize(),
-                    state = CategoryTabsState(
-                        highlightedTarget = swipeState.highlightedTarget,
-                        previousEnabled = uiState.hasPreviousCard,
-                        interactionsEnabled = !swipeState.swipeInteractionLocked &&
-                                !funFactsQuestionTransitionActive,
-                        dimWhenInteractionsDisabled = !funFactsActive,
-                    ),
-                    actions = CategoryTabsActions(
-                        onKategorieSelected = { kategorieId ->
-                            swipeState.requestSwipe(CardSwipeTarget.Category(kategorieId))
-                        },
-                        onRandomSelected = { swipeState.requestSwipe(CardSwipeTarget.Random) },
-                        onPreviousSelected = { swipeState.requestSwipe(CardSwipeTarget.Previous) },
-                        onTabBoundsChanged = swipeState::updateTabBounds,
-                    ),
-                )
-            }
-
-            IconButton(
-                onClick = { showSettings = true },
+            BoxWithConstraints(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(6.dp)
-                    .semantics { contentDescription = accessibilityLabel },
+                    .fillMaxSize()
+                    .background(GameTableBrush)
+                    .safeDrawingPadding(),
             ) {
-                Text(
-                    text = stringResource(R.string.symbol_settings),
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.headlineMedium,
-                )
+                val horizontalPadding = if (maxWidth < CompactWidthBreakpoint) {
+                    CompactHorizontalPadding
+                } else {
+                    ExpandedHorizontalPadding
+                }
+
+                if (funFactsActive) {
+                    FunFactsPlayArea(
+                        uiState = uiState,
+                        session = activeFunFactsSession,
+                        swipeControls = swipeControls,
+                        cardTextActions = editableCardTextActions,
+                        developerMode = developerMode,
+                        transitionActions = FunFactsTransitionActions(
+                            onQuestionTransitionStateChanged = { active ->
+                                funFactsQuestionTransitionActive = active
+                            },
+                            onCategoryTabsVisibilityChanged = { visible ->
+                                funFactsCategoryTabsVisible = visible
+                            },
+                            onNextCard = navigationActions.onNextSelected,
+                        ),
+                        gameContentHorizontalPadding = horizontalPadding,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(
+                                top = 24.dp,
+                                bottom = 24.dp,
+                            ),
+                    )
+                } else {
+                    GamePlayArea(
+                        spielName = uiState.spielName,
+                        aktuelleKarte = uiState.aktuelleKarte,
+                        kategorien = uiState.kategorien,
+                        swipeControls = swipeControls,
+                        cardTextActions = editableCardTextActions,
+                        developerMode = developerMode,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(
+                                start = horizontalPadding,
+                                top = 24.dp,
+                                end = horizontalPadding,
+                                bottom = 24.dp,
+                            ),
+                    )
+                }
+
+                val categoryTabsVisible =
+                    !funFactsActive ||
+                            activeFunFactsSession.selectingQuestion ||
+                            funFactsCategoryTabsVisible
+                AnimatedVisibility(
+                    visible = categoryTabsVisible,
+                    modifier = Modifier.fillMaxSize(),
+                    enter = fadeIn(tween(CATEGORY_TAB_TRANSITION_DURATION_MILLIS)),
+                    exit = fadeOut(tween(CATEGORY_TAB_TRANSITION_DURATION_MILLIS)),
+                ) {
+                    CategoryTabs(
+                        kategorien = uiState.kategorien,
+                        modifier = Modifier.fillMaxSize(),
+                        state = CategoryTabsState(
+                            highlightedTarget = swipeState.highlightedTarget,
+                            previousEnabled = uiState.hasPreviousCard,
+                            interactionsEnabled = !swipeState.swipeInteractionLocked &&
+                                    !funFactsQuestionTransitionActive,
+                            dimWhenInteractionsDisabled = !funFactsActive,
+                        ),
+                        actions = CategoryTabsActions(
+                            onKategorieSelected = { kategorieId ->
+                                swipeState.requestSwipe(CardSwipeTarget.Category(kategorieId))
+                            },
+                            onRandomSelected = { swipeState.requestSwipe(CardSwipeTarget.Random) },
+                            onPreviousSelected = { swipeState.requestSwipe(CardSwipeTarget.Previous) },
+                            onTabBoundsChanged = swipeState::updateTabBounds,
+                        ),
+                    )
+                }
+
+                IconButton(
+                    onClick = { showSettings = true },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .semantics { contentDescription = accessibilityLabel },
+                ) {
+                    Text(
+                        text = stringResource(R.string.symbol_settings),
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                }
             }
         }
     }

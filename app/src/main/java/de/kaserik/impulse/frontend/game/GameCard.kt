@@ -41,10 +41,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.colorResource
@@ -72,10 +68,7 @@ import de.kaserik.impulse.frontend.theme.CardBackground
 import de.kaserik.impulse.frontend.theme.CardTextColor
 import de.kaserik.impulse.frontend.theme.CardTextPanelColors
 import de.kaserik.impulse.frontend.theme.ImpulseTheme
-import kotlin.math.PI
-import kotlin.math.cos
 import kotlin.math.pow
-import kotlin.math.sin
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 
@@ -95,19 +88,15 @@ internal fun GameCard(
     val tooltipState = rememberPlayedTooltipState(cardInstanceId)
     val einzelnerKartentext = kartentexte.singleOrNull()
 
-    if (idleEffectsEnabled) {
-        CardIdlePlayedEffect(
-            cardInstanceId = cardInstanceId,
-            kartentext = einzelnerKartentext,
-            onKartentextPlayed = { kartentextId ->
-                tooltipState.show()
-                cardTextActions.onKartentextPlayedStateChanged(
-                    kartentextId,
-                    true,
-                )
-            },
-        )
-    }
+    CardIdlePlayedEffect(
+        cardInstanceId = cardInstanceId,
+        kartentext = einzelnerKartentext,
+        enabled = idleEffectsEnabled && interactionsEnabled && einzelnerKartentext?.id !in hiddenCardTextIds,
+        onKartentextPlayed = { kartentextId ->
+            tooltipState.show()
+            cardTextActions.onKartentextPlayedStateChanged(kartentextId, true)
+        },
+    )
 
     Surface(
         modifier = modifier,
@@ -258,40 +247,6 @@ private fun BoxScope.PlayedTooltip(visible: Boolean) {
 }
 
 @Composable
-private fun CardIdlePlayedEffect(
-    cardInstanceId: Long,
-    kartentext: GameKartentextUiModel?,
-    onKartentextPlayed: (Int) -> Unit,
-) {
-    LaunchedEffect(cardInstanceId, kartentext?.id, kartentext?.gespielt) {
-        if (kartentext == null || kartentext.gespielt) {
-            return@LaunchedEffect
-        }
-
-        delay(SINGLE_CARD_IDLE_PLAY_DELAY_MILLIS.milliseconds)
-        onKartentextPlayed(kartentext.id)
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun CardIdlePlayedEffectPreview() {
-    ImpulseTheme {
-        CardIdlePlayedEffect(
-            cardInstanceId = 1,
-            kartentext = null,
-            onKartentextPlayed = {},
-        )
-        Box(
-            modifier = Modifier
-                .width(320.dp)
-                .height(124.dp)
-                .padding(24.dp),
-        )
-    }
-}
-
-@Composable
 private fun rememberPlayedTooltipState(cardInstanceId: Long): PlayedTooltipState {
     val tooltipState = remember(cardInstanceId) { PlayedTooltipState() }
 
@@ -310,8 +265,7 @@ private fun rememberPlayedTooltipState(cardInstanceId: Long): PlayedTooltipState
 
 @Preview(showBackground = true)
 @Composable
-@Suppress("ComposableNaming")
-private fun rememberPlayedTooltipStatePreview() {
+private fun RememberPlayedTooltipStatePreview() {
     ImpulseTheme {
         val tooltipState = rememberPlayedTooltipState(cardInstanceId = 1)
         Box(
@@ -372,7 +326,7 @@ internal fun CardTextPanel(
                 if (nextPlayedState) {
                     onKartentextMarkedAsPlayed()
                 }
-                cardTextActions.onKartentextPlayedStateChanged(
+                cardTextActions.onKartentextManuallyPlayedStateChanged(
                     kartentext.id,
                     nextPlayedState,
                 )
@@ -460,19 +414,13 @@ private fun BrokenHeartToggle(
         touchSize = touchSize,
         modifier = modifier,
     ) { marked ->
-        Canvas(modifier = Modifier.size(iconSize)) {
-            val (left, right) = brokenHeartPaths(size.width, size.height)
-            val style = if (marked) Fill else Stroke(width = MarkerStrokeWidth.toPx())
-            drawPath(left, color = inkColor, style = style)
-            drawPath(right, color = inkColor, style = style)
-            if (marked) {
-                drawPath(
-                    path = brokenHeartCrackPath(size.width, size.height),
-                    color = backgroundColor,
-                    style = Stroke(width = FilledHeartCrackWidth.toPx()),
-                )
-            }
-        }
+        CardTextMarkerIcon(
+            marker = CardTextMarker.BROKEN_HEART,
+            checked = marked,
+            modifier = Modifier.size(iconSize),
+            color = inkColor,
+            backgroundColor = backgroundColor,
+        )
     }
 }
 
@@ -502,23 +450,12 @@ private fun StarToggle(
         touchSize = touchSize,
         modifier = modifier,
     ) { marked ->
-        Canvas(modifier = Modifier.size(iconSize)) {
-            val path = Path()
-            repeat(STAR_POINT_COUNT * 2) { index ->
-                val radius =
-                    if (index % 2 == 0) size.minDimension * 0.48f else size.minDimension * 0.21f
-                val angle = -PI / 2.0 + index * PI / STAR_POINT_COUNT
-                val x = size.width / 2f + (cos(angle) * radius).toFloat()
-                val y = size.height / 2f + (sin(angle) * radius).toFloat()
-                if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-            }
-            path.close()
-            drawPath(
-                path = path,
-                color = color,
-                style = if (marked) Fill else Stroke(width = MarkerStrokeWidth.toPx()),
-            )
-        }
+        CardTextMarkerIcon(
+            marker = CardTextMarker.STAR,
+            checked = marked,
+            modifier = Modifier.size(iconSize),
+            color = color,
+        )
     }
 }
 
@@ -551,30 +488,12 @@ private fun PencilToggle(
         touchSize = touchSize,
         modifier = modifier,
     ) { marked ->
-        Canvas(modifier = Modifier.size(iconSize)) {
-            val style = if (marked) Fill else Stroke(width = MarkerStrokeWidth.toPx())
-            rotate(degrees = -45f) {
-                drawRect(
-                    color = inkColor,
-                    topLeft = androidx.compose.ui.geometry.Offset(
-                        size.width * 0.38f,
-                        size.height * 0.12f
-                    ),
-                    size = androidx.compose.ui.geometry.Size(
-                        size.width * 0.24f,
-                        size.height * 0.58f
-                    ),
-                    style = style,
-                )
-                val tip = Path().apply {
-                    moveTo(size.width * 0.38f, size.height * 0.7f)
-                    lineTo(size.width * 0.62f, size.height * 0.7f)
-                    lineTo(size.width * 0.5f, size.height * 0.92f)
-                    close()
-                }
-                drawPath(tip, color = inkColor, style = style)
-            }
-        }
+        CardTextMarkerIcon(
+            marker = CardTextMarker.PENCIL,
+            checked = marked,
+            modifier = Modifier.size(iconSize),
+            color = inkColor,
+        )
     }
 }
 
@@ -672,71 +591,6 @@ private fun MissingTranslationMark(
 private fun MissingTranslationMarkPreview() {
     ImpulseTheme { MissingTranslationMark() }
 }
-
-private fun brokenHeartPaths(
-    width: Float,
-    height: Float,
-): Pair<Path, Path> {
-    val left = Path().apply {
-        moveTo(width * 0.46f, height * 0.88f)
-        cubicTo(
-            width * 0.34f,
-            height * 0.76f,
-            width * 0.06f,
-            height * 0.58f,
-            width * 0.08f,
-            height * 0.3f
-        )
-        cubicTo(
-            width * 0.1f,
-            height * 0.06f,
-            width * 0.39f,
-            height * 0.02f,
-            width * 0.5f,
-            height * 0.24f
-        )
-        lineTo(width * 0.42f, height * 0.43f)
-        lineTo(width * 0.52f, height * 0.53f)
-        lineTo(width * 0.4f, height * 0.67f)
-        close()
-    }
-    val right = Path().apply {
-        moveTo(width * 0.54f, height * 0.88f)
-        cubicTo(
-            width * 0.66f,
-            height * 0.76f,
-            width * 0.94f,
-            height * 0.58f,
-            width * 0.92f,
-            height * 0.3f
-        )
-        cubicTo(
-            width * 0.9f,
-            height * 0.06f,
-            width * 0.61f,
-            height * 0.02f,
-            width * 0.5f,
-            height * 0.24f
-        )
-        lineTo(width * 0.58f, height * 0.43f)
-        lineTo(width * 0.48f, height * 0.53f)
-        lineTo(width * 0.6f, height * 0.67f)
-        close()
-    }
-    return left to right
-}
-
-private fun brokenHeartCrackPath(
-    width: Float,
-    height: Float,
-): Path =
-    Path().apply {
-        moveTo(width * 0.5f, height * 0.22f)
-        lineTo(width * 0.42f, height * 0.43f)
-        lineTo(width * 0.52f, height * 0.53f)
-        lineTo(width * 0.4f, height * 0.67f)
-        lineTo(width * 0.47f, height * 0.88f)
-    }
 
 @Preview(showBackground = true)
 @Composable
@@ -984,12 +838,9 @@ private val CardTextMarkerTouchSize = 30.dp
 private val CardTextMarkerIconSize = 17.dp
 private val CardTextMarkerTextGap = 4.dp
 private val CardTextPanelVerticalPadding = 8.dp
-private val MarkerStrokeWidth = 1.6.dp
-private val FilledHeartCrackWidth = 2.1.dp
 private const val MARKER_ICON_SIZE_FRACTION = 0.57f
 private const val MISSING_TRANSLATION_FONT_SIZE_FRACTION = 0.32f
 private const val MISSING_TRANSLATION_PADDING_FRACTION = 0.23f
-private const val STAR_POINT_COUNT = 5
 private const val NON_BREAKING_SPACE = '\u00A0'
 private const val WORD_JOINER = '\u2060'
 private const val ZERO_WIDTH_JOINER_CODE_POINT = 0x200D
@@ -1002,7 +853,6 @@ private const val MIN_CARD_TEXT_FONT_SIZE_VALUE = 0.01f
 private const val SHRINK_FACTOR = 0.92f
 private const val MAXIMUM_FONT_SIZE_SHRINK_STEPS = 128
 private const val PLAYED_DARKEN_FACTOR = 0.62f
-private const val SINGLE_CARD_IDLE_PLAY_DELAY_MILLIS = 15_000L
 private const val TOOLTIP_VISIBLE_DURATION_MILLIS = 500L
 
 

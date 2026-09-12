@@ -186,6 +186,21 @@ class GameRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun applyErikCardTextTranslations(gameId: Int?, overwriteExisting: Boolean) {
+        database.withTransaction {
+            if (gameId != null) spielEntity(gameId)
+            val dao = database.lokalisierungDao()
+            dao.upsertTranslationen(dao.erikCardTextTranslations(gameId, overwriteExisting))
+        }
+    }
+
+    override suspend fun resetCustomCardTextTranslations(gameId: Int?) {
+        database.withTransaction {
+            if (gameId != null) spielEntity(gameId)
+            database.lokalisierungDao().resetCustomCardTextTranslations(gameId)
+        }
+    }
+
     override suspend fun resetSeenCards(gameId: Int) {
         database.withTransaction {
             spielEntity(gameId)
