@@ -44,6 +44,25 @@ class CardSwipePathTest {
     }
 
     @Test
+    fun horizontalPreviousGestureStillBringsTheCardFromTheLowerRight() {
+        val path = requireNotNull(resolveCardSwipePath(previous.boundsInRoot.center, Offset(-40f, 0f), center, regions, true))
+
+        assertEquals(CardSwipeTarget.Previous, path.target)
+        assertEquals(-0.6f, path.direction.x, 0.001f)
+        assertEquals(-0.8f, path.direction.y, 0.001f)
+    }
+
+    @Test
+    fun previousUsesTheLowerRightEvenWithoutTabBoundsOrWithATabAboveTheCenter() {
+        listOf(emptyList(), listOf(previous.copy(boundsInRoot = random.boundsInRoot))).forEach { bounds ->
+            val path = cardSwipePathForTarget(CardSwipeTarget.Previous, bounds, center)
+            assertTrue(path.direction.x < 0f)
+            assertTrue(path.direction.y < 0f)
+            assertEquals(1f, path.direction.getDistance(), 0.001f)
+        }
+    }
+
+    @Test
     fun unavailablePreviousAndInvalidGesturesCannotStartASwipe() {
         assertNull(resolveCardSwipePath(center, Offset(-18f, -24f), center, listOf(previous), false))
         assertNull(resolveCardSwipePath(center, Offset(0f, 40f), center, regions, true))

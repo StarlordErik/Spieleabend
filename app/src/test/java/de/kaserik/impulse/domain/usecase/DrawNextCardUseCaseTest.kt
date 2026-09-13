@@ -16,10 +16,38 @@ import de.kaserik.impulse.domain.repository.GameRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DrawNextCardUseCaseTest {
+    @Test
+    fun swipePreviewDoesNotChangeHistoryOrFlagsAndCommitUsesExactlyThePreviewedTexts() = runBlocking {
+        listOf(null, 1).forEach { categoryId ->
+            val game = spiel(
+                kategorie(
+                    id = 1,
+                    kartentext(id = 101, gesehen = true, gespielt = true),
+                    kartentext(id = 102, gesehen = true, gespielt = true),
+                    kartentext(id = 103, gesehen = true, gespielt = true),
+                ),
+            )
+            val repository = FakeGameRepository(game)
+            val drawNext = DrawNextCardUseCase(repository)
+            val preview = drawNext.prepare(10, categoryId)
+
+            assertEquals(game, repository.getGame(10))
+            assertNull(repository.getCurrentCard(10))
+            assertTrue(repository.lastSeenCardTextIds.isEmpty())
+            assertTrue(repository.lastResetSeenAndPlayedCategoryIds.isEmpty())
+
+            val committed = drawNext.commit(10, preview)
+            assertEquals(preview.karte, committed.karte)
+            assertEquals(preview.karte, repository.getCurrentCard(10)?.card)
+            assertEquals(setOf(101, 102, 103), repository.lastResetSeenAndPlayedCategoryIds)
+        }
+    }
+
     @Test
     fun previousPopsCurrentCardsAndANewDrawCreatesANewBranch() = runBlocking {
         val repository = FakeGameRepository(spiel(kategorie(id = 1, kartentext(id = 101))))

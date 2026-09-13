@@ -36,7 +36,10 @@ internal fun privacyPoints(prediction: Int, yesCount: Int, playerCount: Int): In
 }
 
 @Stable
-internal class PrivacySession(private val onChanged: () -> Unit = {}) {
+internal class PrivacySession(
+    private val onChanged: () -> Unit = {},
+    private val onRoundCompleted: (Int) -> Unit = {},
+) {
     var phase by mutableStateOf(PrivacyPhase.SelectQuestion)
         private set
     var selectedQuestionId by mutableStateOf<Int?>(null)
@@ -122,6 +125,7 @@ internal class PrivacySession(private val onChanged: () -> Unit = {}) {
             )
         }
         phase = PrivacyPhase.Complete
+        selectedQuestionId?.let(onRoundCompleted)
         onChanged()
     }
 
@@ -215,11 +219,15 @@ internal class PrivacySession(private val onChanged: () -> Unit = {}) {
     }
 
     companion object {
-        fun restore(serialized: String?, onChanged: () -> Unit = {}): PrivacySession = runCatching {
+        fun restore(
+            serialized: String?,
+            onChanged: () -> Unit = {},
+            onRoundCompleted: (Int) -> Unit = {},
+        ): PrivacySession = runCatching {
             val bytes = Base64.getDecoder().decode(requireNotNull(serialized))
             DataInputStream(ByteArrayInputStream(bytes)).use { input ->
                 require(input.readInt() == PRIVACY_SESSION_VERSION)
-                PrivacySession(onChanged).apply {
+                PrivacySession(onChanged, onRoundCompleted).apply {
                     phase = PrivacyPhase.valueOf(input.readUTF())
                     selectedQuestionId = input.readInt().takeIf { it >= 0 }
                     cardInstanceId = input.readLong().takeIf { it >= 0 }
@@ -230,7 +238,7 @@ internal class PrivacySession(private val onChanged: () -> Unit = {}) {
                     validateRestoredRound()
                 }
             }
-        }.getOrElse { PrivacySession(onChanged) }
+        }.getOrElse { PrivacySession(onChanged, onRoundCompleted) }
 
         private fun PrivacySession.readPlayers(input: DataInputStream) {
             repeat(input.readPlayerCount()) {

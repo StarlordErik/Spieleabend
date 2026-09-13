@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Impulse</string>
-    <string name="card_text_marked_as_played">Kartentext als gespielt markiert</string>
+    <string name="card_text_played">gespielt</string>
     <string name="settings">Einstellungen</string>
     <string name="language">Sprache</string>
     <string name="developer_access">Dev-Zugang</string>

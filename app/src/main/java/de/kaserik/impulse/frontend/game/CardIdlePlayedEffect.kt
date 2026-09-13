@@ -50,6 +50,6 @@ internal fun CardIdlePlayedEffect(
 private fun CardIdlePlayedEffectPreview() {
     ImpulseTheme {
         CardIdlePlayedEffect(cardInstanceId = 1, kartentext = null, enabled = false, onKartentextPlayed = {})
-        Text(stringResource(R.string.card_text_marked_as_played))
+        Text(stringResource(R.string.card_text_played))
     }
 }

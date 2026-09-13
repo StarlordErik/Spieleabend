@@ -131,8 +131,8 @@ internal fun FunFactsPlayArea(
             kategorien = uiState.kategorien,
             swipeControls = swipeControls,
             developerMode = developerMode,
-            cardTextActions = cardTextActions.withPlayedStateHandler { cardTextId, played ->
-                if (played) {
+            cardTextActions = cardTextActions.copy(
+                onKartentextManuallyPlayedStateChanged = { cardTextId, _ ->
                     transitionActions.onQuestionTransitionStateChanged(true)
                     transitionActions.onCategoryTabsVisibilityChanged(false)
                     playState.newlySelectedQuestionId = cardTextId
@@ -141,9 +141,8 @@ internal fun FunFactsPlayArea(
                         origin = cardTextBounds[cardTextId]
                             ?.relativeTo(playState.playAreaBounds),
                     )
-                }
-                cardTextActions.onKartentextPlayedStateChanged(cardTextId, played)
-            },
+                },
+            ),
             onKartentextBoundsChanged = { cardTextId, bounds ->
                 cardTextBounds[cardTextId] = bounds
             },
@@ -1414,11 +1413,6 @@ private fun FunFactsQuestionStage(
         .firstOrNull { category -> category.id == question.kategorieId }
         ?.name
         .orEmpty()
-    val transitionCard = uiState.aktuelleKarte.copy(
-        kartentexte = uiState.aktuelleKarte.kartentexte.map { cardText ->
-            if (cardText.id == question.id) cardText.copy(gespielt = false) else cardText
-        },
-    )
     val questionOrigin = session.selectedQuestionOrigin
     val measuredQuestionBounds = cardTextBounds[question.id]
     LaunchedEffect(question.id, questionOrigin, measuredQuestionBounds, playState.playAreaBounds) {
@@ -1442,7 +1436,6 @@ private fun FunFactsQuestionStage(
             session = session,
             playState = playState,
             transitionActions = transitionActions,
-            cardTextActions = cardTextActions,
         )
     }
 
@@ -1468,7 +1461,7 @@ private fun FunFactsQuestionStage(
         if (questionOrigin == null || progress < 1f) {
             GamePlayArea(
                 spielName = uiState.spielName,
-                aktuelleKarte = transitionCard,
+                aktuelleKarte = uiState.aktuelleKarte,
                 kategorien = uiState.kategorien,
                 interactionsEnabled = false,
                 developerMode = developerMode,
@@ -1498,7 +1491,7 @@ private fun FunFactsQuestionStage(
 
         if (questionOrigin != null) {
             CardTextPanel(
-                kartentext = question.copy(gespielt = false),
+                kartentext = question,
                 index = questionIndex,
                 kartentextCount = uiState.aktuelleKarte.kartentexte.size,
                 textPanelColor = questionColor,
@@ -1753,7 +1746,6 @@ private suspend fun animateQuestionTransition(
     session: FunFactsSession,
     playState: FunFactsPlayAreaState,
     transitionActions: FunFactsTransitionActions,
-    cardTextActions: CardTextActions,
 ) {
 
     transitionActions.onQuestionTransitionStateChanged(true)
@@ -1767,9 +1759,7 @@ private suspend fun animateQuestionTransition(
             targetValue = 0f,
             animationSpec = tween(QUESTION_SLIDE_DURATION_MILLIS.toInt()),
         )
-        session.reopenQuestionSelection()?.let { questionId ->
-            cardTextActions.onKartentextPlayedStateChanged(questionId, false)
-        }
+        session.reopenQuestionSelection()
     } else {
         transitionActions.onCategoryTabsVisibilityChanged(false)
         if (transitionProgress.value < 1f) {

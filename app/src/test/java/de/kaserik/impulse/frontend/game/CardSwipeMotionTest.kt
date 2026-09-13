@@ -12,6 +12,7 @@ import org.junit.Test
 class CardSwipeMotionTest {
     private val current = GameCardUiModel(2, emptyList())
     private val previous = GameCardUiModel(1, emptyList())
+    private val next = GameCardUiModel(3, emptyList())
     private val previousPath = CardSwipePath(CardSwipeTarget.Previous, Offset(-0.6f, -0.8f))
 
     @Test
@@ -60,6 +61,7 @@ class CardSwipeMotionTest {
     fun reversingPastTheStartKeepsTheCardOnItsTrack() {
         val motion = CardSwipeMotion(current)
         motion.begin(CardSwipePath(CardSwipeTarget.Category(7), Offset(1f, 0f)), null, 500f)
+        motion.previewNextCard(next)
         motion.dragBy(Offset(100f, 100f))
         motion.dragBy(Offset(-150f, -300f))
         motion.dragBy(Offset(20f, 400f))
@@ -69,19 +71,22 @@ class CardSwipeMotionTest {
     }
 
     @Test
-    fun drawAfterManualMarkingAnimatesFromTheLastCategoryOrRandomSide() {
+    fun drawAfterManualMarkingRevealsTheStationaryNextCardUnderTheOutgoingCard() {
         listOf(
             CardSwipePath(CardSwipeTarget.Category(7), Offset(0.6f, 0.8f)),
             CardSwipePath(CardSwipeTarget.Random, Offset(-1f, 0f)),
         ).forEach { path ->
             val motion = CardSwipeMotion(current)
             val frames = mutableListOf<Pair<Long, Float>>()
-            runBlocking(TestFrameClock { frames.add(motion.movingCard.instanceId to path.project(motion.movingOffset)) }) {
-                motion.showCard(current.copy(instanceId = 3), path, 500f)
+            runBlocking(TestFrameClock {
+                assertEquals(next, motion.stationaryCard)
+                frames.add(motion.movingCard.instanceId to path.project(motion.movingOffset))
+            }) {
+                motion.showCard(next, path, 500f)
             }
 
             assertTrue(frames.any { (id, distance) -> id == 2L && distance > 0f })
-            assertTrue(frames.any { (id, distance) -> id == 3L && distance < 0f })
+            assertTrue(frames.all { (id, distance) -> id == 2L && distance >= 0f })
             assertEquals(3L, motion.movingCard.instanceId)
             assertOffset(Offset.Zero, motion.movingOffset)
             assertTrue(motion.idle)
@@ -97,23 +102,52 @@ class CardSwipeMotionTest {
     }
 
     @Test
-    fun committedForwardSwipeRetainsItsTrackForTheIncomingCard() = runBlocking(TestFrameClock()) {
+    fun committedForwardSwipeRevealsThePreparedCardWithoutAnIncomingAnimation() = runBlocking(TestFrameClock()) {
         val motion = CardSwipeMotion(current)
         val path = CardSwipePath(CardSwipeTarget.Category(7), Offset(0.6f, 0.8f))
         motion.begin(path, previous, 500f)
+        motion.previewNextCard(next)
         motion.dragBy(Offset(60f, 80f))
-        assertNull(motion.stationaryCard)
+        assertEquals(next, motion.stationaryCard)
+        assertEquals(current, motion.movingCard)
+        assertOffset(Offset(60f, 80f), motion.movingOffset)
         motion.commit {}
         assertEquals(CardSwipePhase.AwaitingCard, motion.phase)
-        val incomingOffsets = mutableListOf<Offset>()
-        val clock = TestFrameClock {
-            if (motion.phase == CardSwipePhase.Arriving) incomingOffsets.add(motion.movingOffset)
+        assertEquals(next, motion.stationaryCard)
+        assertOffset(Offset(300f, 400f), motion.movingOffset)
+        var additionalFrames = 0
+        kotlinx.coroutines.withContext(TestFrameClock { additionalFrames++ }) {
+            motion.showCard(next, previousPath, 900f)
         }
-        kotlinx.coroutines.withContext(clock) {
-            motion.showCard(current.copy(instanceId = 3), previousPath, 900f)
-        }
-        assertTrue(incomingOffsets.any { it.x < 0f && it.y < 0f })
-        incomingOffsets.forEach { assertEquals(it.x * 4f / 3f, it.y, 0.001f) }
+        assertEquals(0, additionalFrames)
+        assertEquals(next, motion.movingCard)
+        assertNull(motion.stationaryCard)
+        assertOffset(Offset.Zero, motion.movingOffset)
+        assertTrue(motion.idle)
+    }
+
+    @Test
+    fun slowPreviewKeepsTheOldCardInPlaceUntilThereIsACardToReveal() {
+        val motion = CardSwipeMotion(current)
+        motion.begin(CardSwipePath(CardSwipeTarget.Random, Offset(-1f, 0f)), null, 500f)
+        motion.dragBy(Offset(-100f, 0f))
+        assertOffset(Offset.Zero, motion.movingOffset)
+        motion.previewNextCard(next)
+        assertEquals(next, motion.stationaryCard)
+        assertOffset(Offset(-100f, 0f), motion.movingOffset)
+    }
+
+    @Test
+    fun cancellingAForwardSwipeDiscardsItsPreviewAndIgnoresLateResults() = runBlocking(TestFrameClock()) {
+        val motion = CardSwipeMotion(current)
+        motion.begin(CardSwipePath(CardSwipeTarget.Random, Offset(-1f, 0f)), null, 500f)
+        motion.previewNextCard(next)
+        motion.dragBy(Offset(-100f, 0f))
+        motion.cancel()
+        motion.previewNextCard(next)
+        assertEquals(current, motion.movingCard)
+        assertNull(motion.stationaryCard)
+        assertOffset(Offset.Zero, motion.movingOffset)
         assertTrue(motion.idle)
     }
 

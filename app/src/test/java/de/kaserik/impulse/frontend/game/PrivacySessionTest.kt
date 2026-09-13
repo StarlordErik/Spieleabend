@@ -9,6 +9,53 @@ import org.junit.Test
 
 class PrivacySessionTest {
     @Test
+    fun selectedQuestionIsCompletedOnlyAfterEvaluationAndOnlyOnce() {
+        val completedQuestions = mutableListOf<Int>()
+        val session = PrivacySession(onRoundCompleted = { completedQuestions.add(it) })
+        session.selectQuestion(QUESTION_ID, CARD_ID)
+        session.reopenQuestionSelection()
+        session.selectQuestion(QUESTION_ID, CARD_ID)
+        session.enter("Alex", true, 1)
+        session.nextPlayer()
+        session.restartGame()
+        assertTrue(completedQuestions.isEmpty())
+
+        session.selectQuestion(QUESTION_ID, CARD_ID)
+        session.enter("Alex", true, 1)
+        session.nextPlayer()
+        session.enter("Sam", false, 1)
+        session.reveal()
+        assertEquals(PrivacyPhase.Revealing, session.phase)
+        assertTrue(completedQuestions.isEmpty())
+
+        session.completeReveal()
+        assertEquals(listOf(QUESTION_ID), completedQuestions)
+        session.completeReveal()
+        session.startNextRound()
+        session.restartGame()
+        assertEquals(listOf(QUESTION_ID), completedQuestions)
+    }
+
+    @Test
+    fun restoredEvaluationStillReportsTheCompletedQuestion() {
+        val session = newRound()
+        session.enter("Alex", true, 1)
+        session.reveal()
+        val completedQuestions = mutableListOf<Int>()
+        val restored = PrivacySession.restore(
+            session.serialize(), onRoundCompleted = { completedQuestions.add(it) },
+        )
+        assertTrue(completedQuestions.isEmpty())
+
+        restored.completeReveal()
+        assertEquals(listOf(QUESTION_ID), completedQuestions)
+        PrivacySession.restore(
+            restored.serialize(), onRoundCompleted = { completedQuestions.add(it) },
+        ).completeReveal()
+        assertEquals(listOf(QUESTION_ID), completedQuestions)
+    }
+
+    @Test
     fun exactNearAndMissedPredictionsScoreAccordingToRules() {
         assertEquals(3, privacyPoints(4, yesCount = 4, playerCount = 6))
         assertEquals(1, privacyPoints(3, yesCount = 4, playerCount = 6))

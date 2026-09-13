@@ -23,16 +23,22 @@ internal data class CardSwipeControls(
     val onSwipeRequestConsumed: (Long) -> Unit = {},
     val onHighlightedTargetChanged: (CardSwipeTarget?) -> Unit = {},
     val onInteractionStateChanged: (Boolean) -> Unit = {},
-    val onSwipeTargetSelected: (CardSwipeTarget) -> Unit = {},
+    val navigationActions: GameNavigationActions = GameNavigationActions(),
 ) {
     val previousEnabled: Boolean get() = previousCard != null
 }
+
+internal data class PreparedCardSwipe(
+    val card: GameCardUiModel,
+    val commit: suspend () -> Unit,
+)
 
 internal data class GameNavigationActions(
     val onKategorieSelected: (Int) -> Unit = {},
     val onRandomSelected: () -> Unit = {},
     val onPreviousSelected: () -> Unit = {},
     val onNextSelected: () -> Unit = onRandomSelected,
+    val prepareNextCard: suspend (CardSwipeTarget) -> PreparedCardSwipe? = { null },
 ) {
     fun select(target: CardSwipeTarget) {
         when (target) {

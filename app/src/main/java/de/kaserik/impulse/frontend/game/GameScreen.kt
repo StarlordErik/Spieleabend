@@ -80,6 +80,7 @@ fun GameScreen(
                     onRandomSelected = viewModel::selectRandom,
                     onPreviousSelected = viewModel::selectPrevious,
                     onNextSelected = viewModel::selectNextFromLastCategory,
+                    prepareNextCard = viewModel::prepareCardSwipe,
                 ),
                 settingsActions = GameSettingsActions(
                     onResetSeenCards = viewModel::resetSeenCards,
@@ -196,7 +197,7 @@ private fun GameScreenContent(
         onSwipeRequestConsumed = swipeState::consumeRequest,
         onHighlightedTargetChanged = { swipeState.highlightedTarget = it },
         onInteractionStateChanged = { swipeState.swipeInteractionLocked = it },
-        onSwipeTargetSelected = navigationActions::select,
+        navigationActions = navigationActions,
     )
     val editableCardTextActions = cardTextActions.copy(
         onKartentextEditRequested = { editingCardTextId = it },
@@ -210,7 +211,7 @@ private fun GameScreenContent(
     )
 
     CompositionLocalProvider(
-        LocalCardTimerPaused provides (showSettings || editingCardTextId != null || privacyActive),
+        LocalCardTimerPaused provides (showSettings || editingCardTextId != null || privacyActive || funFactsActive),
     ) {
         Surface(
             modifier = modifier.fillMaxSize(),
@@ -299,6 +300,7 @@ private fun GameScreenContent(
 
                 IconButton(
                     onClick = { showSettings = true },
+                    enabled = !swipeState.swipeInteractionLocked,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(6.dp)
@@ -330,16 +332,10 @@ private fun GameScreenContent(
             ),
             settingsActions = settingsActions,
             onRestartPrivacyGame = {
-                activePrivacySession.selectedQuestionId?.let { questionId ->
-                    cardTextActions.onKartentextPlayedStateChanged(questionId, false)
-                }
                 activePrivacySession.restartGame()
                 showSettings = false
             },
             onRestartFunFactsGame = {
-                activeFunFactsSession.selectedQuestionId?.let { questionId ->
-                    cardTextActions.onKartentextPlayedStateChanged(questionId, false)
-                }
                 activeFunFactsSession.restartGame()
                 funFactsQuestionTransitionActive = false
                 funFactsCategoryTabsVisible = true

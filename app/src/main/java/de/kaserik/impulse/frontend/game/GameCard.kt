@@ -2,23 +2,18 @@
 
 package de.kaserik.impulse.frontend.game
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,10 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -69,8 +61,6 @@ import de.kaserik.impulse.frontend.theme.CardTextColor
 import de.kaserik.impulse.frontend.theme.CardTextPanelColors
 import de.kaserik.impulse.frontend.theme.ImpulseTheme
 import kotlin.math.pow
-import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.coroutines.delay
 
 @Composable
 internal fun GameCard(
@@ -85,7 +75,6 @@ internal fun GameCard(
     onKartentextBoundsChanged: (Int, Rect) -> Unit = { _, _ -> },
     cardTextActions: CardTextActions = CardTextActions(),
 ) {
-    val tooltipState = rememberPlayedTooltipState(cardInstanceId)
     val einzelnerKartentext = kartentexte.singleOrNull()
 
     CardIdlePlayedEffect(
@@ -93,7 +82,6 @@ internal fun GameCard(
         kartentext = einzelnerKartentext,
         enabled = idleEffectsEnabled && interactionsEnabled && einzelnerKartentext?.id !in hiddenCardTextIds,
         onKartentextPlayed = { kartentextId ->
-            tooltipState.show()
             cardTextActions.onKartentextPlayedStateChanged(kartentextId, true)
         },
     )
@@ -112,13 +100,11 @@ internal fun GameCard(
         GameCardContent(
             kartentexte = kartentexte,
             textPanelColors = textPanelColors,
-            tooltipVisible = tooltipState.visible,
             interactionsEnabled = interactionsEnabled,
             hiddenCardTextIds = hiddenCardTextIds,
             developerMode = developerMode,
             onKartentextBoundsChanged = onKartentextBoundsChanged,
             cardTextActions = cardTextActions,
-            onKartentextMarkedAsPlayed = tooltipState::show,
         )
     }
 }
@@ -142,13 +128,11 @@ private fun GameCardPreview() {
 private fun GameCardContent(
     kartentexte: List<GameKartentextUiModel>,
     textPanelColors: List<Color>,
-    tooltipVisible: Boolean,
     interactionsEnabled: Boolean = true,
     hiddenCardTextIds: Set<Int> = emptySet(),
     developerMode: Boolean = false,
     onKartentextBoundsChanged: (Int, Rect) -> Unit = { _, _ -> },
     cardTextActions: CardTextActions = CardTextActions(),
-    onKartentextMarkedAsPlayed: () -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -182,7 +166,6 @@ private fun GameCardContent(
                             interactionsEnabled = interactionsEnabled,
                             developerMode = developerMode,
                             cardTextActions = cardTextActions,
-                            onKartentextMarkedAsPlayed = onKartentextMarkedAsPlayed,
                             modifier = panelModifier.onGloballyPositioned { coordinates ->
                                 onKartentextBoundsChanged(kartentext.id, coordinates.boundsInRoot())
                             },
@@ -191,8 +174,6 @@ private fun GameCardContent(
                 }
             }
         }
-
-        PlayedTooltip(visible = tooltipVisible)
     }
 }
 
@@ -207,89 +188,13 @@ private fun GameCardContentPreview() {
                 .padding(24.dp),
         ) {
             GameCardContent(
-                kartentexte = PreviewUiState.aktuelleKarte.kartentexte,
+                kartentexte = PreviewUiState.aktuelleKarte.kartentexte.map { it.copy(gespielt = true) },
                 textPanelColors = emptyList(),
-                tooltipVisible = true,
                 cardTextActions = CardTextActions(
                     onKartentextPlayedStateChanged = { _, _ -> },
                 ),
-                onKartentextMarkedAsPlayed = {},
             )
         }
-    }
-}
-
-@Composable
-private fun BoxScope.PlayedTooltip(visible: Boolean) {
-    val tooltipText = stringResource(R.string.card_text_marked_as_played)
-
-    AnimatedVisibility(
-        visible = visible,
-        modifier = Modifier
-            .align(Alignment.BottomCenter)
-            .offset(y = (-20).dp),
-        enter = fadeIn(),
-        exit = fadeOut(),
-    ) {
-        Surface(
-            shape = RoundedCornerShape(999.dp),
-            color = MaterialTheme.colorScheme.primary,
-            shadowElevation = 6.dp,
-        ) {
-            Text(
-                text = tooltipText,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                color = MaterialTheme.colorScheme.onPrimary,
-                style = MaterialTheme.typography.labelLarge,
-            )
-        }
-    }
-}
-
-@Composable
-private fun rememberPlayedTooltipState(cardInstanceId: Long): PlayedTooltipState {
-    val tooltipState = remember(cardInstanceId) { PlayedTooltipState() }
-
-    LaunchedEffect(cardInstanceId, tooltipState.triggerCount) {
-        if (tooltipState.triggerCount == 0) {
-            return@LaunchedEffect
-        }
-
-        tooltipState.visible = true
-        delay(TOOLTIP_VISIBLE_DURATION_MILLIS.milliseconds)
-        tooltipState.visible = false
-    }
-
-    return tooltipState
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun RememberPlayedTooltipStatePreview() {
-    ImpulseTheme {
-        val tooltipState = rememberPlayedTooltipState(cardInstanceId = 1)
-        Box(
-            modifier = Modifier
-                .width(320.dp)
-                .height(124.dp)
-                .padding(24.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = tooltipState.visible.toString(),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-    }
-}
-
-@Stable
-private class PlayedTooltipState {
-    var visible by mutableStateOf(false)
-    var triggerCount by mutableIntStateOf(0)
-
-    fun show() {
-        triggerCount++
     }
 }
 
@@ -305,7 +210,6 @@ internal fun CardTextPanel(
     markerInteractionsEnabled: Boolean = interactionsEnabled,
     developerMode: Boolean = false,
     cardTextActions: CardTextActions = CardTextActions(),
-    onKartentextMarkedAsPlayed: () -> Unit = {},
 ) {
     val textStyle = when (kartentextCount) {
         1 -> MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.SemiBold)
@@ -323,9 +227,6 @@ internal fun CardTextPanel(
             .background(backgroundColor)
             .clickable(enabled = interactionsEnabled) {
                 val nextPlayedState = !kartentext.gespielt
-                if (nextPlayedState) {
-                    onKartentextMarkedAsPlayed()
-                }
                 cardTextActions.onKartentextManuallyPlayedStateChanged(
                     kartentext.id,
                     nextPlayedState,
@@ -344,7 +245,7 @@ internal fun CardTextPanel(
             text = kartentext.text,
             modifier = Modifier.padding(
                 start = markerTouchSize + CardTextMarkerTextGap,
-                top = if (kartentext.uebersetzungFehlt) {
+                top = if (kartentext.gespielt || kartentext.uebersetzungFehlt) {
                     markerTouchSize + CardTextMarkerTextGap
                 } else {
                     CardTextPanelVerticalPadding
@@ -386,13 +287,43 @@ internal fun CardTextPanel(
             },
             modifier = Modifier.align(Alignment.TopEnd),
         )
-        if (kartentext.uebersetzungFehlt) {
+        if (kartentext.gespielt) {
+            PlayedMark(
+                modifier = Modifier.align(Alignment.TopCenter)
+                    .padding(horizontal = markerTouchSize + CardTextMarkerTextGap),
+                markerSize = markerTouchSize,
+            )
+        } else if (kartentext.uebersetzungFehlt) {
             MissingTranslationMark(
                 markerSize = markerTouchSize,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
         }
     }
+}
+
+@Composable
+private fun PlayedMark(modifier: Modifier = Modifier, markerSize: Dp = CardTextMarkerTouchSize) {
+    Surface(
+        modifier = modifier.height(markerSize).padding(vertical = 3.dp),
+        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.primary,
+    ) {
+        Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+            Text(
+                text = stringResource(R.string.card_text_played),
+                color = MaterialTheme.colorScheme.onPrimary,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PlayedMarkPreview() {
+    ImpulseTheme { PlayedMark() }
 }
 
 @Composable
@@ -853,7 +784,6 @@ private const val MIN_CARD_TEXT_FONT_SIZE_VALUE = 0.01f
 private const val SHRINK_FACTOR = 0.92f
 private const val MAXIMUM_FONT_SIZE_SHRINK_STEPS = 128
 private const val PLAYED_DARKEN_FACTOR = 0.62f
-private const val TOOLTIP_VISIBLE_DURATION_MILLIS = 500L
 
 
 private fun Color.darkenedIfPlayed(gespielt: Boolean): Color =

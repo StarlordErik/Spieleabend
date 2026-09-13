@@ -31,7 +31,9 @@ import androidx.compose.ui.unit.dp
 import de.kaserik.impulse.R
 import de.kaserik.impulse.frontend.theme.ImpulseTheme
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 
@@ -48,6 +50,7 @@ internal fun SwipeableGameCard(
     val geometryReady = !cardBounds.isEmpty
     val scope = rememberCoroutineScope()
     var animationJob by remember { mutableStateOf<Job?>(null) }
+    var preparation by remember { mutableStateOf<Deferred<PreparedCardSwipe?>?>(null) }
     val minimumDistance = with(LocalDensity.current) { MinimumSwipeDistance.toPx() }
 
     fun pathFor(target: CardSwipeTarget): CardSwipePath = cardSwipePathForTarget(
@@ -61,8 +64,26 @@ internal fun SwipeableGameCard(
     fun finishGesture(commit: Boolean) {
         if (motion.phase != CardSwipePhase.Dragging) return
         animationJob = scope.launch(start = CoroutineStart.UNDISPATCHED) {
-            if (commit) motion.commit(latestControls.onSwipeTargetSelected) else motion.cancel()
+            if (commit) {
+                val prepared = preparation?.await()
+                motion.commit { target ->
+                    if (prepared != null) prepared.commit() else latestControls.navigationActions.select(target)
+                }
+            } else {
+                preparation?.cancel()
+                motion.cancel()
+            }
         }
+    }
+
+    fun beginGesture(path: CardSwipePath): Boolean {
+        if (!motion.begin(path, latestControls.previousCard, travelDistance(path))) return false
+        preparation = if (path.target == CardSwipeTarget.Previous) null else {
+            scope.async(start = CoroutineStart.UNDISPATCHED) {
+                latestControls.navigationActions.prepareNextCard(path.target)?.also { motion.previewNextCard(it.card) }
+            }
+        }
+        return true
     }
 
     SideEffect { motion.updateCurrentCard(card) }
@@ -80,12 +101,12 @@ internal fun SwipeableGameCard(
         val request = latestControls.swipeRequest ?: return@LaunchedEffect
         if (!geometryReady || !motion.idle) return@LaunchedEffect
         val path = pathFor(request.target)
-        if (motion.begin(path, latestControls.previousCard, travelDistance(path))) finishGesture(commit = true)
+        if (beginGesture(path)) finishGesture(commit = true)
         latestControls.onSwipeRequestConsumed(request.id)
     }
 
     val currentHandlers by rememberUpdatedState(
-        swipeGestureHandlers(motion, latestControls, cardBounds, minimumDistance, ::finishGesture),
+        swipeGestureHandlers(motion, latestControls, cardBounds, minimumDistance, ::beginGesture, ::finishGesture),
     )
     DisposableEffect(controls.gestureInput) {
         val input = controls.gestureInput
@@ -139,6 +160,7 @@ private fun swipeGestureHandlers(
     controls: CardSwipeControls,
     cardBounds: Rect,
     minimumDistance: Float,
+    beginGesture: (CardSwipePath) -> Boolean,
     finishGesture: (Boolean) -> Unit,
 ): CardSwipeGestureHandlers {
     var startPosition = Offset.Unspecified
@@ -158,8 +180,7 @@ private fun swipeGestureHandlers(
                         startPosition, initialDrag, controls.screenBounds.center,
                         controls.swipeRegions, controls.previousEnabled,
                     )
-                    if (path != null) {
-                        motion.begin(path, controls.previousCard, path.offscreenDistance(cardBounds, controls.screenBounds))
+                    if (path != null && beginGesture(path)) {
                         motion.dragBy(initialDrag)
                     }
                 } else {
@@ -210,8 +231,8 @@ private fun CardSwipeLayersPreview() {
         val card = PreviewUiState.aktuelleKarte
         val motion = remember(card) {
             CardSwipeMotion(card).apply {
-                begin(CardSwipePath(CardSwipeTarget.Previous, Offset(-1f, 0f)), card.copy(instanceId = 0), 400f)
-                dragBy(Offset(-220f, 0f))
+                begin(CardSwipePath(CardSwipeTarget.Previous, Offset(-0.6f, -0.8f)), card.copy(instanceId = 0), 400f)
+                dragBy(Offset(-132f, -176f))
             }
         }
         CardSwipeLayers(motion, Modifier.width(240.dp).height(320.dp)) { visibleCard, _ ->

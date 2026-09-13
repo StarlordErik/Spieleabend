@@ -77,7 +77,6 @@ internal fun PrivacyPlayArea(
                 onKartentextManuallyPlayedStateChanged = { id, _ ->
                     motion.newQuestionId = id
                     session.selectQuestion(id, uiState.aktuelleKarte.instanceId)
-                    cardTextActions.onKartentextPlayedStateChanged(id, true)
                 },
             ),
             modifier = areaModifier.padding(horizontal = gameContentHorizontalPadding),
@@ -134,7 +133,6 @@ private fun PrivacyQuestionStage(
         motion.newQuestionId = null
         if (returning) {
             session.reopenQuestionSelection()
-                ?.let { cardTextActions.onKartentextPlayedStateChanged(it, false) }
         }
     }
     BoxWithConstraints(modifier) {
@@ -159,7 +157,7 @@ private fun PrivacyQuestionStage(
             progress.value >= 1f && !returning,
         )
         CardTextPanel(
-            kartentext = question.copy(gespielt = false),
+            kartentext = question,
             index = index,
             kartentextCount = uiState.aktuelleKarte.kartentexte.size,
             textPanelColor = colors[index],

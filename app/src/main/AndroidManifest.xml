@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:name=".ImpulseApplication"
@@ -12,9 +13,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/Theme.Impulse"
         android:usesCleartextTraffic="false">
+        <!--
+            Hochkant ist für die gesamte App gewollt; nur das Funfacts-Malen gibt die Drehung zur Laufzeit frei.
+            Deshalb werden ausschließlich die Orientierungswarnungen hier unterdrückt. Als appCategory="game"
+            fällt Impulse unter die Spiele-Ausnahme der Orientierungsänderungen ab Android 16.
+        -->
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity,DiscouragedApi">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

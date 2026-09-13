@@ -9,7 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 
-internal enum class CardSwipePhase { Idle, Dragging, Returning, Departing, AwaitingCard, Arriving }
+internal enum class CardSwipePhase { Idle, Dragging, Returning, Departing, AwaitingCard }
 
 @Stable
 internal class CardSwipeMotion(initialCard: GameCardUiModel) {
@@ -17,6 +17,7 @@ internal class CardSwipeMotion(initialCard: GameCardUiModel) {
         private set
     var overlayCard by mutableStateOf<GameCardUiModel?>(null)
         private set
+    private var underlayCard by mutableStateOf<GameCardUiModel?>(null)
     var path by mutableStateOf<CardSwipePath?>(null)
         private set
     var phase by mutableStateOf(CardSwipePhase.Idle)
@@ -28,11 +29,15 @@ internal class CardSwipeMotion(initialCard: GameCardUiModel) {
 
     val idle: Boolean get() = phase == CardSwipePhase.Idle
     val movingCard: GameCardUiModel get() = overlayCard ?: displayedCard
-    val stationaryCard: GameCardUiModel? get() = displayedCard.takeIf { overlayCard != null }
+    val stationaryCard: GameCardUiModel? get() = if (overlayCard != null) displayedCard else underlayCard
     val movingOffset: Offset
-        get() = path?.direction?.times(
-            if (overlayCard != null) distance - travelDistance else distance,
-        ) ?: Offset.Zero
+        get() = if (overlayCard == null && underlayCard == null) {
+            Offset.Zero
+        } else {
+            path?.direction?.times(
+                if (overlayCard != null) distance - travelDistance else distance,
+            ) ?: Offset.Zero
+        }
 
     fun updateCurrentCard(card: GameCardUiModel) {
         if (displayedCard.instanceId == card.instanceId) displayedCard = card
@@ -49,6 +54,10 @@ internal class CardSwipeMotion(initialCard: GameCardUiModel) {
         return true
     }
 
+    fun previewNextCard(card: GameCardUiModel) {
+        if (phase == CardSwipePhase.Dragging && path?.target != CardSwipeTarget.Previous) underlayCard = card
+    }
+
     fun dragBy(drag: Offset) {
         if (phase != CardSwipePhase.Dragging) return
         dragOffset += drag
@@ -62,7 +71,7 @@ internal class CardSwipeMotion(initialCard: GameCardUiModel) {
         reset()
     }
 
-    suspend fun commit(onTargetSelected: (CardSwipeTarget) -> Unit) {
+    suspend fun commit(onTargetSelected: suspend (CardSwipeTarget) -> Unit) {
         if (phase != CardSwipePhase.Dragging) return
         val target = path?.target ?: return
         phase = CardSwipePhase.Departing
@@ -81,18 +90,17 @@ internal class CardSwipeMotion(initialCard: GameCardUiModel) {
             reset()
             return
         }
+        underlayCard = card
         if (phase != CardSwipePhase.AwaitingCard) {
             // This also animates draws initiated by manually marking a text as played.
             path = defaultPath
             overlayCard = null
+            distance = 0f
             travelDistance = offscreenDistance
             phase = CardSwipePhase.Departing
             animateDistance(travelDistance, OUTGOING_ANIMATION_MILLIS)
         }
         displayedCard = card
-        distance = -travelDistance
-        phase = CardSwipePhase.Arriving
-        animateDistance(0f, INCOMING_ANIMATION_MILLIS)
         reset()
     }
 
@@ -104,10 +112,10 @@ internal class CardSwipeMotion(initialCard: GameCardUiModel) {
         distance = 0f
         path = null
         overlayCard = null
+        underlayCard = null
         phase = CardSwipePhase.Idle
     }
 }
 
 private const val OUTGOING_ANIMATION_MILLIS = 180
-private const val INCOMING_ANIMATION_MILLIS = 220
 private const val RETURN_ANIMATION_MILLIS = 160

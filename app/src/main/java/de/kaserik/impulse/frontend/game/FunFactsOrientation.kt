@@ -1,5 +1,7 @@
 package de.kaserik.impulse.frontend.game
 
+import android.annotation.SuppressLint
+import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import androidx.activity.compose.LocalActivity
 import androidx.compose.material3.Text
@@ -19,6 +21,9 @@ import androidx.core.view.WindowInsetsControllerCompat
 import de.kaserik.impulse.R
 import de.kaserik.impulse.frontend.theme.ImpulseTheme
 
+internal fun gameScreenOrientation(rotationEnabled: Boolean): Int =
+    if (rotationEnabled) ActivityInfo.SCREEN_ORIENTATION_SENSOR else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
 internal fun landscapeDrawingTarget(
     previousTarget: FunFactsLandscapeTarget?,
     rotationEnabled: Boolean,
@@ -31,12 +36,23 @@ internal fun landscapeDrawingTarget(
     else -> FunFactsLandscapeTarget.Name
 }
 
+// Gewollte Hochkant-Sperre außerhalb des Funfacts-Malens, einschließlich der Rückkehr in andere Ansichten.
 @Composable
+@SuppressLint("SourceLockedOrientationActivity")
 internal fun rememberFunFactsLandscapeTarget(
     rotationEnabled: Boolean,
     hasName: Boolean,
 ): FunFactsLandscapeTarget? {
     val activity = LocalActivity.current
+    DisposableEffect(activity, rotationEnabled) {
+        // Gewollt: Nur beim Funfacts-Malen darf der Sensor das große Schild ins Querformat drehen.
+        activity?.requestedOrientation = gameScreenOrientation(rotationEnabled)
+        onDispose {
+            if (activity != null && !activity.isChangingConfigurations) {
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            }
+        }
+    }
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     var previousTarget by rememberSaveable { mutableStateOf<FunFactsLandscapeTarget?>(null) }
     val target = landscapeDrawingTarget(previousTarget, rotationEnabled, isLandscape, hasName)

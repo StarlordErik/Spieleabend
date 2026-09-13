@@ -63,13 +63,16 @@ class GameViewModel @Inject constructor(
     internal var funFactsSession by mutableStateOf(
         FunFactsSession.restore(
             appSettingsRepository.getFunFactsSession(),
-            ::scheduleFunFactsPersistence
+            onChanged = ::scheduleFunFactsPersistence,
+            onRoundCompleted = { setKartentextGespielt(it, true) },
         ),
     )
         private set
 
     internal val privacySession = PrivacySession.restore(
-        appSettingsRepository.getPrivacySession(), ::persistPrivacySession,
+        appSettingsRepository.getPrivacySession(),
+        onChanged = ::persistPrivacySession,
+        onRoundCompleted = { setKartentextGespielt(it, true) },
     )
 
     private val _uiState = MutableStateFlow<GameScreenUiState>(GameScreenUiState.Loading)
@@ -145,6 +148,26 @@ class GameViewModel @Inject constructor(
         lastDrawCategoryId = categoryId
         appSettingsRepository.setLastDrawCategoryId(gameId, categoryId)
         showCard(nextCard)
+    }
+
+    internal suspend fun prepareCardSwipe(target: CardSwipeTarget): PreparedCardSwipe? {
+        if (target == CardSwipeTarget.Previous) return null
+        return cardChangeMutex.withLock {
+            val state = _uiState.value as? GameScreenUiState.Loaded ?: return@withLock null
+            val categoryId = (target as? CardSwipeTarget.Category)?.id
+            val draw = drawNextCard.prepare(gameId, categoryId)
+            PreparedCardSwipe(draw.karte.toGameCardUiModel(sprache, cardInstanceId = Long.MIN_VALUE)) {
+                cardChangeMutex.withLock {
+                    val latestState = _uiState.value as? GameScreenUiState.Loaded
+                    if (latestState?.game?.aktuelleKarte?.instanceId == state.game.aktuelleKarte.instanceId) {
+                        val nextCard = drawNextCard.commit(gameId, draw)
+                        lastDrawCategoryId = categoryId
+                        appSettingsRepository.setLastDrawCategoryId(gameId, categoryId)
+                        showCard(nextCard)
+                    }
+                }
+            }
+        }
     }
 
     fun setFunFactsModeEnabled(enabled: Boolean) {

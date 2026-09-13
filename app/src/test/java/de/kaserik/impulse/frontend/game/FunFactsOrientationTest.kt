@@ -1,11 +1,18 @@
 package de.kaserik.impulse.frontend.game
 
+import android.content.pm.ActivityInfo
 import androidx.compose.ui.geometry.Offset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class FunFactsOrientationTest {
+    @Test
+    fun onlyTheEnabledDrawingPhaseAllowsSensorRotation() {
+        assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR, gameScreenOrientation(rotationEnabled = true))
+        assertEquals(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, gameScreenOrientation(rotationEnabled = false))
+    }
+
     @Test
     fun emptyNameSelectsNameSignOnRotation() {
         assertEquals(

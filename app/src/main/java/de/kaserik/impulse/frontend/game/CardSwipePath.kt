@@ -25,7 +25,14 @@ internal fun cardSwipePathForTarget(
     screenCenter: Offset,
 ): CardSwipePath {
     val origin = regions.firstOrNull { it.target == target }?.boundsInRoot?.center
-    val delta = origin?.let { screenCenter - it }
+    val delta = origin?.let { screenCenter - it }.let {
+        if (target == CardSwipeTarget.Previous) {
+            // History cards always enter from below and to the right, including horizontal gestures.
+            it?.takeIf { offset -> offset.x < 0f && offset.y < 0f } ?: Offset(-1f, -1f)
+        } else {
+            it
+        }
+    }
     val direction = if (delta != null && delta.hasFiniteCoordinates() && delta.getDistance() > 0f) {
         delta / delta.getDistance()
     } else {
@@ -53,7 +60,12 @@ internal fun resolveCardSwipePath(
         // Prefer the central horizontal track when both tracks have the same direction.
         paths.add(0, CardSwipePath(horizontalTarget, Offset(direction.sign, 0f)))
     }
-    return paths.maxByOrNull { it.project(drag) }?.takeIf { it.project(drag) > 0f }
+    val selected = paths.maxByOrNull { it.project(drag) }?.takeIf { it.project(drag) > 0f } ?: return null
+    return if (selected.target == CardSwipeTarget.Previous) {
+        cardSwipePathForTarget(CardSwipeTarget.Previous, regions, screenCenter)
+    } else {
+        selected
+    }
 }
 
 private fun distanceOutside(card: Rect, screen: Rect, direction: Offset): Float {

@@ -15,7 +15,6 @@ import de.kaserik.impulse.common.Sprache
 import de.kaserik.impulse.data.GameRepositoryImpl
 import de.kaserik.impulse.data.ImpulseDatabase
 import de.kaserik.impulse.data.SharedPreferencesAppSettingsRepository
-import de.kaserik.impulse.domain.usecase.DrawNextCardFromCategoryUseCase
 import de.kaserik.impulse.domain.usecase.DrawNextCardUseCase
 import de.kaserik.impulse.domain.usecase.DrawNextRandomCardUseCase
 import de.kaserik.impulse.domain.usecase.GetOrDrawInitialCardUseCase
@@ -218,7 +217,7 @@ class GameFlowIntegrationTest {
         val drawRandom = DrawNextRandomCardUseCase(repository)
         GameViewModel(
             savedStateHandle = SavedStateHandle(mapOf(GAME_ID_ARG to "1")),
-            drawNextCard = DrawNextCardUseCase(DrawNextCardFromCategoryUseCase(repository), drawRandom),
+            drawNextCard = DrawNextCardUseCase(repository),
             getOrDrawInitialCard = GetOrDrawInitialCardUseCase(repository, drawRandom),
             showPreviousCard = ShowPreviousCardUseCase(repository),
             setCardTextPlayedState = SetCardTextPlayedStateUseCase(repository),

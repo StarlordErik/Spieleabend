@@ -9,6 +9,58 @@ import org.junit.Test
 
 class FunFactsSessionTest {
     @Test
+    fun selectedQuestionIsCompletedOnlyAfterTheLastSignAndOnlyOnce() {
+        val completedQuestions = mutableListOf<Int>()
+        val session = FunFactsSession(onRoundCompleted = { completedQuestions.add(it) })
+        session.selectQuestion(9)
+        session.reopenQuestionSelection()
+        session.selectQuestion(9)
+        session.addPlayer("Ada", "10")
+        session.restartGame()
+        assertTrue(completedQuestions.isEmpty())
+
+        session.selectQuestion(10)
+        session.addPlayer("Ada", "10")
+        session.nextPlayer()
+        session.addPlayer("Bo", "90")
+        session.beginReveal()
+        session.beginReveal()
+        assertEquals(FunFactsPhase.Revealing, session.phase)
+        assertTrue(completedQuestions.isEmpty())
+
+        session.beginReveal()
+        assertEquals(listOf(10), completedQuestions)
+        session.beginReveal()
+        session.toggleRevealedSide(session.players.first().id)
+        session.startNextRound()
+        session.restartGame()
+        assertEquals(listOf(10), completedQuestions)
+    }
+
+    @Test
+    fun restoredRoundStillReportsCompletionWhenItsLastSignIsRevealed() {
+        val session = FunFactsSession()
+        session.selectQuestion(10)
+        session.addPlayer("Ada", "10")
+        session.nextPlayer()
+        session.addPlayer("Bo", "90")
+        session.beginReveal()
+        session.beginReveal()
+        val completedQuestions = mutableListOf<Int>()
+        val restored = FunFactsSession.restore(
+            session.serialize(), onRoundCompleted = { completedQuestions.add(it) },
+        )
+        assertTrue(completedQuestions.isEmpty())
+
+        restored.beginReveal()
+        assertEquals(listOf(10), completedQuestions)
+        FunFactsSession.restore(
+            restored.serialize(), onRoundCompleted = { completedQuestions.add(it) },
+        ).beginReveal()
+        assertEquals(listOf(10), completedQuestions)
+    }
+
+    @Test
     fun questionCanOnlyBeChangedBeforeFirstSignIsFinished() {
         val session = FunFactsSession()
         session.selectQuestion(10, QUESTION_ORIGIN)

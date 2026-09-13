@@ -115,6 +115,7 @@ internal class FunFactsDraftDrawing(
 @Suppress("TooManyFunctions")
 internal class FunFactsSession(
     private val onChanged: () -> Unit = {},
+    private val onRoundCompleted: (Int) -> Unit = {},
 ) {
     var phase by mutableStateOf(FunFactsPhase.SelectQuestion)
         private set
@@ -272,6 +273,7 @@ internal class FunFactsSession(
             FunFactsPhase.Revealing -> revealLowestSign()
             else -> return
         }
+        if (phase == FunFactsPhase.Complete) selectedQuestionId?.let(onRoundCompleted)
         onChanged()
     }
 
@@ -409,12 +411,13 @@ internal class FunFactsSession(
         fun decode(
             serialized: String,
             onChanged: () -> Unit,
+            onRoundCompleted: (Int) -> Unit,
         ): FunFactsSession = runCatching {
             val lines = serialized.lineSequence().iterator()
             val serializationVersion = lines.next()
             require(serializationVersion in SUPPORTED_SERIALIZATION_VERSIONS)
             val features = SerializationFeatures(serializationVersion)
-            val session = FunFactsSession(onChanged)
+            val session = FunFactsSession(onChanged, onRoundCompleted)
             decodeSessionState(lines, session, features)
             repeat(lines.next().toInt()) {
                 session.players += decodePlayer(lines.next(), features)
@@ -423,7 +426,7 @@ internal class FunFactsSession(
             session.draftName.restore(decodeDrawing(lines.next(), features.strokeWidths))
             session.draftAnswer.restore(decodeDrawing(lines.next(), features.strokeWidths))
             session
-        }.getOrElse { FunFactsSession(onChanged) }
+        }.getOrElse { FunFactsSession(onChanged, onRoundCompleted) }
 
         private fun decodeSessionState(
             lines: Iterator<String>,
@@ -592,8 +595,10 @@ internal class FunFactsSession(
         fun restore(
             serialized: String?,
             onChanged: () -> Unit = {},
+            onRoundCompleted: (Int) -> Unit = {},
         ): FunFactsSession =
-            serialized?.let { FunFactsSessionCodec.decode(it, onChanged) } ?: FunFactsSession(onChanged)
+            serialized?.let { FunFactsSessionCodec.decode(it, onChanged, onRoundCompleted) }
+                ?: FunFactsSession(onChanged, onRoundCompleted)
 
         private const val SIGN_COLOR_COUNT = 10
         private const val STROKE_WIDTH_OPTION_COUNT = 3
