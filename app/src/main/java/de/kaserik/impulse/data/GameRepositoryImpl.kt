@@ -104,6 +104,16 @@ class GameRepositoryImpl @Inject constructor(
             )
         }
 
+    override suspend fun getPreviousCard(gameId: Int): CardHistoryState? =
+        database.withTransaction {
+            val cards = database.kartenverlaufDao().neuesteKarten(gameId, PREVIOUS_CHECK_LIMIT + 1)
+            val previousCard = cards.getOrNull(1) ?: return@withTransaction null
+            previousCard.toHistoryState(
+                spiel = spielEntity(gameId).toDomain(),
+                hasPrevious = cards.size > PREVIOUS_CHECK_LIMIT,
+            )
+        }
+
     override suspend fun popCurrentCard(gameId: Int): CardHistoryState? =
         database.withTransaction {
             val kartenverlaufDao = database.kartenverlaufDao()

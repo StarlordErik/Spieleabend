@@ -452,6 +452,9 @@ class DrawNextCardUseCaseTest {
         override suspend fun getCurrentCard(gameId: Int): CardHistoryState? =
             history.firstOrNull()?.copy(hasPrevious = history.size > 1)
 
+        override suspend fun getPreviousCard(gameId: Int): CardHistoryState? =
+            history.getOrNull(1)?.copy(hasPrevious = history.size > 2)
+
         override suspend fun popCurrentCard(gameId: Int): CardHistoryState? {
             if (history.size < 2) return null
             history.removeAt(0)

@@ -23,6 +23,8 @@ interface GameRepository {
 
     suspend fun getCurrentCard(gameId: Int): CardHistoryState?
 
+    suspend fun getPreviousCard(gameId: Int): CardHistoryState?
+
     suspend fun popCurrentCard(gameId: Int): CardHistoryState?
 
     suspend fun setCardTextsPlayedState(

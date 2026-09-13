@@ -1,5 +1,7 @@
 package de.kaserik.impulse.frontend.game
 
+import androidx.compose.ui.geometry.Rect
+
 internal data class CardTextActions(
     val onKartentextPlayedStateChanged: (Int, Boolean) -> Unit = { _, _ -> },
     val onKartentextManuallyPlayedStateChanged: (Int, Boolean) -> Unit = onKartentextPlayedStateChanged,
@@ -13,13 +15,18 @@ internal fun CardTextActions.withPlayedStateHandler(handler: (Int, Boolean) -> U
 
 internal data class CardSwipeControls(
     val swipeRegions: Collection<SwipeRegion> = emptyList(),
-    val previousEnabled: Boolean = false,
+    val screenBounds: Rect = Rect.Zero,
+    val previousCard: GameCardUiModel? = null,
+    val nextDrawTarget: CardSwipeTarget = CardSwipeTarget.Random,
+    val gestureInput: CardSwipeGestureInput = CardSwipeGestureInput(),
     val swipeRequest: CardSwipeRequest? = null,
     val onSwipeRequestConsumed: (Long) -> Unit = {},
     val onHighlightedTargetChanged: (CardSwipeTarget?) -> Unit = {},
     val onInteractionStateChanged: (Boolean) -> Unit = {},
     val onSwipeTargetSelected: (CardSwipeTarget) -> Unit = {},
-)
+) {
+    val previousEnabled: Boolean get() = previousCard != null
+}
 
 internal data class GameNavigationActions(
     val onKategorieSelected: (Int) -> Unit = {},

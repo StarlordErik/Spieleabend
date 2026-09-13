@@ -90,6 +90,8 @@ class GameFlowIntegrationTest {
         assertTrue(requireNotNull(database.kartentextDao().kartentext(playedId)).gespielt)
         assertEquals(historySize + 1, database.kartenverlaufDao().neuesteKarten(1, 10).size)
         assertEquals(11, settings.getLastDrawCategoryId(1))
+        assertEquals(11, next.lastDrawCategoryId)
+        assertEquals(selected.aktuelleKarte.instanceId, next.previousCard?.instanceId)
     }
 
     @Test
@@ -128,6 +130,27 @@ class GameFlowIntegrationTest {
 
         assertEquals(availableId, next.aktuelleKarte.kartentexte.single().id)
         assertEquals(otherCategory, next.aktuelleKarte.kartentexte.single().kategorieId)
+        assertNull(next.lastDrawCategoryId)
+    }
+
+    @Test
+    fun previousPreviewPreservesHistoryUntilTheSwipeIsCommitted() = runBlocking {
+        val viewModel = createViewModel()
+        val initial = viewModel.awaitGame()
+        assertNull(initial.previousCard)
+        withContext(Dispatchers.Main) { viewModel.selectKategorie(11) }
+        val selected = viewModel.awaitGame { it.aktuelleKarte.instanceId != initial.aktuelleKarte.instanceId }
+
+        assertEquals(initial.aktuelleKarte.instanceId, selected.previousCard?.instanceId)
+        repeat(2) { assertEquals(initial.aktuelleKarte.instanceId, repository.getPreviousCard(1)?.instanceId) }
+        assertEquals(selected.aktuelleKarte.instanceId, repository.getCurrentCard(1)?.instanceId)
+        assertEquals(2, database.kartenverlaufDao().neuesteKarten(1, 10).size)
+
+        withContext(Dispatchers.Main) { viewModel.selectPrevious() }
+        val previous = viewModel.awaitGame { it.aktuelleKarte.instanceId == initial.aktuelleKarte.instanceId }
+        assertFalse(previous.hasPreviousCard)
+        assertNull(previous.previousCard)
+        assertEquals(1, database.kartenverlaufDao().neuesteKarten(1, 10).size)
     }
 
     @Test

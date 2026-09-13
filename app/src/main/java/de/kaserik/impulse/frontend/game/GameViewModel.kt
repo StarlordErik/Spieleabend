@@ -165,7 +165,7 @@ class GameViewModel @Inject constructor(
     fun selectPrevious() {
         viewModelScope.launch {
             cardChangeMutex.withLock {
-                showPreviousCard(gameId)?.let(::showCard)
+                showPreviousCard(gameId)?.let { showCard(it) }
             }
         }
     }
@@ -343,8 +343,9 @@ class GameViewModel @Inject constructor(
         }
     }
 
-    private fun showCard(drawCardResult: DrawCardResult) {
+    private suspend fun showCard(drawCardResult: DrawCardResult) {
         val loadedSpiel = drawCardResult.spiel
+        val previous = showPreviousCard.preview(gameId)
         if (gameId == PRIVACY_GAME_ID) privacySession.onCardChanged(drawCardResult.instanceId)
         _uiState.value = GameScreenUiState.Loaded(
             game = loadedSpiel.toUiState(
@@ -352,6 +353,8 @@ class GameViewModel @Inject constructor(
                 cardInstanceId = drawCardResult.instanceId,
                 hasPreviousCard = drawCardResult.hasPrevious,
             ).copy(
+                previousCard = previous?.card?.toGameCardUiModel(sprache, previous.instanceId),
+                lastDrawCategoryId = lastDrawCategoryId,
                 funFactsModeEnabled = funFactsModeEnabled,
                 privacyModeEnabled = privacyModeEnabled
             ),

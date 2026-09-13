@@ -29,6 +29,8 @@ data class GameUiState(
     val texteProKarte: Int,
     val standardTexteProKarte: Int,
     val hasPreviousCard: Boolean,
+    val previousCard: GameCardUiModel? = null,
+    val lastDrawCategoryId: Int? = null,
     val funFactsModeEnabled: Boolean = true,
     val privacyModeEnabled: Boolean = true,
     val sprache: Sprache = Sprache.DE,
@@ -87,7 +89,7 @@ internal fun Spiel.toGameUiState(
         bearbeiteteKartentexteModus = bearbeiteteKartentexteModus,
     )
 
-private fun GezogeneKarte.toGameCardUiModel(
+internal fun GezogeneKarte.toGameCardUiModel(
     sprache: Sprache,
     cardInstanceId: Long,
 ): GameCardUiModel =

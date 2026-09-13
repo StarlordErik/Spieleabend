@@ -34,6 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -186,7 +188,10 @@ private fun GameScreenContent(
 
     val swipeControls = CardSwipeControls(
         swipeRegions = swipeState.tabBounds.map { (target, bounds) -> SwipeRegion(target, bounds) },
-        previousEnabled = uiState.hasPreviousCard,
+        screenBounds = swipeState.screenBounds,
+        previousCard = uiState.previousCard,
+        nextDrawTarget = uiState.lastDrawCategoryId?.let { CardSwipeTarget.Category(it) } ?: CardSwipeTarget.Random,
+        gestureInput = swipeState.gestureInput,
         swipeRequest = swipeState.swipeRequest,
         onSwipeRequestConsumed = swipeState::consumeRequest,
         onHighlightedTargetChanged = { swipeState.highlightedTarget = it },
@@ -195,6 +200,13 @@ private fun GameScreenContent(
     )
     val editableCardTextActions = cardTextActions.copy(
         onKartentextEditRequested = { editingCardTextId = it },
+    )
+    val categoryTabsVisible = gameCategoryTabsVisible(
+        privacyActive,
+        activePrivacySession,
+        funFactsActive,
+        activeFunFactsSession,
+        funFactsCategoryTabsVisible,
     )
 
     CompositionLocalProvider(
@@ -208,7 +220,11 @@ private fun GameScreenContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(GameTableBrush)
-                    .safeDrawingPadding(),
+                    .safeDrawingPadding()
+                    .onGloballyPositioned { swipeState.screenBounds = it.boundsInRoot() }
+                    .cardSwipeGestures(swipeState.gestureInput, categoryTabsVisible) {
+                        swipeState.screenBounds.topLeft
+                    },
             ) {
                 val horizontalPadding = if (maxWidth < CompactWidthBreakpoint) {
                     CompactHorizontalPadding
@@ -253,13 +269,6 @@ private fun GameScreenContent(
                     )
                 }
 
-                val categoryTabsVisible = gameCategoryTabsVisible(
-                    privacyActive,
-                    activePrivacySession,
-                    funFactsActive,
-                    activeFunFactsSession,
-                    funFactsCategoryTabsVisible,
-                )
                 AnimatedVisibility(
                     visible = categoryTabsVisible,
                     modifier = Modifier.fillMaxSize(),
@@ -418,31 +427,27 @@ internal fun GamePlayArea(
             contentAlignment = Alignment.Center,
         ) {
             SwipeableGameCard(
-                cardInstanceId = aktuelleKarte.instanceId,
-                swipeRegions = swipeControls.swipeRegions,
-                previousEnabled = swipeControls.previousEnabled,
-                swipeRequest = swipeControls.swipeRequest,
-                onSwipeRequestConsumed = swipeControls.onSwipeRequestConsumed,
-                onHighlightedTargetChanged = swipeControls.onHighlightedTargetChanged,
-                onInteractionStateChanged = swipeControls.onInteractionStateChanged,
-                onTargetSelected = swipeControls.onSwipeTargetSelected,
+                card = aktuelleKarte,
+                controls = swipeControls,
                 modifier = Modifier
                     .widthIn(max = 560.dp)
                     .heightIn(max = 720.dp)
                     .fillMaxSize()
                     .padding(vertical = 12.dp),
-            ) { idleEffectsEnabled ->
+            ) { visibleCard, idleEffectsEnabled ->
                 GameCard(
-                    kartentexte = aktuelleKarte.kartentexte,
-                    cardInstanceId = aktuelleKarte.instanceId,
-                    textPanelColors = aktuelleKarte.textPanelColors(
+                    kartentexte = visibleCard.kartentexte,
+                    cardInstanceId = visibleCard.instanceId,
+                    textPanelColors = visibleCard.textPanelColors(
                         kategorien, CategoryTabColors, FallbackTextPanelColor,
                     ),
                     idleEffectsEnabled = idleEffectsEnabled,
-                    interactionsEnabled = interactionsEnabled,
+                    interactionsEnabled = interactionsEnabled && idleEffectsEnabled,
                     hiddenCardTextIds = hiddenCardTextIds,
                     developerMode = developerMode,
-                    onKartentextBoundsChanged = onKartentextBoundsChanged,
+                    onKartentextBoundsChanged = { id, bounds ->
+                        if (idleEffectsEnabled) onKartentextBoundsChanged(id, bounds)
+                    },
                     cardTextActions = cardTextActions,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -486,6 +491,8 @@ internal const val PRIVACY_GAME_ID = 337
 
 @Stable
 private class GameScreenSwipeState {
+    val gestureInput = CardSwipeGestureInput()
+    var screenBounds by mutableStateOf(Rect.Zero)
     var highlightedTarget by mutableStateOf<CardSwipeTarget?>(null)
     var swipeInteractionLocked by mutableStateOf(false)
     var swipeRequest by mutableStateOf<CardSwipeRequest?>(null)

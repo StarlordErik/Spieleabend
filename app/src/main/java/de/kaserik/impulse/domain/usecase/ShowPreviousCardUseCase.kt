@@ -6,6 +6,8 @@ import javax.inject.Inject
 class ShowPreviousCardUseCase @Inject constructor(
     private val repository: GameRepository,
 ) {
+    suspend fun preview(gameId: Int) = repository.getPreviousCard(gameId)
+
     suspend operator fun invoke(gameId: Int): DrawCardResult? {
         val previous = repository.popCurrentCard(gameId) ?: return null
 
