@@ -70,7 +70,10 @@ fun AppSettingsDialog(
                     )
                 }
                 HorizontalDivider()
-                Text(stringResource(R.string.edited_card_texts), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(R.string.edited_card_texts),
+                    style = MaterialTheme.typography.titleSmall
+                )
                 CustomTranslationSettings(allGames = true, actions = customTranslationActions)
                 HorizontalDivider()
                 Row(
@@ -126,6 +129,7 @@ fun GameSettingsDialog(
     settings: GameSettingsState,
     settingsActions: GameSettingsActions = GameSettingsActions(),
     onRestartFunFactsGame: () -> Unit = {},
+    onRestartPrivacyGame: () -> Unit = {},
     onShowCards: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -141,38 +145,12 @@ fun GameSettingsDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                if (settings.supportsFunFactsMode) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                stringResource(R.string.game_mode),
-                                style = MaterialTheme.typography.titleSmall
-                            )
-                            Text(
-                                stringResource(
-                                    if (settings.funFactsModeEnabled) R.string.mode_fun_facts else R.string.mode_basic,
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                        Switch(
-                            checked = settings.funFactsModeEnabled,
-                            onCheckedChange = settingsActions.onFunFactsModeChanged,
-                        )
-                    }
-                    if (settings.funFactsModeEnabled) {
-                        Button(
-                            onClick = onRestartFunFactsGame,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(stringResource(R.string.restart_game))
-                        }
-                    }
-                    HorizontalDivider()
-                }
+                GameModeSettings(
+                    settings,
+                    settingsActions,
+                    onRestartFunFactsGame,
+                    onRestartPrivacyGame
+                )
                 CardTextSymbolSettings(settings, settingsActions)
                 HorizontalDivider()
                 SettingsActionRow(
@@ -246,6 +224,75 @@ fun GameSettingsDialog(
 }
 
 @Composable
+private fun GameModeSettings(
+    settings: GameSettingsState,
+    settingsActions: GameSettingsActions,
+    onRestartFunFactsGame: () -> Unit,
+    onRestartPrivacyGame: () -> Unit,
+) {
+    if (settings.supportsFunFactsMode || settings.supportsPrivacyMode) {
+        val modeEnabled =
+            if (settings.supportsPrivacyMode) settings.privacyModeEnabled else settings.funFactsModeEnabled
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.game_mode),
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    stringResource(
+                        when {
+                            !modeEnabled -> R.string.mode_basic
+                            settings.supportsPrivacyMode -> R.string.mode_privacy
+                            else -> R.string.mode_fun_facts
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(
+                checked = modeEnabled,
+                onCheckedChange = if (settings.supportsPrivacyMode) {
+                    settingsActions.onPrivacyModeChanged
+                } else {
+                    settingsActions.onFunFactsModeChanged
+                },
+            )
+        }
+        if (modeEnabled) {
+            Button(
+                onClick = if (settings.supportsPrivacyMode) onRestartPrivacyGame else onRestartFunFactsGame,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.restart_game))
+            }
+        }
+        HorizontalDivider()
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun GameModeSettingsPreview() {
+    ImpulseTheme {
+        Column {
+            GameModeSettings(
+                GameSettingsState(
+                    textsPerCard = 2,
+                    defaultTextsPerCard = 2,
+                    developerMode = false,
+                    supportsPrivacyMode = true
+                ),
+                GameSettingsActions(), {}, {},
+            )
+        }
+    }
+}
+
+@Composable
 private fun CardTextSymbolSettings(
     settings: GameSettingsState,
     settingsActions: GameSettingsActions,
@@ -304,7 +351,10 @@ private fun EditedCardTextSettings(
                 )
             }
         }
-        CustomTranslationSettings(allGames = false, actions = settingsActions.customTranslationActions)
+        CustomTranslationSettings(
+            allGames = false,
+            actions = settingsActions.customTranslationActions
+        )
     }
 }
 
@@ -314,7 +364,11 @@ private fun CardTextSymbolSettingsPreview() {
     ImpulseTheme {
         Column {
             CardTextSymbolSettings(
-                settings = GameSettingsState(textsPerCard = 1, defaultTextsPerCard = 1, developerMode = true),
+                settings = GameSettingsState(
+                    textsPerCard = 1,
+                    defaultTextsPerCard = 1,
+                    developerMode = true
+                ),
                 settingsActions = GameSettingsActions(),
             )
         }
@@ -326,7 +380,11 @@ private fun CardTextSymbolSettingsPreview() {
 private fun EditedCardTextSettingsPreview() {
     ImpulseTheme {
         EditedCardTextSettings(
-            settings = GameSettingsState(textsPerCard = 1, defaultTextsPerCard = 1, developerMode = true),
+            settings = GameSettingsState(
+                textsPerCard = 1,
+                defaultTextsPerCard = 1,
+                developerMode = true
+            ),
             settingsActions = GameSettingsActions(),
         )
     }

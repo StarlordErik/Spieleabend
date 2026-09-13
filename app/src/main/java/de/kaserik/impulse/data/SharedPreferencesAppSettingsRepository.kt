@@ -11,6 +11,8 @@ import de.kaserik.impulse.common.PreferenceKeys.FUN_FACTS_SESSION_KEY
 import de.kaserik.impulse.common.PreferenceKeys.LANGUAGE_KEY
 import de.kaserik.impulse.common.PreferenceKeys.LAST_DRAW_CATEGORY_PREFIX
 import de.kaserik.impulse.common.PreferenceKeys.PREFERENCES_NAME
+import de.kaserik.impulse.common.PreferenceKeys.PRIVACY_MODE_KEY
+import de.kaserik.impulse.common.PreferenceKeys.PRIVACY_SESSION_KEY
 import de.kaserik.impulse.common.Sprache
 import de.kaserik.impulse.domain.repository.AppSettingsRepository
 import java.util.Locale
@@ -27,17 +29,20 @@ class SharedPreferencesAppSettingsRepository @Inject constructor(
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
     override val developerMode: Flow<Boolean> =
-        booleanPreferenceFlow(DEVELOPER_MODE_KEY, defaultValue = false)
+        preferences.booleanPreferenceFlow(DEVELOPER_MODE_KEY, defaultValue = false)
 
     override val funFactsModeEnabled: Flow<Boolean> =
-        booleanPreferenceFlow(FUN_FACTS_MODE_KEY, defaultValue = true)
+        preferences.booleanPreferenceFlow(FUN_FACTS_MODE_KEY, defaultValue = true)
+
+    override val privacyModeEnabled: Flow<Boolean> =
+        preferences.booleanPreferenceFlow(PRIVACY_MODE_KEY, defaultValue = true)
 
     override val language: Flow<Sprache> =
         callbackFlow {
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
-                if (changedKey == LANGUAGE_KEY) trySend(readLanguage())
+                if (changedKey == LANGUAGE_KEY) trySend(preferences.readLanguage())
             }
-            trySend(readLanguage())
+            trySend(preferences.readLanguage())
             preferences.registerOnSharedPreferenceChangeListener(listener)
             awaitClose { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
         }.distinctUntilChanged()
@@ -48,6 +53,10 @@ class SharedPreferencesAppSettingsRepository @Inject constructor(
 
     override suspend fun setFunFactsModeEnabled(enabled: Boolean) {
         preferences.edit { putBoolean(FUN_FACTS_MODE_KEY, enabled) }
+    }
+
+    override suspend fun setPrivacyModeEnabled(enabled: Boolean) {
+        preferences.edit { putBoolean(PRIVACY_MODE_KEY, enabled) }
     }
 
     override suspend fun setLanguage(language: Sprache) {
@@ -62,6 +71,12 @@ class SharedPreferencesAppSettingsRepository @Inject constructor(
         preferences.edit { putString(FUN_FACTS_SESSION_KEY, serializedSession) }
     }
 
+    override fun getPrivacySession(): String? = preferences.getString(PRIVACY_SESSION_KEY, null)
+
+    override fun setPrivacySession(serializedSession: String) {
+        preferences.edit { putString(PRIVACY_SESSION_KEY, serializedSession) }
+    }
+
     override fun getLastDrawCategoryId(gameId: Int): Int? {
         val key = LAST_DRAW_CATEGORY_PREFIX + gameId
         return if (preferences.contains(key)) preferences.getInt(key, 0) else null
@@ -74,29 +89,30 @@ class SharedPreferencesAppSettingsRepository @Inject constructor(
         }
     }
 
-    private fun booleanPreferenceFlow(
-        key: String,
-        defaultValue: Boolean,
-    ): Flow<Boolean> =
-        callbackFlow {
-            val listener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, changedKey ->
+}
+
+private fun SharedPreferences.booleanPreferenceFlow(
+    key: String,
+    defaultValue: Boolean,
+): Flow<Boolean> =
+    callbackFlow {
+        val listener =
+            SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, changedKey ->
                 if (changedKey == key) trySend(sharedPreferences.getBoolean(key, defaultValue))
             }
-            trySend(preferences.getBoolean(key, defaultValue))
-            preferences.registerOnSharedPreferenceChangeListener(listener)
-            awaitClose { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
-        }.distinctUntilChanged()
+        trySend(getBoolean(key, defaultValue))
+        registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { unregisterOnSharedPreferenceChangeListener(listener) }
+    }.distinctUntilChanged()
 
-    private fun readLanguage(): Sprache {
-        val storedLanguage = preferences.getString(LANGUAGE_KEY, null)
-            ?.let { value -> Sprache.entries.firstOrNull { language -> language.name == value } }
-        return when {
-            storedLanguage == Sprache.ERIK -> Sprache.DE
-            storedLanguage?.auswaehlbar == true -> storedLanguage
-            else -> Sprache.AuswaehlbareSprachen.firstOrNull { language ->
-                language.name == Locale.getDefault().language.uppercase(ROOT)
-            } ?: Sprache.DE
-        }
+private fun SharedPreferences.readLanguage(): Sprache {
+    val storedLanguage = getString(LANGUAGE_KEY, null)
+        ?.let { value -> Sprache.entries.firstOrNull { language -> language.name == value } }
+    return when {
+        storedLanguage == Sprache.ERIK -> Sprache.DE
+        storedLanguage?.auswaehlbar == true -> storedLanguage
+        else -> Sprache.AuswaehlbareSprachen.firstOrNull { language ->
+            language.name == Locale.getDefault().language.uppercase(ROOT)
+        } ?: Sprache.DE
     }
-
 }

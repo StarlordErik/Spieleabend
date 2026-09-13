@@ -12,4 +12,4 @@ Spielinhalte bleiben in der Datenbank `app/src/main/assets/impulse.db`, die aus 
 Technische Kennungen und Diagnosemeldungen sind unter
 `app/src/main/java/de/kaserik/impulse/common` in `AppConstants.kt` und `AppMessages.kt` gebündelt.
 
-Einrichtung und Ausf?hrung des Grafikgenerators: [scripts/README.md](scripts/README.md).
+Einrichtung und Ausführung des Grafikgenerators: [scripts/README.md](scripts/README.md).

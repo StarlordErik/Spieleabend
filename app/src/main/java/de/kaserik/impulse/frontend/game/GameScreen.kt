@@ -88,6 +88,7 @@ fun GameScreen(
                     onFavoritesModeChanged = viewModel::setFavoritenModus,
                     onEditedCardTextsModeChanged = viewModel::setBearbeiteteKartentexteModus,
                     onFunFactsModeChanged = viewModel::setFunFactsModeEnabled,
+                    onPrivacyModeChanged = viewModel::setPrivacyModeEnabled,
                     customTranslationActions = CustomTranslationActions(
                         onApplyErikTranslations = viewModel::applyErikTranslations,
                         onResetCustomTranslations = viewModel::resetCustomTranslations,
@@ -101,6 +102,7 @@ fun GameScreen(
                 ),
                 onCustomCardTextChanged = viewModel::setEigeneKartentextLokalisierung,
                 funFactsSession = viewModel.funFactsSession,
+                privacySession = viewModel.privacySession,
             )
         }
     }
@@ -154,6 +156,7 @@ private fun GameScreenContent(
     cardTextActions: CardTextActions = CardTextActions(),
     onCustomCardTextChanged: (Int, String?) -> Unit = { _, _ -> },
     funFactsSession: FunFactsSession? = null,
+    privacySession: PrivacySession? = null,
 ) {
     val accessibilityLabel = stringResource(R.string.game_settings)
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -163,6 +166,8 @@ private fun GameScreenContent(
     var funFactsCategoryTabsVisible by remember { mutableStateOf(true) }
     val funFactsActive = uiState.spielId == FUN_FACTS_GAME_ID && uiState.funFactsModeEnabled
     val activeFunFactsSession = funFactsSession ?: remember { FunFactsSession() }
+    val privacyActive = uiState.spielId == PRIVACY_GAME_ID && uiState.privacyModeEnabled
+    val activePrivacySession = privacySession ?: remember { PrivacySession() }
     val landscapeTarget = rememberFunFactsLandscapeTarget(
         rotationEnabled = funFactsActive &&
                 activeFunFactsSession.phase == FunFactsPhase.EnterAnswer &&
@@ -192,7 +197,9 @@ private fun GameScreenContent(
         onKartentextEditRequested = { editingCardTextId = it },
     )
 
-    CompositionLocalProvider(LocalCardTimerPaused provides (showSettings || editingCardTextId != null)) {
+    CompositionLocalProvider(
+        LocalCardTimerPaused provides (showSettings || editingCardTextId != null || privacyActive),
+    ) {
         Surface(
             modifier = modifier.fillMaxSize(),
             color = TableBackground,
@@ -234,28 +241,25 @@ private fun GameScreenContent(
                             ),
                     )
                 } else {
-                    GamePlayArea(
-                        spielName = uiState.spielName,
-                        aktuelleKarte = uiState.aktuelleKarte,
-                        kategorien = uiState.kategorien,
-                        swipeControls = swipeControls,
-                        cardTextActions = editableCardTextActions,
-                        developerMode = developerMode,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(
-                                start = horizontalPadding,
-                                top = 24.dp,
-                                end = horizontalPadding,
-                                bottom = 24.dp,
-                            ),
+                    PrivacyOrBasicPlayArea(
+                        uiState,
+                        privacyActive,
+                        activePrivacySession,
+                        swipeControls,
+                        editableCardTextActions,
+                        developerMode,
+                        navigationActions.onNextSelected,
+                        horizontalPadding,
                     )
                 }
 
-                val categoryTabsVisible =
-                    !funFactsActive ||
-                            activeFunFactsSession.selectingQuestion ||
-                            funFactsCategoryTabsVisible
+                val categoryTabsVisible = gameCategoryTabsVisible(
+                    privacyActive,
+                    activePrivacySession,
+                    funFactsActive,
+                    activeFunFactsSession,
+                    funFactsCategoryTabsVisible,
+                )
                 AnimatedVisibility(
                     visible = categoryTabsVisible,
                     modifier = Modifier.fillMaxSize(),
@@ -269,7 +273,8 @@ private fun GameScreenContent(
                             highlightedTarget = swipeState.highlightedTarget,
                             previousEnabled = uiState.hasPreviousCard,
                             interactionsEnabled = !swipeState.swipeInteractionLocked &&
-                                    !funFactsQuestionTransitionActive,
+                                    !funFactsQuestionTransitionActive &&
+                                    (!privacyActive || activePrivacySession.selectingQuestion),
                             dimWhenInteractionsDisabled = !funFactsActive,
                         ),
                         actions = CategoryTabsActions(
@@ -308,11 +313,20 @@ private fun GameScreenContent(
                 developerMode = developerMode,
                 supportsFunFactsMode = uiState.spielId == FUN_FACTS_GAME_ID,
                 funFactsModeEnabled = uiState.funFactsModeEnabled,
+                supportsPrivacyMode = uiState.spielId == PRIVACY_GAME_ID,
+                privacyModeEnabled = uiState.privacyModeEnabled,
                 deletedCardTextsMode = uiState.geloeschteKartentexteModus,
                 favoritesMode = uiState.favoritenModus,
                 editedCardTextsMode = uiState.bearbeiteteKartentexteModus,
             ),
             settingsActions = settingsActions,
+            onRestartPrivacyGame = {
+                activePrivacySession.selectedQuestionId?.let { questionId ->
+                    cardTextActions.onKartentextPlayedStateChanged(questionId, false)
+                }
+                activePrivacySession.restartGame()
+                showSettings = false
+            },
             onRestartFunFactsGame = {
                 activeFunFactsSession.selectedQuestionId?.let { questionId ->
                     cardTextActions.onKartentextPlayedStateChanged(questionId, false)
@@ -468,6 +482,7 @@ internal fun GameCardUiModel.textPanelColors(
     }
 
 internal const val FUN_FACTS_GAME_ID = 149
+internal const val PRIVACY_GAME_ID = 337
 
 @Stable
 private class GameScreenSwipeState {

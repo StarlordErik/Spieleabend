@@ -57,12 +57,20 @@ class GameViewModel @Inject constructor(
     private var sprache: Sprache = Sprache.DE
     private val cardChangeMutex = Mutex()
     private var funFactsModeEnabled = true
+    private var privacyModeEnabled = true
     private var funFactsPersistenceJob: Job? = null
 
     internal var funFactsSession by mutableStateOf(
-        FunFactsSession.restore(appSettingsRepository.getFunFactsSession(), ::scheduleFunFactsPersistence),
+        FunFactsSession.restore(
+            appSettingsRepository.getFunFactsSession(),
+            ::scheduleFunFactsPersistence
+        ),
     )
         private set
+
+    internal val privacySession = PrivacySession.restore(
+        appSettingsRepository.getPrivacySession(), ::persistPrivacySession,
+    )
 
     private val _uiState = MutableStateFlow<GameScreenUiState>(GameScreenUiState.Loading)
 
@@ -70,10 +78,19 @@ class GameViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            appSettingsRepository.privacyModeEnabled.collect { enabled ->
+                privacyModeEnabled = enabled
+                val state = _uiState.value as? GameScreenUiState.Loaded ?: return@collect
+                _uiState.value =
+                    GameScreenUiState.Loaded(state.game.copy(privacyModeEnabled = enabled))
+            }
+        }
+        viewModelScope.launch {
             appSettingsRepository.funFactsModeEnabled.collect { enabled ->
                 funFactsModeEnabled = enabled
                 val state = _uiState.value as? GameScreenUiState.Loaded ?: return@collect
-                _uiState.value = GameScreenUiState.Loaded(state.game.copy(funFactsModeEnabled = enabled))
+                _uiState.value =
+                    GameScreenUiState.Loaded(state.game.copy(funFactsModeEnabled = enabled))
             }
         }
         viewModelScope.launch {
@@ -118,7 +135,8 @@ class GameViewModel @Inject constructor(
 
     private suspend fun drawFromLastCategory() {
         val state = _uiState.value as? GameScreenUiState.Loaded ?: return
-        val categoryId = lastDrawCategoryId?.takeIf { id -> state.game.kategorien.any { it.id == id } }
+        val categoryId =
+            lastDrawCategoryId?.takeIf { id -> state.game.kategorien.any { it.id == id } }
         drawCard(categoryId)
     }
 
@@ -132,9 +150,16 @@ class GameViewModel @Inject constructor(
     fun setFunFactsModeEnabled(enabled: Boolean) {
         val state = _uiState.value as? GameScreenUiState.Loaded
         if (state != null) {
-            _uiState.value = GameScreenUiState.Loaded(state.game.copy(funFactsModeEnabled = enabled))
+            _uiState.value =
+                GameScreenUiState.Loaded(state.game.copy(funFactsModeEnabled = enabled))
         }
         viewModelScope.launch { appSettingsRepository.setFunFactsModeEnabled(enabled) }
+    }
+
+    fun setPrivacyModeEnabled(enabled: Boolean) {
+        privacyModeEnabled = enabled
+        updateGameSettings { it.copy(privacyModeEnabled = enabled) }
+        viewModelScope.launch { appSettingsRepository.setPrivacyModeEnabled(enabled) }
     }
 
     fun selectPrevious() {
@@ -303,6 +328,11 @@ class GameViewModel @Inject constructor(
 
     override fun onCleared() {
         appSettingsRepository.setFunFactsSession(funFactsSession.serialize())
+        if (gameId == PRIVACY_GAME_ID) persistPrivacySession()
+    }
+
+    private fun persistPrivacySession() {
+        appSettingsRepository.setPrivacySession(privacySession.serialize())
     }
 
     private fun scheduleFunFactsPersistence() {
@@ -315,12 +345,16 @@ class GameViewModel @Inject constructor(
 
     private fun showCard(drawCardResult: DrawCardResult) {
         val loadedSpiel = drawCardResult.spiel
+        if (gameId == PRIVACY_GAME_ID) privacySession.onCardChanged(drawCardResult.instanceId)
         _uiState.value = GameScreenUiState.Loaded(
             game = loadedSpiel.toUiState(
                 aktuelleKarte = drawCardResult.karte,
                 cardInstanceId = drawCardResult.instanceId,
                 hasPreviousCard = drawCardResult.hasPrevious,
-            ).copy(funFactsModeEnabled = funFactsModeEnabled),
+            ).copy(
+                funFactsModeEnabled = funFactsModeEnabled,
+                privacyModeEnabled = privacyModeEnabled
+            ),
         )
     }
 

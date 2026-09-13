@@ -10,6 +10,8 @@ data class GameSettingsState(
     val developerMode: Boolean,
     val supportsFunFactsMode: Boolean = false,
     val funFactsModeEnabled: Boolean = false,
+    val supportsPrivacyMode: Boolean = false,
+    val privacyModeEnabled: Boolean = false,
     val deletedCardTextsMode: GeloeschteKartentexteModus = GeloeschteKartentexteModus.ALS_LETZTE,
     val favoritesMode: FavoritenModus = FavoritenModus.UNBEACHTET,
     val editedCardTextsMode: BearbeiteteKartentexteModus = BearbeiteteKartentexteModus.UNBEACHTET,
@@ -17,6 +19,7 @@ data class GameSettingsState(
 
 data class GameSettingsActions(
     val onFunFactsModeChanged: (Boolean) -> Unit = {},
+    val onPrivacyModeChanged: (Boolean) -> Unit = {},
     val onDeletedCardTextsModeChanged: (GeloeschteKartentexteModus) -> Unit = {},
     val onFavoritesModeChanged: (FavoritenModus) -> Unit = {},
     val onEditedCardTextsModeChanged: (BearbeiteteKartentexteModus) -> Unit = {},

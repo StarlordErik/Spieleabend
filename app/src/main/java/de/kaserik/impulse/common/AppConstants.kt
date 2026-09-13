@@ -10,6 +10,8 @@ internal object PreferenceKeys {
     const val DEVELOPER_MODE_KEY = "developer_mode"
     const val FUN_FACTS_MODE_KEY = "fun_facts_mode_enabled"
     const val FUN_FACTS_SESSION_KEY = "fun_facts_session"
+    const val PRIVACY_MODE_KEY = "privacy_mode_enabled"
+    const val PRIVACY_SESSION_KEY = "privacy_session"
     const val LANGUAGE_KEY = "language"
     const val LAST_DRAW_CATEGORY_PREFIX = "last_draw_category_"
 }

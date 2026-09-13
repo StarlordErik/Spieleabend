@@ -30,6 +30,7 @@ data class GameUiState(
     val standardTexteProKarte: Int,
     val hasPreviousCard: Boolean,
     val funFactsModeEnabled: Boolean = true,
+    val privacyModeEnabled: Boolean = true,
     val sprache: Sprache = Sprache.DE,
     val geloeschteKartentexteModus: GeloeschteKartentexteModus = GeloeschteKartentexteModus.ALS_LETZTE,
     val favoritenModus: FavoritenModus = FavoritenModus.UNBEACHTET,
