@@ -10,11 +10,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
@@ -173,6 +179,7 @@ private fun GameScreenContent(
     val activePrivacySession = privacySession ?: remember { PrivacySession() }
     val landscapeTarget = rememberFunFactsLandscapeTarget(
         rotationEnabled = funFactsActive &&
+                !activeFunFactsSession.needsPlayerCount &&
                 activeFunFactsSession.phase == FunFactsPhase.EnterAnswer &&
                 !funFactsQuestionTransitionActive && !showSettings && editingCardTextId == null,
         hasName = activeFunFactsSession.draftName.strokes.isNotEmpty(),
@@ -221,7 +228,10 @@ private fun GameScreenContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(GameTableBrush)
-                    .safeDrawingPadding()
+                    .windowInsetsPadding(
+                        if (privacyActive) WindowInsets.systemBars.union(WindowInsets.displayCutout)
+                        else WindowInsets.safeDrawing,
+                    )
                     .onGloballyPositioned { swipeState.screenBounds = it.boundsInRoot() }
                     .cardSwipeGestures(swipeState.gestureInput, categoryTabsVisible) {
                         swipeState.screenBounds.topLeft

@@ -32,7 +32,7 @@ internal fun privacyPoints(prediction: Int, yesCount: Int, playerCount: Int): In
         1 -> 1
         else -> 0
     }
-    return if (yesCount == playerCount) points.coerceAtMost(1) else points
+    return if (yesCount == 0 || yesCount == playerCount) points.coerceAtMost(1) else points
 }
 
 @Stable
@@ -48,7 +48,14 @@ internal class PrivacySession(
         private set
     var roundNumber by mutableIntStateOf(1)
         private set
-    val draft = PrivacyDraft(onChanged) { phase == PrivacyPhase.EnterAnswer }
+    var totalPlayerCount by mutableIntStateOf(0)
+        private set
+    val needsPlayerCount: Boolean get() = totalPlayerCount == 0
+    val minimumPlayerCount: Int get() = maxOf(MIN_GAME_PLAYERS, players.size, answers.size + 1)
+    val predictionMaximum: Int get() = (totalPlayerCount - 1).coerceAtLeast(1)
+    val draft = PrivacyDraft(onChanged, { predictionMaximum }) {
+        !needsPlayerCount && phase == PrivacyPhase.EnterAnswer
+    }
     val draftName: String get() = draft.name
     val draftVote: Boolean? get() = draft.vote
     val draftPrediction: Int get() = draft.prediction
@@ -65,8 +72,10 @@ internal class PrivacySession(
     val canChangeQuestion: Boolean get() = phase == PrivacyPhase.EnterAnswer && answers.isEmpty()
     val canSubmit: Boolean
         get() = phase == PrivacyPhase.EnterAnswer && draftName.isNotBlank() &&
-                draftVote != null && answers.size < PRIVACY_MAX_PLAYERS
-    val canGoToNextPlayer: Boolean get() = canSubmit && playerNumber < PRIVACY_MAX_PLAYERS
+                draftVote != null && answers.size < totalPlayerCount
+    val isLastPlayer: Boolean get() = !needsPlayerCount && playerNumber == totalPlayerCount
+    val canGoToNextPlayer: Boolean get() = canSubmit && !isLastPlayer
+    val canReveal: Boolean get() = canSubmit && isLastPlayer && playerNumber >= MIN_GAME_PLAYERS
     val ranking: List<PrivacyRanking>
         get() {
             val participants = answers.map { answer -> players.first { it.id == answer.playerId } }
@@ -81,8 +90,18 @@ internal class PrivacySession(
             }
         }
 
+    fun configurePlayerCount(count: Int) {
+        if (!needsPlayerCount || count !in minimumPlayerCount..PRIVACY_MAX_PLAYERS) return
+        totalPlayerCount = count
+        draft.constrainPrediction()
+        answers.indices.forEach { index ->
+            answers[index] = answers[index].copy(prediction = answers[index].prediction.coerceIn(1, predictionMaximum))
+        }
+        onChanged()
+    }
+
     fun selectQuestion(questionId: Int, instanceId: Long) {
-        if (!selectingQuestion) return
+        if (needsPlayerCount || !selectingQuestion) return
         selectedQuestionId = questionId
         cardInstanceId = instanceId
         phase = PrivacyPhase.EnterAnswer
@@ -108,7 +127,7 @@ internal class PrivacySession(
     }
 
     fun reveal() {
-        if (!canSubmit) return
+        if (!canReveal) return
         saveAnswer()
         draft.reset()
         phase = PrivacyPhase.Revealing
@@ -150,6 +169,7 @@ internal class PrivacySession(
         turnOrder.clear()
         nextId = 0
         roundNumber = 1
+        totalPlayerCount = 0
         selectedQuestionId = null
         cardInstanceId = null
         phase = PrivacyPhase.SelectQuestion
@@ -214,6 +234,7 @@ internal class PrivacySession(
                 output.writeBoolean(answer.yes)
                 output.writeInt(answer.prediction)
             }
+            output.writeInt(totalPlayerCount)
         }
         return Base64.getEncoder().encodeToString(bytes.toByteArray())
     }
@@ -226,7 +247,8 @@ internal class PrivacySession(
         ): PrivacySession = runCatching {
             val bytes = Base64.getDecoder().decode(requireNotNull(serialized))
             DataInputStream(ByteArrayInputStream(bytes)).use { input ->
-                require(input.readInt() == PRIVACY_SESSION_VERSION)
+                val version = input.readInt()
+                require(version in 1..PRIVACY_SESSION_VERSION)
                 PrivacySession(onChanged, onRoundCompleted).apply {
                     phase = PrivacyPhase.valueOf(input.readUTF())
                     selectedQuestionId = input.readInt().takeIf { it >= 0 }
@@ -235,6 +257,8 @@ internal class PrivacySession(
                     nextId = input.readInt().also { require(it >= 0) }
                     draft.restore(input)
                     readPlayers(input)
+                    totalPlayerCount = if (version == PRIVACY_SESSION_VERSION) input.readInt() else legacyPlayerCount()
+                    if (!needsPlayerCount) draft.constrainPrediction()
                     validateRestoredRound()
                 }
             }
@@ -251,6 +275,8 @@ internal class PrivacySession(
         }
 
         private fun PrivacySession.validateRestoredRound() {
+            require(totalPlayerCount == 0 || totalPlayerCount in MIN_GAME_PLAYERS..PRIVACY_MAX_PLAYERS)
+            require(needsPlayerCount || players.size <= totalPlayerCount)
             require(players.all { it.id in 0 until nextId && it.name.isNotBlank() && it.points >= 0 })
             require(players.map { it.id }.distinct().size == players.size)
             require(turnOrder.distinct().size == turnOrder.size && turnOrder.all { id -> players.any { it.id == id } })
@@ -262,9 +288,16 @@ internal class PrivacySession(
                 require(answers.isEmpty())
             } else {
                 require(selectedQuestionId != null && cardInstanceId != null)
-                require(phase != PrivacyPhase.EnterAnswer || answers.size < PRIVACY_MAX_PLAYERS)
-                require(phase == PrivacyPhase.EnterAnswer || answers.isNotEmpty())
+                require(phase != PrivacyPhase.EnterAnswer || answers.size <
+                        if (needsPlayerCount) PRIVACY_MAX_PLAYERS else totalPlayerCount)
+                require(phase == PrivacyPhase.EnterAnswer ||
+                        answers.size == totalPlayerCount && totalPlayerCount >= MIN_GAME_PLAYERS)
             }
+        }
+
+        private fun PrivacySession.legacyPlayerCount(): Int = when (phase) {
+            PrivacyPhase.Revealing, PrivacyPhase.Complete -> answers.size
+            else -> 0
         }
     }
 
@@ -274,6 +307,6 @@ internal class PrivacySession(
 private fun DataInputStream.readPlayerCount(): Int =
     readInt().also { require(it in 0..PRIVACY_MAX_PLAYERS) }
 
-internal const val PRIVACY_MAX_PLAYERS = 10
+internal const val PRIVACY_MAX_PLAYERS = MAX_GAME_PLAYERS
 private const val PRIVACY_EXACT_POINTS = 3
-private const val PRIVACY_SESSION_VERSION = 1
+private const val PRIVACY_SESSION_VERSION = 2

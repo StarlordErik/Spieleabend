@@ -1,12 +1,13 @@
 package de.kaserik.impulse.frontend.game
 
+import android.view.WindowManager
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -14,6 +15,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -50,6 +52,21 @@ internal fun PrivacyPlayArea(
     onNextCard: () -> Unit = {},
     gameContentHorizontalPadding: Dp = 0.dp,
 ) {
+    val window = LocalActivity.current?.window
+    DisposableEffect(window) {
+        val previousMode = window?.attributes?.softInputMode
+        if (previousMode != null) {
+            window.setSoftInputMode(
+                (previousMode and WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST.inv()) or
+                        WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING,
+            )
+        }
+        onDispose { if (previousMode != null) window.setSoftInputMode(previousMode) }
+    }
+    if (session.needsPlayerCount) {
+        PlayerCountSetup(session::configurePlayerCount, modifier, session.minimumPlayerCount)
+        return
+    }
     val motion = remember { PrivacyQuestionMotion() }
     val scope = rememberCoroutineScope()
     LaunchedEffect(uiState.aktuelleKarte.instanceId) {
@@ -101,7 +118,7 @@ internal fun PrivacyPlayArea(
                     }
                 }
             },
-            modifier = areaModifier.imePadding(),
+            modifier = areaModifier,
         )
     }
 }
@@ -236,14 +253,7 @@ private fun PrivacyRoundBody(
         CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
             when (session.phase) {
                 PrivacyPhase.EnterAnswer -> PrivacyAnswerEntry(session, Modifier.fillMaxSize())
-                PrivacyPhase.Revealing -> PrivacyDiceReveal(
-                    yesCount = session.yesCount,
-                    playerCount = session.playerCount,
-                    onFinished = session::completeReveal,
-                    modifier = Modifier.fillMaxSize(),
-                )
-
-                PrivacyPhase.Complete -> PrivacyResults(
+                PrivacyPhase.Revealing, PrivacyPhase.Complete -> PrivacyDiceReveal(
                     session = session,
                     onNextRound = onNextRound,
                     nextRoundEnabled = nextRoundEnabled,
@@ -295,7 +305,8 @@ private fun PrivacyQuestionStagePreview() {
     }
 }
 
-internal fun previewPrivacySession(): PrivacySession = PrivacySession().apply {
+internal fun previewPrivacySession(playerCount: Int = 5): PrivacySession = PrivacySession().apply {
+    configurePlayerCount(playerCount)
     selectQuestion(questionId = 101, instanceId = 0)
     draft.updateName("Alex")
 }

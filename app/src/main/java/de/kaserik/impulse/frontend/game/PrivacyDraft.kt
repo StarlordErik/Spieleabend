@@ -10,6 +10,7 @@ import java.io.DataInputStream
 @Stable
 internal class PrivacyDraft(
     private val onChanged: () -> Unit,
+    private val maximumPrediction: () -> Int,
     private val canEdit: () -> Boolean,
 ) {
     var name by mutableStateOf("")
@@ -33,8 +34,12 @@ internal class PrivacyDraft(
 
     fun choosePrediction(value: Int) {
         if (!canEdit()) return
-        prediction = value.coerceIn(1, PRIVACY_MAX_PLAYERS)
+        prediction = value.coerceIn(1, maximumPrediction())
         onChanged()
+    }
+
+    fun constrainPrediction() {
+        prediction = prediction.coerceIn(1, maximumPrediction())
     }
 
     fun reset(name: String = "") {

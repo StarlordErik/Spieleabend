@@ -12,6 +12,7 @@ class FunFactsSessionTest {
     fun selectedQuestionIsCompletedOnlyAfterTheLastSignAndOnlyOnce() {
         val completedQuestions = mutableListOf<Int>()
         val session = FunFactsSession(onRoundCompleted = { completedQuestions.add(it) })
+        session.configurePlayerCount(2)
         session.selectQuestion(9)
         session.reopenQuestionSelection()
         session.selectQuestion(9)
@@ -19,6 +20,7 @@ class FunFactsSessionTest {
         session.restartGame()
         assertTrue(completedQuestions.isEmpty())
 
+        session.configurePlayerCount(2)
         session.selectQuestion(10)
         session.addPlayer("Ada", "10")
         session.nextPlayer()
@@ -39,7 +41,7 @@ class FunFactsSessionTest {
 
     @Test
     fun restoredRoundStillReportsCompletionWhenItsLastSignIsRevealed() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(10)
         session.addPlayer("Ada", "10")
         session.nextPlayer()
@@ -62,7 +64,7 @@ class FunFactsSessionTest {
 
     @Test
     fun questionCanOnlyBeChangedBeforeFirstSignIsFinished() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(10, QUESTION_ORIGIN)
 
         assertEquals(10, session.reopenQuestionSelection())
@@ -78,7 +80,7 @@ class FunFactsSessionTest {
 
     @Test
     fun activeSignCanBeInsertedBetweenOtherSigns() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(3) }
         session.selectQuestion(10)
         session.addPlayer("Ada", "10")
         session.nextPlayer()
@@ -96,7 +98,7 @@ class FunFactsSessionTest {
 
     @Test
     fun signsRevealFromBottomToTop() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(10)
         session.addPlayer("Ada", "10")
         session.nextPlayer()
@@ -114,7 +116,7 @@ class FunFactsSessionTest {
 
     @Test
     fun revealedAnswerCanBeHiddenWithoutLosingRevealOrder() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(3) }
         session.selectQuestion(10)
         session.addPlayer("Ada", "10")
         session.nextPlayer()
@@ -159,7 +161,7 @@ class FunFactsSessionTest {
 
     @Test
     fun newPlayersStartWithMiddleWidthAndKnownPlayersRestoreTheirLastSelection() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(10)
 
         assertEquals(DEFAULT_STROKE_WIDTH_INDEX, session.selectedStrokeWidthIndex)
@@ -182,7 +184,7 @@ class FunFactsSessionTest {
 
     @Test
     fun allRevealedSignsCanStillBeFlippedRepeatedly() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(10)
         session.addPlayer("Ada", "10")
         session.nextPlayer()
@@ -201,7 +203,7 @@ class FunFactsSessionTest {
 
     @Test
     fun selectedStrokeWidthSurvivesSessionSerialization() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(10)
         val wideStroke = DEFAULT_DRAWING_STROKE_WIDTH_FRACTION * 2f
         session.draftName.startStroke(Offset.Zero, wideStroke)
@@ -215,7 +217,7 @@ class FunFactsSessionTest {
 
     @Test
     fun selectedQuestionOriginSurvivesSessionSerialization() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(71, QUESTION_ORIGIN)
 
         val restored = FunFactsSession.restore(session.serialize())
@@ -226,10 +228,11 @@ class FunFactsSessionTest {
 
     @Test
     fun versionSixSessionWithoutQuestionOriginCanStillBeRestored() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(71, QUESTION_ORIGIN)
         val versionSixLines = session.serialize().lines().toMutableList().apply {
             this[0] = "6"
+            removeAt(lastIndex)
             removeAt(4)
         }
 
@@ -241,7 +244,7 @@ class FunFactsSessionTest {
 
     @Test
     fun restartReturnsToQuestionSelectionAndClearsAllSigns() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(10)
         session.selectColor(3)
         session.addPlayer("Ada", "10")
@@ -257,6 +260,8 @@ class FunFactsSessionTest {
         assertTrue(session.draftAnswer.strokes.isEmpty())
         assertEquals((0 until 10).toList(), session.availableColorIndices)
 
+        assertTrue(session.needsPlayerCount)
+        session.configurePlayerCount(2)
         session.selectQuestion(11)
         assertTrue(session.draftName.strokes.isEmpty())
         assertEquals(DEFAULT_STROKE_WIDTH_INDEX, session.selectedStrokeWidthIndex)
@@ -264,7 +269,7 @@ class FunFactsSessionTest {
 
     @Test
     fun nextRoundStartsWithSecondPlayerFromPreviousRound() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(10)
         session.addPlayer("Ada", "10")
         session.nextPlayer()
@@ -279,7 +284,7 @@ class FunFactsSessionTest {
 
     @Test
     fun assignedSignColorsCannotBeSelectedAgain() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(10)
         session.selectColor(3)
         session.addPlayer("Ada", "10")
@@ -298,7 +303,7 @@ class FunFactsSessionTest {
 
     @Test
     fun playersKeepTheirReservedColorsInTheNextRound() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(10)
         session.selectColor(3)
         session.addPlayer("Ada", "10")
@@ -319,7 +324,7 @@ class FunFactsSessionTest {
 
     @Test
     fun reservedColorsSurviveSessionSerialization() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(10)
         session.selectColor(4)
         session.addPlayer("Ada", "10")
@@ -333,7 +338,7 @@ class FunFactsSessionTest {
 
     @Test
     fun finishedDrawingIsIndependentFromNextPlayersCanvas() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(10)
         session.addPlayer("Ada", "10")
         val savedDrawing = session.players.single().answer
@@ -346,7 +351,7 @@ class FunFactsSessionTest {
 
     @Test
     fun serializedSessionRestoresRoundAndDrawings() {
-        val session = FunFactsSession()
+        val session = FunFactsSession().apply { configurePlayerCount(2) }
         session.selectQuestion(71)
         session.selectColor(4)
         session.addPlayer("Ada", "42")
@@ -358,6 +363,66 @@ class FunFactsSessionTest {
         assertEquals(4, restored.players.single().colorIndex)
         assertEquals(session.players.single().name, restored.players.single().name)
         assertEquals(session.players.single().answer, restored.players.single().answer)
+    }
+
+
+    @Test
+    fun playerCountIsRequiredAndPersistsUntilRestart() {
+        val session = FunFactsSession()
+        session.selectQuestion(10)
+        assertNull(session.selectedQuestionId)
+        listOf(-1, 0, 1, 11).forEach(session::configurePlayerCount)
+        assertTrue(session.needsPlayerCount)
+        session.configurePlayerCount(5)
+        session.configurePlayerCount(3)
+        val restored = FunFactsSession.restore(session.serialize())
+        assertEquals(5, restored.totalPlayerCount)
+        restored.selectQuestion(10)
+        restored.addPlayer("Ada", "10")
+        restored.startNextRound()
+        assertEquals(5, restored.totalPlayerCount)
+        restored.restartGame()
+        assertTrue(restored.needsPlayerCount)
+    }
+
+    @Test
+    fun revealRequiresEveryConfiguredPlayerAndNoExtraPlayerCanJoin() {
+        for (count in MIN_GAME_PLAYERS..MAX_GAME_PLAYERS) {
+            val session = FunFactsSession().apply { configurePlayerCount(count) }
+            session.selectQuestion(10)
+            repeat(count) { index ->
+                session.addPlayer("Person $index", "10")
+                if (index < count - 1) {
+                    assertTrue(session.canAddPlayer)
+                    assertFalse(session.canBeginReveal)
+                    session.beginReveal()
+                    assertEquals(FunFactsPhase.PositionSign, session.phase)
+                    session.nextPlayer()
+                }
+            }
+            val restored = FunFactsSession.restore(session.serialize())
+            assertFalse(restored.canAddPlayer)
+            assertTrue(restored.canBeginReveal)
+            restored.nextPlayer()
+            assertEquals(FunFactsPhase.PositionSign, restored.phase)
+            restored.beginReveal()
+            assertEquals(FunFactsPhase.FinalPositioning, restored.phase)
+            assertEquals(count, restored.players.size)
+        }
+    }
+
+    @Test
+    fun olderPartialRoundsAskForCountWithoutLosingSigns() {
+        val session = FunFactsSession().apply { configurePlayerCount(4) }
+        session.selectQuestion(10)
+        session.addPlayer("Ada", "10")
+        val legacy = session.serialize().substringBeforeLast("\n")
+        val restored = FunFactsSession.restore(legacy)
+        assertTrue(restored.needsPlayerCount)
+        assertEquals(session.players.toList(), restored.players.toList())
+        restored.configurePlayerCount(4)
+        restored.nextPlayer()
+        assertEquals(FunFactsPhase.EnterAnswer, restored.phase)
     }
 
     private fun FunFactsSession.addPlayer(name: String, answer: String) {

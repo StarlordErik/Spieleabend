@@ -129,6 +129,11 @@ internal class FunFactsSession(
         private set
     var showFirstPlayerHint by mutableStateOf(false)
         private set
+    var totalPlayerCount by mutableIntStateOf(0)
+        private set
+    val needsPlayerCount: Boolean get() = totalPlayerCount == 0
+    val minimumPlayerCount: Int
+        get() = maxOf(MIN_GAME_PLAYERS, knownNames.size, players.size + if (phase == FunFactsPhase.EnterAnswer) 1 else 0)
     val players = mutableStateListOf<FunFactsPlayer>()
     val draftName = FunFactsDraftDrawing(onChanged)
     val draftAnswer = FunFactsDraftDrawing(onChanged)
@@ -160,12 +165,23 @@ internal class FunFactsSession(
         }
 
     val canAddPlayer: Boolean
-        get() = players.size < SIGN_COLOR_COUNT
+        get() = !needsPlayerCount && players.size < totalPlayerCount
+
+    val canBeginReveal: Boolean
+        get() = phase == FunFactsPhase.PositionSign &&
+                totalPlayerCount >= MIN_GAME_PLAYERS && players.size == totalPlayerCount
+
+    fun configurePlayerCount(count: Int) {
+        if (!needsPlayerCount || count !in minimumPlayerCount..MAX_GAME_PLAYERS) return
+        totalPlayerCount = count
+        onChanged()
+    }
 
     fun selectQuestion(
         questionId: Int,
         origin: FunFactsQuestionOrigin? = null,
     ) {
+        if (needsPlayerCount || !selectingQuestion) return
         selectedQuestionId = questionId
         selectedQuestionOrigin = origin?.takeIf(FunFactsQuestionOrigin::valid)
         phase = FunFactsPhase.EnterAnswer
@@ -203,7 +219,7 @@ internal class FunFactsSession(
     }
 
     fun finishAnswer() {
-        if (phase != FunFactsPhase.EnterAnswer) return
+        if (phase != FunFactsPhase.EnterAnswer || !canAddPlayer) return
         val validDraft =
             draftName.strokes.isNotEmpty() &&
                 draftAnswer.strokes.isNotEmpty() &&
@@ -261,7 +277,7 @@ internal class FunFactsSession(
     fun beginReveal() {
         when (phase) {
             FunFactsPhase.PositionSign -> {
-                if (players.size < 2) return
+                if (!canBeginReveal) return
                 phase = FunFactsPhase.FinalPositioning
                 showFirstPlayerHint = true
             }
@@ -295,6 +311,7 @@ internal class FunFactsSession(
     }
 
     fun restartGame() {
+        totalPlayerCount = 0
         phase = FunFactsPhase.SelectQuestion
         selectedQuestionId = null
         selectedQuestionOrigin = null
@@ -405,7 +422,8 @@ internal class FunFactsSession(
             appendLine(session.knownStrokeWidthIndices.size)
             session.knownStrokeWidthIndices.forEach { index -> appendLine(index) }
             appendLine(encodeDrawing(session.draftName.snapshot()))
-            append(encodeDrawing(session.draftAnswer.snapshot()))
+            appendLine(encodeDrawing(session.draftAnswer.snapshot()))
+            append(session.totalPlayerCount)
         }
 
         fun decode(
@@ -425,6 +443,15 @@ internal class FunFactsSession(
             decodeKnownPlayers(lines, session, features)
             session.draftName.restore(decodeDrawing(lines.next(), features.strokeWidths))
             session.draftAnswer.restore(decodeDrawing(lines.next(), features.strokeWidths))
+            session.totalPlayerCount = if (lines.hasNext()) {
+                lines.next().toInt()
+            } else {
+                session.players.size.takeIf {
+                    session.phase in setOf(FunFactsPhase.FinalPositioning, FunFactsPhase.Revealing, FunFactsPhase.Complete)
+                } ?: 0
+            }
+            require(session.totalPlayerCount == 0 || session.totalPlayerCount in MIN_GAME_PLAYERS..MAX_GAME_PLAYERS)
+            require(session.needsPlayerCount || session.players.size <= session.totalPlayerCount)
             session
         }.getOrElse { FunFactsSession(onChanged, onRoundCompleted) }
 
@@ -600,7 +627,7 @@ internal class FunFactsSession(
             serialized?.let { FunFactsSessionCodec.decode(it, onChanged, onRoundCompleted) }
                 ?: FunFactsSession(onChanged, onRoundCompleted)
 
-        private const val SIGN_COLOR_COUNT = 10
+        private const val SIGN_COLOR_COUNT = MAX_GAME_PLAYERS
         private const val STROKE_WIDTH_OPTION_COUNT = 3
         private const val UNASSIGNED_COLOR = -1
         private const val NULL_INT = -1

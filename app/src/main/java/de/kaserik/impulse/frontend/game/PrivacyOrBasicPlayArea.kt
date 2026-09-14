@@ -58,8 +58,9 @@ internal fun gameCategoryTabsVisible(
     funFactsActive: Boolean,
     funFactsSession: FunFactsSession,
     funFactsTabsVisible: Boolean,
-): Boolean = (!privacyActive || privacySession.selectingQuestion) &&
-        (!funFactsActive || funFactsSession.selectingQuestion || funFactsTabsVisible)
+): Boolean = (!privacyActive || !privacySession.needsPlayerCount && privacySession.selectingQuestion) &&
+        (!funFactsActive || !funFactsSession.needsPlayerCount &&
+                (funFactsSession.selectingQuestion || funFactsTabsVisible))
 
 @Preview(showBackground = true)
 @Composable
@@ -71,4 +72,3 @@ private fun PrivacyOrBasicPlayAreaPreview() {
         )
     }
 }
-

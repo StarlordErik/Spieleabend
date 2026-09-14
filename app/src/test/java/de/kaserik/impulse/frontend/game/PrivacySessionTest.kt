@@ -1,6 +1,6 @@
 package de.kaserik.impulse.frontend.game
 
-import androidx.compose.ui.geometry.Offset
+import java.util.Base64
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -12,6 +12,7 @@ class PrivacySessionTest {
     fun selectedQuestionIsCompletedOnlyAfterEvaluationAndOnlyOnce() {
         val completedQuestions = mutableListOf<Int>()
         val session = PrivacySession(onRoundCompleted = { completedQuestions.add(it) })
+        session.configurePlayerCount(2)
         session.selectQuestion(QUESTION_ID, CARD_ID)
         session.reopenQuestionSelection()
         session.selectQuestion(QUESTION_ID, CARD_ID)
@@ -20,6 +21,7 @@ class PrivacySessionTest {
         session.restartGame()
         assertTrue(completedQuestions.isEmpty())
 
+        session.configurePlayerCount(2)
         session.selectQuestion(QUESTION_ID, CARD_ID)
         session.enter("Alex", true, 1)
         session.nextPlayer()
@@ -40,6 +42,8 @@ class PrivacySessionTest {
     fun restoredEvaluationStillReportsTheCompletedQuestion() {
         val session = newRound()
         session.enter("Alex", true, 1)
+        session.nextPlayer()
+        session.enter("Sam", false, 1)
         session.reveal()
         val completedQuestions = mutableListOf<Int>()
         val restored = PrivacySession.restore(
@@ -96,12 +100,12 @@ class PrivacySessionTest {
         session.draft.choosePrediction(0)
         assertEquals(1, session.draftPrediction)
         session.draft.choosePrediction(11)
-        assertEquals(10, session.draftPrediction)
+        assertEquals(1, session.draftPrediction)
     }
 
     @Test
     fun nextPersonCannotSeePreviousVoteOrPrediction() {
-        val session = newRound()
+        val session = newRound(10)
         session.enter("  Alex  ", true, 7)
         session.nextPlayer()
         assertEquals(2, session.playerNumber)
@@ -115,7 +119,7 @@ class PrivacySessionTest {
 
     @Test
     fun firstPersonCanChangeQuestionWithoutLosingTheirName() {
-        val session = newRound()
+        val session = newRound(5)
         session.enter("Alex", false, 4)
         assertEquals(QUESTION_ID, session.reopenQuestionSelection())
         assertTrue(session.selectingQuestion)
@@ -129,7 +133,7 @@ class PrivacySessionTest {
 
     @Test
     fun tenthPersonCanEvaluateButCannotAddAnEleventhPerson() {
-        val session = newRound()
+        val session = newRound(10)
         repeat(9) { index ->
             session.enter("Person $index", index % 2 == 0, 5)
             session.nextPlayer()
@@ -157,7 +161,7 @@ class PrivacySessionTest {
         session.reveal()
         assertEquals(saved, session.serialize())
         assertEquals(listOf("Alex", "Sam", "Chris"), session.ranking.map { it.player.name })
-        assertEquals(listOf(3, 1, 0), session.ranking.map { it.player.points })
+        assertEquals(listOf(3, 1, 1), session.ranking.map { it.player.points })
     }
 
     @Test
@@ -166,6 +170,7 @@ class PrivacySessionTest {
         session.startNextRound()
         assertEquals("Sam", session.draftName)
         assertEquals(2, session.roundNumber)
+        assertEquals(3, session.totalPlayerCount)
         session.selectQuestion(QUESTION_ID + 1, CARD_ID + 1)
         session.draft.chooseVote(true)
         session.draft.choosePrediction(1)
@@ -180,41 +185,51 @@ class PrivacySessionTest {
         session.reveal()
         session.completeReveal()
         assertEquals(listOf("Alex", "Sam", "Chris"), session.ranking.map { it.player.name })
-        assertEquals(listOf(6, 4, 1), session.ranking.map { it.player.points })
+        assertEquals(listOf(6, 4, 2), session.ranking.map { it.player.points })
         session.startNextRound()
         assertEquals("Chris", session.draftName)
     }
 
     @Test
     fun identicalNamesStillHaveSeparateScoresAndRenamingPreservesIdentity() {
-        val session = newRound()
+        val session = newRound(3)
+        session.enter("Alex", true, 2)
+        session.nextPlayer()
         session.enter("Alex", true, 1)
         session.nextPlayer()
-        session.enter("Alex", false, 4)
+        session.enter("Sam", false, 1)
         session.reveal()
         session.completeReveal()
-        assertEquals(listOf(3, 0), session.ranking.map { it.player.points })
+        val secondAlex = session.ranking[1].player
+        assertEquals(listOf(3, 1, 1), session.ranking.map { it.player.points })
         session.startNextRound()
         session.selectQuestion(QUESTION_ID + 1, CARD_ID + 1)
-        session.enter("Alex 2", true, 1)
+        session.enter("Alex 2", false, 1)
+        session.nextPlayer()
+        session.enter("Sam", false, 2)
+        session.nextPlayer()
+        session.enter("Alex", false, 2)
         session.reveal()
         session.completeReveal()
-        assertEquals(1, session.ranking.single().player.points)
-        assertEquals("Alex 2", session.ranking.single().player.name)
+        val renamed = session.ranking.first { it.player.id == secondAlex.id }.player
+        assertEquals(2, renamed.points)
+        assertEquals("Alex 2", renamed.name)
     }
 
     @Test
     fun sessionRestoresDraftsUnicodeAndEveryRoundPhase() {
-        var session = newRound()
-        session.enter("Zoë | 李 😀", false, 8)
+        var session = newRound(3)
+        session.enter("Zoë | 李 😀", false, 2)
         session = roundTrip(session)
         assertEquals("Zoë | 李 😀", session.draftName)
         assertEquals(false, session.draftVote)
-        assertEquals(8, session.draftPrediction)
+        assertEquals(2, session.draftPrediction)
         session.nextPlayer()
         session.enter("Müller", true, 1)
         session = roundTrip(session)
         assertEquals(1, session.playerCount)
+        session.nextPlayer()
+        session.enter("Chris", false, 2)
         session.reveal()
         session = roundTrip(session)
         assertEquals(PrivacyPhase.Revealing, session.phase)
@@ -266,13 +281,88 @@ class PrivacySessionTest {
     }
 
     @Test
-    fun dialHandlesClockwiseCounterclockwiseAndAngleWrap() {
-        assertEquals(2.5f, privacyDialDelta(Offset(0f, -1f), Offset(1f, 0f)), 0.001f)
-        assertEquals(-2.5f, privacyDialDelta(Offset(1f, 0f), Offset(0f, -1f)), 0.001f)
-        assertTrue(privacyDialDelta(Offset(-1f, 0.01f), Offset(-1f, -0.01f)) in 0f..0.1f)
+    fun configuredCountBlocksEarlyEvaluationAndExtraPlayers() {
+        for (count in MIN_GAME_PLAYERS..PRIVACY_MAX_PLAYERS) {
+            val session = newRound(count)
+            repeat(count) { index ->
+                session.enter("Person $index", index % 2 == 0, 1)
+                assertEquals(index == count - 1, session.canReveal)
+                assertEquals(index < count - 1, session.canGoToNextPlayer)
+                if (index < count - 1) {
+                    session.reveal()
+                    assertEquals(PrivacyPhase.EnterAnswer, session.phase)
+                    assertEquals(index, session.playerCount)
+                    session.nextPlayer()
+                }
+            }
+            session.nextPlayer()
+            assertEquals(count - 1, session.playerCount)
+            session.reveal()
+            assertEquals(PrivacyPhase.Revealing, session.phase)
+            assertEquals(count, session.playerCount)
+        }
     }
 
-    private fun newRound() = PrivacySession().apply { selectQuestion(QUESTION_ID, CARD_ID) }
+    @Test
+    fun firstStartRequiresAPlayerCountAndRestartAsksAgain() {
+        val session = PrivacySession()
+        session.selectQuestion(QUESTION_ID, CARD_ID)
+        assertNull(session.selectedQuestionId)
+        listOf(-1, 0, 1, 11).forEach(session::configurePlayerCount)
+        assertTrue(session.needsPlayerCount)
+        session.configurePlayerCount(5)
+        session.configurePlayerCount(3)
+        val restored = roundTrip(session)
+        assertEquals(5, restored.totalPlayerCount)
+        assertFalse(restored.needsPlayerCount)
+        restored.restartGame()
+        assertTrue(restored.needsPlayerCount)
+    }
+
+    @Test
+    fun predictionsUseOnlyOneThroughPlayerCountMinusOne() {
+        for (count in MIN_GAME_PLAYERS..PRIVACY_MAX_PLAYERS) {
+            val session = newRound(count)
+            session.draft.choosePrediction(Int.MIN_VALUE)
+            assertEquals(1, session.draftPrediction)
+            session.draft.choosePrediction(Int.MAX_VALUE)
+            assertEquals(count - 1, session.draftPrediction)
+            assertEquals(count - 1, roundTrip(session).draftPrediction)
+        }
+    }
+
+    @Test
+    fun unanimousVotesAwardAtMostOnePointWithEveryLegalPrediction() {
+        for (count in MIN_GAME_PLAYERS..PRIVACY_MAX_PLAYERS) {
+            for (yesCount in listOf(0, count)) {
+                val points = (1 until count).map { privacyPoints(it, yesCount, count) }
+                assertEquals(1, points.max())
+                assertTrue(points.all { it in 0..1 })
+            }
+        }
+    }
+
+    @Test
+    fun legacyPartialSessionAsksForCountAndRetainsTheAnswers() {
+        val session = newRound(5)
+        session.enter("Alex", true, 4)
+        session.nextPlayer()
+        session.enter("Sam", false, 2)
+        val bytes = Base64.getDecoder().decode(session.serialize()).dropLast(Int.SIZE_BYTES).toByteArray()
+        bytes[Int.SIZE_BYTES - 1] = 1
+        val restored = PrivacySession.restore(Base64.getEncoder().encodeToString(bytes))
+        assertTrue(restored.needsPlayerCount)
+        assertEquals(1, restored.playerCount)
+        assertEquals("Sam", restored.draftName)
+        restored.configurePlayerCount(5)
+        assertEquals(2, restored.draftPrediction)
+        assertEquals(5, roundTrip(restored).totalPlayerCount)
+    }
+
+    private fun newRound(playerCount: Int = 2) = PrivacySession().apply {
+        configurePlayerCount(playerCount)
+        selectQuestion(QUESTION_ID, CARD_ID)
+    }
 
     private fun PrivacySession.enter(name: String, yes: Boolean, prediction: Int) {
         draft.updateName(name)
@@ -280,12 +370,12 @@ class PrivacySessionTest {
         draft.choosePrediction(prediction)
     }
 
-    private fun completedRound() = newRound().apply {
+    private fun completedRound() = newRound(3).apply {
         enter("Alex", true, 2)
         nextPlayer()
-        enter("Sam", false, 3)
+        enter("Sam", false, 1)
         nextPlayer()
-        enter("Chris", true, 5)
+        enter("Chris", true, 1)
         reveal()
         completeReveal()
     }

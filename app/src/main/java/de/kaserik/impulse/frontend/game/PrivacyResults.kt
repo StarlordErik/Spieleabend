@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,9 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -54,7 +51,6 @@ internal fun PrivacyResults(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        PrivacyVoteSummary(session.yesCount, session.playerCount)
         Text(
             stringResource(R.string.privacy_ranking),
             style = MaterialTheme.typography.headlineSmall,
@@ -67,8 +63,11 @@ internal fun PrivacyResults(
         )
         Text(
             stringResource(
-                if (session.yesCount == session.playerCount) R.string.privacy_all_yes_rule
-                else R.string.privacy_points_rule,
+                when (session.yesCount) {
+                    0 -> R.string.privacy_all_no_rule
+                    session.playerCount -> R.string.privacy_all_yes_rule
+                    else -> R.string.privacy_points_rule
+                },
             ),
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.bodySmall,
@@ -89,34 +88,6 @@ internal fun PrivacyResults(
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).heightIn(min = 52.dp)
         ) {
             Text(stringResource(R.string.next_card))
-        }
-    }
-}
-
-@Composable
-internal fun PrivacyVoteSummary(yesCount: Int, playerCount: Int) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        listOf(true, false).forEach { yes ->
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    modifier = Modifier.size(18.dp), shape = RoundedCornerShape(5.dp),
-                    color = if (yes) colorResource(R.color.privacy_orange) else Color.Black,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                ) {}
-                Text(
-                    stringResource(
-                        if (yes) R.string.privacy_yes_count else R.string.privacy_no_count,
-                        if (yes) yesCount else playerCount - yesCount
-                    ),
-                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
-                )
-            }
         }
     }
 }
@@ -188,19 +159,13 @@ private fun PrivacyResultsPreview() {
     ImpulseTheme { PrivacyResults(remember { previewPrivacyResults() }, {}) }
 }
 
-@Preview(showBackground = true)
-@Composable
-private fun PrivacyVoteSummaryPreview() {
-    ImpulseTheme { PrivacyVoteSummary(PRIVACY_MAX_PLAYERS / 2, PRIVACY_MAX_PLAYERS) }
-}
-
 @Preview(showBackground = true, widthDp = 364)
 @Composable
 private fun PrivacyRankingRowPreview() {
     ImpulseTheme { PrivacyRankingRow(remember { previewPrivacyResults().ranking.first() }, 0) }
 }
 
-private fun previewPrivacyResults(): PrivacySession = previewPrivacySession().apply {
+internal fun previewPrivacyResults(): PrivacySession = previewPrivacySession(2).apply {
     draft.chooseVote(true)
     draft.choosePrediction(2)
     nextPlayer()

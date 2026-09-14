@@ -110,6 +110,10 @@ internal fun FunFactsPlayArea(
     gameContentHorizontalPadding: Dp = 0.dp,
 ) {
     val scope = rememberCoroutineScope()
+    if (session.needsPlayerCount) {
+        PlayerCountSetup(session::configurePlayerCount, modifier, session.minimumPlayerCount)
+        return
+    }
     val playState = remember { FunFactsPlayAreaState() }
     val cardTextBounds = remember(uiState.aktuelleKarte.instanceId) {
         mutableStateMapOf<Int, Rect>()
@@ -179,6 +183,7 @@ private fun FunFactsPlayAreaPreview() {
     ImpulseTheme {
         val session = remember {
             FunFactsSession().apply {
+                configurePlayerCount(3)
                 selectQuestion(
                     questionId = 101,
                     origin = FunFactsQuestionOrigin(
@@ -478,6 +483,7 @@ private fun FinishAnswerButtonPreview() {
         FinishAnswerButton(
             session = remember {
                 FunFactsSession().apply {
+                    configurePlayerCount(3)
                     draftName.restore(PreviewDrawing)
                     draftAnswer.restore(PreviewDrawing)
                 }
@@ -493,6 +499,7 @@ private fun AnswerEntryPreview() {
         AnswerEntry(
             session = remember {
                 FunFactsSession().apply {
+                    configurePlayerCount(3)
                     draftName.restore(PreviewDrawing); draftAnswer.restore(
                     PreviewDrawing
                 )
@@ -883,18 +890,15 @@ private fun PositioningActions(
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodySmall,
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        if (nextPlayerEnabled) {
             Button(
                 onClick = onNextPlayer,
-                enabled = nextPlayerEnabled,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.next_player))
             }
-            Button(onClick = onReveal, enabled = revealEnabled, modifier = Modifier.weight(1f)) {
+        } else {
+            Button(onClick = onReveal, enabled = revealEnabled, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.reveal))
             }
         }
@@ -907,7 +911,7 @@ private fun PositioningActionsPreview() {
     ImpulseTheme {
         PositioningActions(
             revealEnabled = true,
-            nextPlayerEnabled = true,
+            nextPlayerEnabled = false,
             onNextPlayer = {},
             onReveal = {},
         )
@@ -1651,7 +1655,7 @@ private fun FunFactsPhaseActions(
 ) {
     when (session.phase) {
         FunFactsPhase.PositionSign -> PositioningActions(
-            revealEnabled = session.players.size >= 2,
+            revealEnabled = session.canBeginReveal,
             nextPlayerEnabled = session.canAddPlayer,
             onNextPlayer = session::nextPlayer,
             onReveal = session::beginReveal,
@@ -1733,6 +1737,7 @@ private fun FunFactsPhaseActionsPreview() {
 
 private fun previewSelectedQuestionSession(): FunFactsSession =
     FunFactsSession().apply {
+        configurePlayerCount(3)
         selectQuestion(
             questionId = 101,
             origin = FunFactsQuestionOrigin(0.15f, 0.35f, 0.7f, 0.2f),
