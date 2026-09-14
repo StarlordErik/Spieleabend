@@ -45,6 +45,7 @@ import de.kaserik.impulse.R
 import de.kaserik.impulse.frontend.theme.ImpulseTheme
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlinx.coroutines.delay
 import kotlin.random.Random
 
@@ -63,6 +64,9 @@ internal fun PrivacyDiceReveal(
         List(session.playerCount) { it < session.yesCount }
             .shuffled(Random(session.roundNumber xor (session.selectedQuestionId ?: 0)))
     }
+    val placements = remember(session.roundNumber, session.selectedQuestionId, dice.size) {
+        privacyDiceLayout(dice.size, Random(session.roundNumber xor (session.selectedQuestionId ?: 0)))
+    }
     LaunchedEffect(session.phase) {
         if (complete) {
             compact.animateTo(1f, tween(PRIVACY_DICE_MOVE_MILLIS))
@@ -75,7 +79,7 @@ internal fun PrivacyDiceReveal(
     BoxWithConstraints(
         modifier = Modifier.widthIn(max = 440.dp).then(modifier),
     ) {
-        PrivacyDiceScene(dice, progress.value, compact.value, Modifier.fillMaxSize())
+        PrivacyDiceScene(dice, placements, progress.value, compact.value, Modifier.fillMaxSize())
         if (awaitingReveal) {
             val unit = maxWidth / DICE_SCENE_WIDTH
             val sceneTop = ((maxHeight - unit * DICE_SCENE_HEIGHT) / 2f).coerceAtLeast(0.dp)
@@ -96,7 +100,7 @@ internal fun PrivacyDiceReveal(
                 textAlign = TextAlign.Center,
             )
         }
-        val diceHeight = maxWidth * (if (dice.size <= 5) 40f else 88f) / DICE_SCENE_WIDTH
+        val diceHeight = maxWidth * PRIVACY_DICE_LANDING_AREA.height / DICE_SCENE_WIDTH
         if (complete) PrivacyResults(
             session = session,
             onNextRound = onNextRound,
@@ -112,11 +116,12 @@ internal fun PrivacyDiceReveal(
 @Composable
 private fun PrivacyDiceScene(
     dice: List<Boolean>,
+    placements: List<PrivacyDiePlacement>,
     progress: Float,
     compact: Float,
     modifier: Modifier = Modifier,
 ) {
-    val orange = colorResource(R.color.privacy_orange)
+    val orange = colorResource(R.color.privacy_dice_orange)
     val bag = colorResource(R.color.privacy_bag)
     val seam = colorResource(R.color.privacy_bag_seam)
     val description = if (progress < 1f) stringResource(R.string.privacy_dice_animation)
@@ -128,13 +133,19 @@ private fun PrivacyDiceScene(
         withTransform({
             scale(scale, scale, pivot = Offset.Zero)
         }) {
+            if (compact < 1f) {
+                val pileOffset = Offset(0f, sceneTop * (1f - compact) - PRIVACY_DICE_LANDING_AREA.top * compact)
+                drawOval(
+                    Color.Black.copy(alpha = 0.15f * (1f - compact)),
+                    PRIVACY_DICE_LANDING_AREA.topLeft + pileOffset,
+                    PRIVACY_DICE_LANDING_AREA.size,
+                )
+            }
             if (compact < 1f) translate(top = sceneTop) {
-                val tableShadow = Rect(Offset(30f, 173f), Size(268f, 83f))
-                drawOval(Color.Black.copy(alpha = 0.15f * (1f - compact)), tableShadow.topLeft, tableShadow.size)
                 drawPrivacyBag(progress, bag.copy(alpha = 1f - compact), seam.copy(alpha = 1f - compact))
             }
             dice.forEachIndexed { index, yes ->
-                drawFallingPrivacyDie(index, dice.size, progress, if (yes) orange else Color.Black, sceneTop, compact)
+                drawFallingPrivacyDie(index, placements[index], progress, if (yes) orange else Color.Black, sceneTop, compact)
             }
         }
     }
@@ -182,7 +193,7 @@ private fun DrawScope.drawPrivacyBagDetails(bag: Color, seam: Color) {
 
 private fun DrawScope.drawFallingPrivacyDie(
     index: Int,
-    count: Int,
+    placement: PrivacyDiePlacement,
     progress: Float,
     color: Color,
     sceneTop: Float,
@@ -190,17 +201,15 @@ private fun DrawScope.drawFallingPrivacyDie(
 ) {
     val fall = ((progress - 0.29f - index * 0.035f) / 0.35f).coerceIn(0f, 1f)
     if (fall <= 0f) return
-    val columns = minOf(count, 5)
-    val rowCount = minOf(count - (index / 5) * 5, 5)
-    val targetX = 160f + (index % columns - (rowCount - 1) / 2f) * 49f
-    val targetY = 188f + (index / 5) * 48f + sin(index * 2f) * 6f
+    val targetX = placement.center.x
+    val targetY = placement.center.y
     val x = 159f + (targetX - 159f) * fall
     val revealY = sceneTop + 99f + (targetY - 99f) * fall - sin(fall * PI).toFloat() * 30f
-    val parkedY = 24f + (index / 5) * 48f
+    val parkedY = targetY - PRIVACY_DICE_LANDING_AREA.top
     val y = revealY + (parkedY - revealY) * compact
-    val angle = (1f - fall) * (if (index % 2 == 0) 300f else -280f) + (index % 3 - 1) * 13f
+    val angle = (1f - fall) * (if (index % 2 == 0) 300f else -280f) + placement.rotation
     val shadowY = (sceneTop + targetY) * (1f - compact) + parkedY * compact
-    val shadow = Rect(Offset(x - 9.5f, shadowY + 7f), Size(20f, 4.5f))
+    val shadow = Rect(Offset(x - 14.25f, shadowY + 10.5f), Size(30f, 6.75f))
     drawOval(Color.Black.copy(alpha = 0.2f * fall), shadow.topLeft, shadow.size)
     translate(x, y) {
         rotate(angle, Offset.Zero) {
@@ -227,7 +236,9 @@ private fun PrivacyDiceRevealPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 500)
 @Composable
 private fun PrivacyDiceScenePreview() {
-    ImpulseTheme { PrivacyDiceScene(listOf(true, false, true, false, true), 1f, 0f, Modifier.fillMaxSize()) }
+    val dice = List(PRIVACY_MAX_PLAYERS) { it % 2 == 0 }
+    val placements = remember { privacyDiceLayout(dice.size, Random(12)) }
+    ImpulseTheme { PrivacyDiceScene(dice, placements, 1f, 0f, Modifier.fillMaxSize()) }
 }
 
 private const val PRIVACY_REVEAL_MILLIS = 3600
@@ -238,27 +249,27 @@ private const val DICE_SCENE_HEIGHT = 270f
 private const val BAG_COLLAR_STROKE = 4f
 private const val BAG_CORD_STROKE = 3f
 private val BAG_TOUCH_BOUNDS = Rect(62f, 23f, 170f, 140f)
-private const val DIE_HALF_WIDTH = 7.794229f
+private val DIE_HALF_WIDTH = PRIVACY_DIE_RADIUS * sqrt(3f) / 2f
 private val DIE_BODY = Path().apply {
-    moveTo(0f, -9f)
-    lineTo(DIE_HALF_WIDTH, -4.5f)
-    lineTo(DIE_HALF_WIDTH, 4.5f)
-    lineTo(0f, 9f)
-    lineTo(-DIE_HALF_WIDTH, 4.5f)
-    lineTo(-DIE_HALF_WIDTH, -4.5f)
+    moveTo(0f, -PRIVACY_DIE_RADIUS)
+    lineTo(DIE_HALF_WIDTH, -PRIVACY_DIE_RADIUS / 2f)
+    lineTo(DIE_HALF_WIDTH, PRIVACY_DIE_RADIUS / 2f)
+    lineTo(0f, PRIVACY_DIE_RADIUS)
+    lineTo(-DIE_HALF_WIDTH, PRIVACY_DIE_RADIUS / 2f)
+    lineTo(-DIE_HALF_WIDTH, -PRIVACY_DIE_RADIUS / 2f)
     close()
 }
 private val DIE_RIGHT_FACE = Path().apply {
     moveTo(0f, 0f)
-    lineTo(DIE_HALF_WIDTH, -4.5f)
-    lineTo(DIE_HALF_WIDTH, 4.5f)
-    lineTo(0f, 9f)
+    lineTo(DIE_HALF_WIDTH, -PRIVACY_DIE_RADIUS / 2f)
+    lineTo(DIE_HALF_WIDTH, PRIVACY_DIE_RADIUS / 2f)
+    lineTo(0f, PRIVACY_DIE_RADIUS)
     close()
 }
 private val DIE_TOP_FACE = Path().apply {
-    moveTo(0f, -9f)
-    lineTo(DIE_HALF_WIDTH, -4.5f)
+    moveTo(0f, -PRIVACY_DIE_RADIUS)
+    lineTo(DIE_HALF_WIDTH, -PRIVACY_DIE_RADIUS / 2f)
     lineTo(0f, 0f)
-    lineTo(-DIE_HALF_WIDTH, -4.5f)
+    lineTo(-DIE_HALF_WIDTH, -PRIVACY_DIE_RADIUS / 2f)
     close()
 }

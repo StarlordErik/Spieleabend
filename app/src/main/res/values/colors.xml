@@ -2,6 +2,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <color name="impulse_gold">#E8B75A</color>
     <color name="privacy_orange">#F59A38</color>
+    <color name="privacy_dice_orange">#FF7300</color>
     <color name="privacy_bag">#D9B887</color>
     <color name="privacy_bag_seam">#745538</color>
     <color name="black">#000000</color>
