@@ -25,6 +25,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -209,8 +210,12 @@ private fun DrawScope.drawFallingPrivacyDie(
 }
 
 private fun DrawScope.drawPrivacyDie(color: Color) {
-    val bounds = Rect(-9f, -9f, 9f, 9f)
-    drawRect(color, bounds.topLeft, bounds.size)
+    val front = Color.White.copy(alpha = 0.14f).compositeOver(color)
+    val side = Color.Black.copy(alpha = 0.3f).compositeOver(front)
+    val top = Color.White.copy(alpha = 0.32f).compositeOver(color)
+    drawPath(DIE_BODY, front)
+    drawPath(DIE_RIGHT_FACE, side)
+    drawPath(DIE_TOP_FACE, top)
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 500)
@@ -233,3 +238,27 @@ private const val DICE_SCENE_HEIGHT = 270f
 private const val BAG_COLLAR_STROKE = 4f
 private const val BAG_CORD_STROKE = 3f
 private val BAG_TOUCH_BOUNDS = Rect(62f, 23f, 170f, 140f)
+private const val DIE_HALF_WIDTH = 7.794229f
+private val DIE_BODY = Path().apply {
+    moveTo(0f, -9f)
+    lineTo(DIE_HALF_WIDTH, -4.5f)
+    lineTo(DIE_HALF_WIDTH, 4.5f)
+    lineTo(0f, 9f)
+    lineTo(-DIE_HALF_WIDTH, 4.5f)
+    lineTo(-DIE_HALF_WIDTH, -4.5f)
+    close()
+}
+private val DIE_RIGHT_FACE = Path().apply {
+    moveTo(0f, 0f)
+    lineTo(DIE_HALF_WIDTH, -4.5f)
+    lineTo(DIE_HALF_WIDTH, 4.5f)
+    lineTo(0f, 9f)
+    close()
+}
+private val DIE_TOP_FACE = Path().apply {
+    moveTo(0f, -9f)
+    lineTo(DIE_HALF_WIDTH, -4.5f)
+    lineTo(0f, 0f)
+    lineTo(-DIE_HALF_WIDTH, -4.5f)
+    close()
+}
