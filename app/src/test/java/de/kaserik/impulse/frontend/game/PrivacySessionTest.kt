@@ -27,6 +27,15 @@ class PrivacySessionTest {
         session.nextPlayer()
         session.enter("Sam", false, 1)
         session.reveal()
+        assertEquals(PrivacyPhase.AwaitingReveal, session.phase)
+        session.completeReveal()
+        session.startNextRound()
+        assertEquals(PrivacyPhase.AwaitingReveal, session.phase)
+        assertTrue(session.ranking.all { it.player.points == 0 })
+        assertTrue(completedQuestions.isEmpty())
+
+        session.startReveal()
+        session.startReveal()
         assertEquals(PrivacyPhase.Revealing, session.phase)
         assertTrue(completedQuestions.isEmpty())
 
@@ -45,6 +54,7 @@ class PrivacySessionTest {
         session.nextPlayer()
         session.enter("Sam", false, 1)
         session.reveal()
+        session.startReveal()
         val completedQuestions = mutableListOf<Int>()
         val restored = PrivacySession.restore(
             session.serialize(), onRoundCompleted = { completedQuestions.add(it) },
@@ -91,6 +101,8 @@ class PrivacySessionTest {
         val session = newRound()
         session.nextPlayer()
         session.reveal()
+        session.startReveal()
+        assertEquals(PrivacyPhase.EnterAnswer, session.phase)
         assertEquals(0, session.playerCount)
         session.draft.updateName("  ")
         session.draft.chooseVote(false)
@@ -148,6 +160,7 @@ class PrivacySessionTest {
         session.reveal()
         assertEquals(10, session.playerCount)
         assertEquals(5, session.yesCount)
+        session.startReveal()
         session.completeReveal()
         assertEquals(10, session.ranking.size)
         assertTrue(session.ranking.all { it.player.points == 3 && it.rank == 1 })
@@ -159,6 +172,7 @@ class PrivacySessionTest {
         val saved = session.serialize()
         session.completeReveal()
         session.reveal()
+        session.startReveal()
         assertEquals(saved, session.serialize())
         assertEquals(listOf("Alex", "Sam", "Chris"), session.ranking.map { it.player.name })
         assertEquals(listOf(3, 1, 1), session.ranking.map { it.player.points })
@@ -183,6 +197,7 @@ class PrivacySessionTest {
         session.draft.chooseVote(false)
         session.draft.choosePrediction(1)
         session.reveal()
+        session.startReveal()
         session.completeReveal()
         assertEquals(listOf("Alex", "Sam", "Chris"), session.ranking.map { it.player.name })
         assertEquals(listOf(6, 4, 2), session.ranking.map { it.player.points })
@@ -199,6 +214,7 @@ class PrivacySessionTest {
         session.nextPlayer()
         session.enter("Sam", false, 1)
         session.reveal()
+        session.startReveal()
         session.completeReveal()
         val secondAlex = session.ranking[1].player
         assertEquals(listOf(3, 1, 1), session.ranking.map { it.player.points })
@@ -210,6 +226,7 @@ class PrivacySessionTest {
         session.nextPlayer()
         session.enter("Alex", false, 2)
         session.reveal()
+        session.startReveal()
         session.completeReveal()
         val renamed = session.ranking.first { it.player.id == secondAlex.id }.player
         assertEquals(2, renamed.points)
@@ -231,6 +248,12 @@ class PrivacySessionTest {
         session.nextPlayer()
         session.enter("Chris", false, 2)
         session.reveal()
+        session = roundTrip(session)
+        assertEquals(PrivacyPhase.AwaitingReveal, session.phase)
+        session.completeReveal()
+        assertEquals(PrivacyPhase.AwaitingReveal, session.phase)
+        assertTrue(session.ranking.all { it.player.points == 0 })
+        session.startReveal()
         session = roundTrip(session)
         assertEquals(PrivacyPhase.Revealing, session.phase)
         assertTrue(session.ranking.all { it.player.points == 0 })
@@ -290,6 +313,7 @@ class PrivacySessionTest {
                 assertEquals(index < count - 1, session.canGoToNextPlayer)
                 if (index < count - 1) {
                     session.reveal()
+                    session.startReveal()
                     assertEquals(PrivacyPhase.EnterAnswer, session.phase)
                     assertEquals(index, session.playerCount)
                     session.nextPlayer()
@@ -298,8 +322,10 @@ class PrivacySessionTest {
             session.nextPlayer()
             assertEquals(count - 1, session.playerCount)
             session.reveal()
-            assertEquals(PrivacyPhase.Revealing, session.phase)
+            assertEquals(PrivacyPhase.AwaitingReveal, session.phase)
             assertEquals(count, session.playerCount)
+            session.startReveal()
+            assertEquals(PrivacyPhase.Revealing, session.phase)
         }
     }
 
@@ -377,6 +403,7 @@ class PrivacySessionTest {
         nextPlayer()
         enter("Chris", true, 1)
         reveal()
+        startReveal()
         completeReveal()
     }
 

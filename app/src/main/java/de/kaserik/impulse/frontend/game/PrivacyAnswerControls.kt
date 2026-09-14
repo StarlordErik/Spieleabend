@@ -1,13 +1,9 @@
 package de.kaserik.impulse.frontend.game
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -19,17 +15,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.kaserik.impulse.R
 import de.kaserik.impulse.frontend.theme.ImpulseTheme
-
-@Composable
-internal fun PrivacyPlayerHeader(session: PrivacySession) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        Text(
-            stringResource(R.string.privacy_round, session.roundNumber),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.titleMedium
-        )
-    }
-}
 
 @Composable
 internal fun PrivacyAnswerActions(session: PrivacySession) {
@@ -46,14 +31,6 @@ internal fun PrivacyAnswerActions(session: PrivacySession) {
             stringResource(if (session.isLastPlayer) R.string.privacy_evaluate else R.string.next_player),
             textAlign = TextAlign.Center,
         )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun PrivacyPlayerHeaderPreview() {
-    ImpulseTheme {
-        Column { PrivacyPlayerHeader(remember { previewPrivacySession() }) }
     }
 }
 

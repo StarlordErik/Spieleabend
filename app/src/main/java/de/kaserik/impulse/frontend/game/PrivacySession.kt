@@ -13,7 +13,7 @@ import java.io.DataOutputStream
 import java.util.Base64
 import kotlin.math.abs
 
-internal enum class PrivacyPhase { SelectQuestion, EnterAnswer, Revealing, Complete }
+internal enum class PrivacyPhase { SelectQuestion, EnterAnswer, AwaitingReveal, Revealing, Complete }
 
 internal data class PrivacyPlayer(val id: Int, val name: String, val points: Int = 0)
 
@@ -130,6 +130,12 @@ internal class PrivacySession(
         if (!canReveal) return
         saveAnswer()
         draft.reset()
+        phase = PrivacyPhase.AwaitingReveal
+        onChanged()
+    }
+
+    fun startReveal() {
+        if (phase != PrivacyPhase.AwaitingReveal) return
         phase = PrivacyPhase.Revealing
         onChanged()
     }
@@ -296,7 +302,7 @@ internal class PrivacySession(
         }
 
         private fun PrivacySession.legacyPlayerCount(): Int = when (phase) {
-            PrivacyPhase.Revealing, PrivacyPhase.Complete -> answers.size
+            PrivacyPhase.AwaitingReveal, PrivacyPhase.Revealing, PrivacyPhase.Complete -> answers.size
             else -> 0
         }
     }

@@ -32,7 +32,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -55,23 +54,6 @@ internal fun PrivacyResults(
             stringResource(R.string.privacy_ranking),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
-        )
-        Text(
-            stringResource(R.string.privacy_total_after_round, session.roundNumber),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            stringResource(
-                when (session.yesCount) {
-                    0 -> R.string.privacy_all_no_rule
-                    session.playerCount -> R.string.privacy_all_yes_rule
-                    else -> R.string.privacy_points_rule
-                },
-            ),
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center,
         )
         LazyColumn(
             modifier = Modifier.fillMaxWidth().weight(1f),
@@ -173,5 +155,6 @@ internal fun previewPrivacyResults(): PrivacySession = previewPrivacySession(2).
     draft.chooseVote(false)
     draft.choosePrediction(1)
     reveal()
+    startReveal()
     completeReveal()
 }

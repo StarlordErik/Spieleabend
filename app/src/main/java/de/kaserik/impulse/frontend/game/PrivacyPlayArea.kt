@@ -253,7 +253,7 @@ private fun PrivacyRoundBody(
         CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
             when (session.phase) {
                 PrivacyPhase.EnterAnswer -> PrivacyAnswerEntry(session, Modifier.fillMaxSize())
-                PrivacyPhase.Revealing, PrivacyPhase.Complete -> PrivacyDiceReveal(
+                PrivacyPhase.AwaitingReveal, PrivacyPhase.Revealing, PrivacyPhase.Complete -> PrivacyDiceReveal(
                     session = session,
                     onNextRound = onNextRound,
                     nextRoundEnabled = nextRoundEnabled,

@@ -45,7 +45,7 @@ class PrivacySessionPersistenceTest {
     }
 
     @Test
-    fun restoredRevealAwardsPointsOnceAndPrefillsTheNextRound() {
+    fun restoredVotesWaitForBagTapBeforeAwardingPointsAndPrefillingTheNextRound() {
         val settings = SharedPreferencesAppSettingsRepository(context)
         val session = PrivacySession().apply {
             configurePlayerCount(2)
@@ -61,9 +61,16 @@ class PrivacySessionPersistenceTest {
         val recreated = SharedPreferencesAppSettingsRepository(context)
         val restored = PrivacySession.restore(recreated.getPrivacySession())
         assertEquals(2, restored.totalPlayerCount)
-        assertEquals(PrivacyPhase.Revealing, restored.phase)
+        assertEquals(PrivacyPhase.AwaitingReveal, restored.phase)
         restored.completeReveal()
+        assertEquals(PrivacyPhase.AwaitingReveal, restored.phase)
+        assertTrue(restored.ranking.all { it.player.points == 0 })
+        restored.startReveal()
         recreated.setPrivacySession(restored.serialize())
+        val revealing = PrivacySession.restore(settings.getPrivacySession())
+        assertEquals(PrivacyPhase.Revealing, revealing.phase)
+        revealing.completeReveal()
+        recreated.setPrivacySession(revealing.serialize())
         val completed = PrivacySession.restore(settings.getPrivacySession())
         completed.completeReveal()
         assertTrue(completed.ranking.all { it.player.points == 3 })

@@ -50,7 +50,6 @@ internal fun PrivacyAnswerEntry(session: PrivacySession, modifier: Modifier = Mo
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                PrivacyPlayerHeader(session)
                 OutlinedTextField(
                     value = session.draftName,
                     onValueChange = session.draft::updateName,

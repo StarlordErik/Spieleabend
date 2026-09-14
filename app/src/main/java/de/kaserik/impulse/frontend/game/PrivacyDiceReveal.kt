@@ -4,21 +4,21 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +54,7 @@ internal fun PrivacyDiceReveal(
     modifier: Modifier = Modifier,
     nextRoundEnabled: Boolean = true,
 ) {
+    val awaitingReveal = session.phase == PrivacyPhase.AwaitingReveal
     val complete = session.phase == PrivacyPhase.Complete
     val progress = remember { Animatable(if (complete) 1f else 0f) }
     val compact = remember { Animatable(if (complete) 1f else 0f) }
@@ -63,7 +65,7 @@ internal fun PrivacyDiceReveal(
     LaunchedEffect(session.phase) {
         if (complete) {
             compact.animateTo(1f, tween(PRIVACY_DICE_MOVE_MILLIS))
-        } else {
+        } else if (session.phase == PrivacyPhase.Revealing) {
             progress.animateTo(1f, tween(PRIVACY_REVEAL_MILLIS, easing = LinearEasing))
             delay(PRIVACY_DICE_HOLD_MILLIS)
             session.completeReveal()
@@ -73,27 +75,27 @@ internal fun PrivacyDiceReveal(
         modifier = Modifier.widthIn(max = 440.dp).then(modifier),
     ) {
         PrivacyDiceScene(dice, progress.value, compact.value, Modifier.fillMaxSize())
-        if (compact.value < 1f) {
-            Column(
-                Modifier.fillMaxWidth().graphicsLayer { alpha = 1f - compact.value },
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(
-                    stringResource(R.string.privacy_revealing),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    stringResource(R.string.privacy_mixed_votes),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-            }
+        if (awaitingReveal) {
+            val unit = maxWidth / DICE_SCENE_WIDTH
+            val sceneTop = ((maxHeight - unit * DICE_SCENE_HEIGHT) / 2f).coerceAtLeast(0.dp)
+            val label = stringResource(R.string.privacy_open_bag)
+            Box(
+                Modifier.offset(x = unit * BAG_TOUCH_BOUNDS.left, y = sceneTop + unit * BAG_TOUCH_BOUNDS.top)
+                    .size(width = unit * BAG_TOUCH_BOUNDS.width, height = unit * BAG_TOUCH_BOUNDS.height)
+                    .semantics { contentDescription = label }
+                    .clickable(role = Role.Button, onClick = session::startReveal),
+            )
         }
-        val diceHeight = maxWidth * (if (dice.size <= 5) 52f else 100f) / DICE_SCENE_WIDTH
+        if (compact.value < 1f) {
+            Text(
+                stringResource(if (awaitingReveal) R.string.privacy_open_bag else R.string.privacy_revealing),
+                modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = 1f - compact.value },
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+        }
+        val diceHeight = maxWidth * (if (dice.size <= 5) 40f else 88f) / DICE_SCENE_WIDTH
         if (complete) PrivacyResults(
             session = session,
             onNextRound = onNextRound,
@@ -119,7 +121,7 @@ private fun PrivacyDiceScene(
     val description = if (progress < 1f) stringResource(R.string.privacy_dice_animation)
     else stringResource(R.string.privacy_dice_result, dice.count { it }, dice.count { !it })
     Canvas(
-        modifier = modifier.semantics { contentDescription = description }) {
+        modifier = modifier.semantics { if (progress > 0f) contentDescription = description }) {
         val scale = size.width / DICE_SCENE_WIDTH
         val sceneTop = ((size.height / scale - DICE_SCENE_HEIGHT) / 2f).coerceAtLeast(0f)
         withTransform({
@@ -197,7 +199,7 @@ private fun DrawScope.drawFallingPrivacyDie(
     val y = revealY + (parkedY - revealY) * compact
     val angle = (1f - fall) * (if (index % 2 == 0) 300f else -280f) + (index % 3 - 1) * 13f
     val shadowY = (sceneTop + targetY) * (1f - compact) + parkedY * compact
-    val shadow = Rect(Offset(x - 19f, shadowY + 14f), Size(40f, 9f))
+    val shadow = Rect(Offset(x - 9.5f, shadowY + 7f), Size(20f, 4.5f))
     drawOval(Color.Black.copy(alpha = 0.2f * fall), shadow.topLeft, shadow.size)
     translate(x, y) {
         rotate(angle, Offset.Zero) {
@@ -207,17 +209,8 @@ private fun DrawScope.drawFallingPrivacyDie(
 }
 
 private fun DrawScope.drawPrivacyDie(color: Color) {
-    val bounds = Rect(-18f, -18f, 18f, 18f)
-    val corners = CornerRadius(7f)
-    val outline = Stroke(1.4f)
-    drawRoundRect(color, bounds.topLeft, bounds.size, corners)
-    drawRoundRect(
-        Color.White.copy(alpha = 0.35f),
-        bounds.topLeft,
-        bounds.size,
-        corners,
-        style = outline
-    )
+    val bounds = Rect(-9f, -9f, 9f, 9f)
+    drawRect(color, bounds.topLeft, bounds.size)
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 500)
@@ -239,3 +232,4 @@ private const val DICE_SCENE_WIDTH = 320f
 private const val DICE_SCENE_HEIGHT = 270f
 private const val BAG_COLLAR_STROKE = 4f
 private const val BAG_CORD_STROKE = 3f
+private val BAG_TOUCH_BOUNDS = Rect(62f, 23f, 170f, 140f)
