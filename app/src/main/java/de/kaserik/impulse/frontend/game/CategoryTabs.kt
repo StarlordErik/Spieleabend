@@ -424,7 +424,7 @@ private val CategoryTabSpacing = 10.dp
 private val CategoryTabLabelVerticalPadding = 14.dp
 private val CategoryTabTextExtraWidth = 4.dp
 private const val RANDOM_CATEGORY_TAB_HEIGHT_FRACTION = 1f / 3f
-private const val HIGHLIGHTED_TAB_SCALE = 1.1f
+private const val HIGHLIGHTED_TAB_SCALE = 1.075f
 private const val DISABLED_TAB_ALPHA = 0.45f
 private const val TAB_HIGHLIGHT_ANIMATION_MILLIS = 90
 

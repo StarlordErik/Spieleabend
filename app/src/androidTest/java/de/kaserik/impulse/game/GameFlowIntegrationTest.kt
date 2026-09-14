@@ -26,9 +26,11 @@ import de.kaserik.impulse.domain.usecase.SetTextsPerCardUseCase
 import de.kaserik.impulse.domain.usecase.ShowPreviousCardUseCase
 import de.kaserik.impulse.domain.usecase.UpdateCardTextSettingsUseCase
 import de.kaserik.impulse.frontend.game.GameScreenUiState
+import de.kaserik.impulse.frontend.game.CardSwipeTarget
 import de.kaserik.impulse.frontend.game.GameUiState
 import de.kaserik.impulse.frontend.game.GameViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -150,6 +152,73 @@ class GameFlowIntegrationTest {
         assertFalse(previous.hasPreviousCard)
         assertNull(previous.previousCard)
         assertEquals(1, database.kartenverlaufDao().neuesteKarten(1, 10).size)
+    }
+
+    @Test
+    fun idlePrefetchAndCancelledSwipesKeepUnshownTextsUnseen() = runBlocking {
+        val viewModel = createViewModel()
+        val initial = viewModel.awaitGame()
+        val before = repository.getGame(1)
+        withContext(Dispatchers.Main) { viewModel.cardPreloader.setActive(true) }
+        delay(500)
+        val prepared = withContext(Dispatchers.Main) {
+            requireNotNull(viewModel.prepareCardSwipe(CardSwipeTarget.Category(11)))
+        }
+        withContext(Dispatchers.Main) { viewModel.prepareCardSwipe(CardSwipeTarget.Random) }
+
+        assertEquals(before, repository.getGame(1))
+        assertEquals(initial.aktuelleKarte.instanceId, repository.getCurrentCard(1)?.instanceId)
+        assertEquals(1, database.kartenverlaufDao().neuesteKarten(1, 10).size)
+
+        withContext(Dispatchers.Main) { prepared.commit() }
+        val next = viewModel.awaitGame { it.aktuelleKarte.instanceId != initial.aktuelleKarte.instanceId }
+        assertEquals(prepared.card.kartentexte, next.aktuelleKarte.kartentexte)
+        val seenIds = repository.getGame(1).kategorien.flatMap { it.kartentexte }
+            .filter { it.gesehen }.map { it.id() }.toSet()
+        assertEquals(
+            (initial.aktuelleKarte.kartentexte + prepared.card.kartentexte).map { it.id }.toSet(),
+            seenIds,
+        )
+    }
+
+    @Test
+    fun changingTextCountDiscardsASwipePreparedForTheSameCurrentCard() = runBlocking {
+        val viewModel = createViewModel()
+        val initial = viewModel.awaitGame()
+        val unusedCategory = initial.kategorien.single {
+            it.id != initial.aktuelleKarte.kartentexte.single().kategorieId
+        }.id
+        val prepared = withContext(Dispatchers.Main) {
+            requireNotNull(viewModel.prepareCardSwipe(CardSwipeTarget.Category(unusedCategory)))
+        }
+        assertEquals(1, prepared.card.kartentexte.size)
+
+        withContext(Dispatchers.Main) {
+            viewModel.setTextsPerCard(2)
+            prepared.commit()
+        }
+        val next = viewModel.awaitGame { it.aktuelleKarte.instanceId != initial.aktuelleKarte.instanceId }
+        assertEquals(2, next.aktuelleKarte.kartentexte.size)
+        assertEquals(2, next.texteProKarte)
+        assertEquals(2, database.kartenverlaufDao().neuesteKarten(1, 10).size)
+    }
+
+    @Test
+    fun addingAMissingTranslationRefreshesTheCurrentCardWithoutDrawingAgain() = runBlocking {
+        settings.setLanguage(Sprache.EN)
+        val viewModel = createViewModel()
+        val initial = viewModel.awaitGame { it.sprache == Sprache.EN }
+        withContext(Dispatchers.Main) { viewModel.selectKategorie(11) }
+        val current = viewModel.awaitGame { it.aktuelleKarte.instanceId != initial.aktuelleKarte.instanceId }
+        val text = current.aktuelleKarte.kartentexte.single()
+        assertTrue(text.uebersetzungFehlt)
+        withContext(Dispatchers.Main) { viewModel.setEigeneKartentextLokalisierung(text.id, "Added translation") }
+
+        val translated = viewModel.awaitGame { it.aktuelleKarte.kartentexte.single().text == "Added translation" }
+        assertFalse(translated.aktuelleKarte.kartentexte.single().uebersetzungFehlt)
+        assertEquals(current.aktuelleKarte.instanceId, translated.aktuelleKarte.instanceId)
+        assertEquals("Added translation", ownText(text.id, Sprache.EIGENE_EN))
+        assertEquals(2, database.kartenverlaufDao().neuesteKarten(1, 10).size)
     }
 
     @Test

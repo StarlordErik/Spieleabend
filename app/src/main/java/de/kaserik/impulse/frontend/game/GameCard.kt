@@ -245,7 +245,7 @@ internal fun CardTextPanel(
             text = kartentext.text,
             modifier = Modifier.padding(
                 start = markerTouchSize + CardTextMarkerTextGap,
-                top = if (kartentext.gespielt || kartentext.uebersetzungFehlt) {
+                top = if (kartentext.uebersetzungFehlt) {
                     markerTouchSize + CardTextMarkerTextGap
                 } else {
                     CardTextPanelVerticalPadding
@@ -287,43 +287,15 @@ internal fun CardTextPanel(
             },
             modifier = Modifier.align(Alignment.TopEnd),
         )
-        if (kartentext.gespielt) {
-            PlayedMark(
-                modifier = Modifier.align(Alignment.TopCenter)
-                    .padding(horizontal = markerTouchSize + CardTextMarkerTextGap),
-                markerSize = markerTouchSize,
-            )
-        } else if (kartentext.uebersetzungFehlt) {
+        if (kartentext.uebersetzungFehlt) {
             MissingTranslationMark(
                 markerSize = markerTouchSize,
                 modifier = Modifier.align(Alignment.TopCenter),
+                enabled = markerInteractionsEnabled,
+                onClick = { cardTextActions.onKartentextEditRequested(kartentext.id) },
             )
         }
     }
-}
-
-@Composable
-private fun PlayedMark(modifier: Modifier = Modifier, markerSize: Dp = CardTextMarkerTouchSize) {
-    Surface(
-        modifier = modifier.height(markerSize).padding(vertical = 3.dp),
-        shape = RoundedCornerShape(999.dp),
-        color = MaterialTheme.colorScheme.primary,
-    ) {
-        Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-            Text(
-                text = stringResource(R.string.card_text_played),
-                color = MaterialTheme.colorScheme.onPrimary,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-            )
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun PlayedMarkPreview() {
-    ImpulseTheme { PlayedMark() }
 }
 
 @Composable
@@ -480,12 +452,16 @@ private fun MarkerToggleButtonPreview() {
 private fun MissingTranslationMark(
     modifier: Modifier = Modifier,
     markerSize: Dp = CardTextMarkerTouchSize,
+    enabled: Boolean = true,
+    onClick: () -> Unit = {},
 ) {
-    val textColor = CardTextColor
+    val textColor = colorResource(R.color.black)
     val accessibilityLabel = stringResource(R.string.missing_translation)
+    val actionLabel = stringResource(R.string.add_translation)
     Surface(
         modifier = modifier
             .size(markerSize)
+            .clickable(enabled = enabled, role = Role.Button, onClickLabel = actionLabel, onClick = onClick)
             .semantics { contentDescription = accessibilityLabel },
         shape = CircleShape,
         color = colorResource(R.color.transparent),

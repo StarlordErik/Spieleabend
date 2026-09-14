@@ -2,6 +2,8 @@ package de.kaserik.impulse.domain.usecase
 
 import de.kaserik.impulse.domain.repository.GameRepository
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class DrawNextCardUseCase @Inject constructor(
     private val repository: GameRepository,
@@ -10,9 +12,19 @@ class DrawNextCardUseCase @Inject constructor(
         commit(gameId, prepare(gameId, categoryId))
 
     // Preparing a swipe must not mark texts as seen or change the card history.
-    internal suspend fun prepare(gameId: Int, categoryId: Int?): PlannedCardDraw {
+    internal suspend fun prepare(gameId: Int, categoryId: Int?): PlannedCardDraw = withContext(Dispatchers.Default) {
         val game = repository.getGame(gameId)
-        return if (categoryId == null) planNextRandomCard(game) else planNextCardFromCategory(game, categoryId)
+        if (categoryId == null) planNextRandomCard(game) else planNextCardFromCategory(game, categoryId)
+    }
+
+    internal suspend fun prepareAll(gameId: Int): Map<Int?, PlannedCardDraw> = withContext(Dispatchers.Default) {
+        val game = repository.getGame(gameId)
+        buildMap {
+            put(null, planNextRandomCard(game))
+            game.kategorien.forEach { category ->
+                put(category.id(), planNextCardFromCategory(game, category.id()))
+            }
+        }
     }
 
     internal suspend fun commit(gameId: Int, draw: PlannedCardDraw): DrawCardResult {

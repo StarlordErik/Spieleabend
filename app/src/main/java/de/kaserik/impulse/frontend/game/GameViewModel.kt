@@ -18,6 +18,7 @@ import de.kaserik.impulse.domain.repository.AppSettingsRepository
 import de.kaserik.impulse.domain.usecase.DrawCardResult
 import de.kaserik.impulse.domain.usecase.DrawNextCardUseCase
 import de.kaserik.impulse.domain.usecase.GetOrDrawInitialCardUseCase
+import de.kaserik.impulse.domain.usecase.PlannedCardDraw
 import de.kaserik.impulse.domain.usecase.ResetAllCardsForGameUseCase
 import de.kaserik.impulse.domain.usecase.ResetSeenCardsUseCase
 import de.kaserik.impulse.domain.usecase.ResetTextsPerCardUseCase
@@ -56,6 +57,7 @@ class GameViewModel @Inject constructor(
     private var lastDrawCategoryId = appSettingsRepository.getLastDrawCategoryId(gameId)
     private var sprache: Sprache = Sprache.DE
     private val cardChangeMutex = Mutex()
+    internal val cardPreloader = CardDrawPreloader(viewModelScope, drawNextCard, gameId)
     private var funFactsModeEnabled = true
     private var privacyModeEnabled = true
     private var funFactsPersistenceJob: Job? = null
@@ -144,10 +146,18 @@ class GameViewModel @Inject constructor(
     }
 
     private suspend fun drawCard(categoryId: Int?) {
-        val nextCard = drawNextCard(gameId, categoryId)
+        commitDraw(categoryId, cardPreloader.prepare(categoryId))
+    }
+
+    private suspend fun commitDraw(categoryId: Int?, draw: PlannedCardDraw) {
+        val currentCard = (_uiState.value as? GameScreenUiState.Loaded)?.game?.aktuelleKarte
+        val previousCard = currentCard?.copy(kartentexte = currentCard.kartentexte.map { text ->
+            if (text.id in draw.resetSeenUndGespieltKartentextIds) text.copy(gespielt = false) else text
+        })
+        val nextCard = drawNextCard.commit(gameId, draw)
         lastDrawCategoryId = categoryId
         appSettingsRepository.setLastDrawCategoryId(gameId, categoryId)
-        showCard(nextCard)
+        showCard(nextCard, previousCard)
     }
 
     internal suspend fun prepareCardSwipe(target: CardSwipeTarget): PreparedCardSwipe? {
@@ -155,15 +165,17 @@ class GameViewModel @Inject constructor(
         return cardChangeMutex.withLock {
             val state = _uiState.value as? GameScreenUiState.Loaded ?: return@withLock null
             val categoryId = (target as? CardSwipeTarget.Category)?.id
-            val draw = drawNextCard.prepare(gameId, categoryId)
+            val version = cardPreloader.version
+            val draw = cardPreloader.prepare(categoryId)
             PreparedCardSwipe(draw.karte.toGameCardUiModel(sprache, cardInstanceId = Long.MIN_VALUE)) {
                 cardChangeMutex.withLock {
                     val latestState = _uiState.value as? GameScreenUiState.Loaded
                     if (latestState?.game?.aktuelleKarte?.instanceId == state.game.aktuelleKarte.instanceId) {
-                        val nextCard = drawNextCard.commit(gameId, draw)
-                        lastDrawCategoryId = categoryId
-                        appSettingsRepository.setLastDrawCategoryId(gameId, categoryId)
-                        showCard(nextCard)
+                        if (version == cardPreloader.version) {
+                            commitDraw(categoryId, draw)
+                        } else {
+                            drawCard(categoryId)
+                        }
                     }
                 }
             }
@@ -194,7 +206,7 @@ class GameViewModel @Inject constructor(
     }
 
     fun resetSeenCards() {
-        viewModelScope.launch { resetSeenCardsUseCase(gameId) }
+        updateCardPool { resetSeenCardsUseCase(gameId) }
     }
 
     fun resetAllCards() {
@@ -202,18 +214,18 @@ class GameViewModel @Inject constructor(
         if (currentState != null) {
             _uiState.value = GameScreenUiState.Loaded(currentState.game.withAllCardTextsUnplayed())
         }
-        viewModelScope.launch { resetAllCardsUseCase(gameId) }
+        updateCardPool { resetAllCardsUseCase(gameId) }
     }
 
     fun setTextsPerCard(value: Int) {
         updateTextCount(value)
-        viewModelScope.launch { setTextsPerCardUseCase(gameId, value) }
+        updateCardPool { setTextsPerCardUseCase(gameId, value) }
     }
 
     fun resetTextsPerCard() {
         val state = _uiState.value as? GameScreenUiState.Loaded ?: return
         updateTextCount(state.game.standardTexteProKarte)
-        viewModelScope.launch { resetTextsPerCardUseCase(gameId) }
+        updateCardPool { resetTextsPerCardUseCase(gameId) }
     }
 
     fun setKartentextGespielt(
@@ -246,15 +258,14 @@ class GameViewModel @Inject constructor(
                     ),
                 )
 
-            viewModelScope.launch {
-                cardChangeMutex.withLock {
-                    setCardTextPlayedState(cardTextId = cardTextId, gespielt = gespielt)
-                    val latestState = _uiState.value as? GameScreenUiState.Loaded
-                    if (drawNext && latestState?.game?.aktuelleKarte?.instanceId ==
-                        currentState.game.aktuelleKarte.instanceId
-                    ) {
-                        drawFromLastCategory()
-                    }
+            updateCardPool {
+                setCardTextPlayedState(cardTextId = cardTextId, gespielt = gespielt)
+                cardPreloader.invalidate()
+                val latestState = _uiState.value as? GameScreenUiState.Loaded
+                if (drawNext && latestState?.game?.aktuelleKarte?.instanceId ==
+                    currentState.game.aktuelleKarte.instanceId
+                ) {
+                    drawFromLastCategory()
                 }
             }
         }
@@ -269,11 +280,7 @@ class GameViewModel @Inject constructor(
         _uiState.value = GameScreenUiState.Loaded(
             state.game.withCardTextDeletedState(cardTextId, deleted),
         )
-        viewModelScope.launch {
-            cardChangeMutex.withLock {
-                updateCardTextSettings.setDeleted(cardTextId, deleted)
-            }
-        }
+        updateCardPool { updateCardTextSettings.setDeleted(cardTextId, deleted) }
     }
 
     fun setKartentextFavorit(
@@ -285,66 +292,57 @@ class GameViewModel @Inject constructor(
         _uiState.value = GameScreenUiState.Loaded(
             state.game.withCardTextFavoriteState(cardTextId, favorite),
         )
-        viewModelScope.launch {
-            cardChangeMutex.withLock {
-                updateCardTextSettings.setFavorite(cardTextId, favorite)
-            }
-        }
+        updateCardPool { updateCardTextSettings.setFavorite(cardTextId, favorite) }
     }
 
     fun setEigeneKartentextLokalisierung(
         cardTextId: Int,
         text: String?,
     ) {
-        viewModelScope.launch {
-            cardChangeMutex.withLock {
-                updateCardTextSettings.setCustomTranslation(cardTextId, sprache, text)
-                showCard(getOrDrawInitialCard(gameId))
-            }
+        updateCardPool {
+            updateCardTextSettings.setCustomTranslation(cardTextId, sprache, text)
+            showCard(getOrDrawInitialCard(gameId))
         }
     }
 
     fun applyErikTranslations(overwriteExisting: Boolean) {
-        viewModelScope.launch {
-            cardChangeMutex.withLock {
-                updateCardTextSettings.applyErikTranslations(gameId, overwriteExisting)
-                showCard(getOrDrawInitialCard(gameId))
-            }
+        updateCardPool {
+            updateCardTextSettings.applyErikTranslations(gameId, overwriteExisting)
+            showCard(getOrDrawInitialCard(gameId))
         }
     }
 
     fun resetCustomTranslations() {
-        viewModelScope.launch {
-            cardChangeMutex.withLock {
-                updateCardTextSettings.resetCustomTranslations(gameId)
-                showCard(getOrDrawInitialCard(gameId))
-            }
+        updateCardPool {
+            updateCardTextSettings.resetCustomTranslations(gameId)
+            showCard(getOrDrawInitialCard(gameId))
         }
     }
 
     fun setGeloeschteKartentexteModus(mode: GeloeschteKartentexteModus) {
         updateGameSettings { game -> game.copy(geloeschteKartentexteModus = mode) }
-        viewModelScope.launch {
-            cardChangeMutex.withLock {
-                updateCardTextSettings.setDeletedMode(gameId, mode)
-            }
-        }
+        updateCardPool { updateCardTextSettings.setDeletedMode(gameId, mode) }
     }
 
     fun setFavoritenModus(mode: FavoritenModus) {
         updateGameSettings { game -> game.copy(favoritenModus = mode) }
-        viewModelScope.launch {
-            cardChangeMutex.withLock {
-                updateCardTextSettings.setFavoritesMode(gameId, mode)
-            }
-        }
+        updateCardPool { updateCardTextSettings.setFavoritesMode(gameId, mode) }
     }
 
     fun setBearbeiteteKartentexteModus(mode: BearbeiteteKartentexteModus) {
         updateGameSettings { game -> game.copy(bearbeiteteKartentexteModus = mode) }
+        updateCardPool { updateCardTextSettings.setEditedMode(gameId, mode) }
+    }
+
+    private fun updateCardPool(update: suspend () -> Unit) {
         viewModelScope.launch {
             cardChangeMutex.withLock {
-                updateCardTextSettings.setEditedMode(gameId, mode)
+                cardPreloader.invalidate()
+                try {
+                    update()
+                } finally {
+                    cardPreloader.invalidate()
+                }
             }
         }
     }
@@ -366,9 +364,11 @@ class GameViewModel @Inject constructor(
         }
     }
 
-    private suspend fun showCard(drawCardResult: DrawCardResult) {
+    private suspend fun showCard(drawCardResult: DrawCardResult, previousCard: GameCardUiModel? = null) {
         val loadedSpiel = drawCardResult.spiel
-        val previous = showPreviousCard.preview(gameId)
+        val previous = previousCard ?: showPreviousCard.preview(gameId)?.let {
+            it.card.toGameCardUiModel(sprache, it.instanceId)
+        }
         if (gameId == PRIVACY_GAME_ID) privacySession.onCardChanged(drawCardResult.instanceId)
         _uiState.value = GameScreenUiState.Loaded(
             game = loadedSpiel.toUiState(
@@ -376,12 +376,13 @@ class GameViewModel @Inject constructor(
                 cardInstanceId = drawCardResult.instanceId,
                 hasPreviousCard = drawCardResult.hasPrevious,
             ).copy(
-                previousCard = previous?.card?.toGameCardUiModel(sprache, previous.instanceId),
+                previousCard = previous,
                 lastDrawCategoryId = lastDrawCategoryId,
                 funFactsModeEnabled = funFactsModeEnabled,
                 privacyModeEnabled = privacyModeEnabled
             ),
         )
+        cardPreloader.invalidate()
     }
 
     private fun updateTextCount(value: Int) {

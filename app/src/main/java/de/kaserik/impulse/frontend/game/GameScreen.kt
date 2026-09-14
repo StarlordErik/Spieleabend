@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -72,13 +73,17 @@ fun GameScreen(
     viewModel: GameViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val prefetchModifier = rememberCardPrefetchModifier(
+        onActiveChanged = viewModel.cardPreloader::setActive,
+        onPointerInput = viewModel.cardPreloader::onPointerInput,
+    )
 
     when (val state = uiState) {
         GameScreenUiState.Loading -> GameLoadingContent(modifier = modifier)
         is GameScreenUiState.Loaded -> {
             GameScreenContent(
                 uiState = state.game,
-                modifier = modifier,
+                modifier = modifier.then(prefetchModifier),
                 developerMode = developerMode,
                 onShowCards = onShowCards,
                 navigationActions = GameNavigationActions(
@@ -87,6 +92,7 @@ fun GameScreen(
                     onPreviousSelected = viewModel::selectPrevious,
                     onNextSelected = viewModel::selectNextFromLastCategory,
                     prepareNextCard = viewModel::prepareCardSwipe,
+                    onInteractionBlocked = viewModel.cardPreloader::setInteractionBlocked,
                 ),
                 settingsActions = GameSettingsActions(
                     onResetSeenCards = viewModel::resetSeenCards,
@@ -173,6 +179,9 @@ private fun GameScreenContent(
     val swipeState = remember { GameScreenSwipeState() }
     var funFactsQuestionTransitionActive by remember { mutableStateOf(false) }
     var funFactsCategoryTabsVisible by remember { mutableStateOf(true) }
+    val prefetchBlocked = showSettings || editingCardTextId != null ||
+            swipeState.swipeInteractionLocked || funFactsQuestionTransitionActive
+    LaunchedEffect(prefetchBlocked) { navigationActions.onInteractionBlocked(prefetchBlocked) }
     val funFactsActive = uiState.spielId == FUN_FACTS_GAME_ID && uiState.funFactsModeEnabled
     val activeFunFactsSession = funFactsSession ?: remember { FunFactsSession() }
     val privacyActive = uiState.spielId == PRIVACY_GAME_ID && uiState.privacyModeEnabled
@@ -364,7 +373,7 @@ private fun GameScreenContent(
     val editingCardText = uiState.aktuelleKarte.kartentexte.firstOrNull { cardText ->
         cardText.id == editingCardTextId
     }
-    if (developerMode && editingCardText != null) {
+    if (editingCardText != null && (developerMode || editingCardText.uebersetzungFehlt)) {
         CardTextEditorDialog(
             cardText = editingCardText,
             language = uiState.sprache,

@@ -39,6 +39,7 @@ internal data class GameNavigationActions(
     val onPreviousSelected: () -> Unit = {},
     val onNextSelected: () -> Unit = onRandomSelected,
     val prepareNextCard: suspend (CardSwipeTarget) -> PreparedCardSwipe? = { null },
+    val onInteractionBlocked: (Boolean) -> Unit = {},
 ) {
     fun select(target: CardSwipeTarget) {
         when (target) {

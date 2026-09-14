@@ -13,7 +13,15 @@ import de.kaserik.impulse.domain.model.Lokalisierung
 import de.kaserik.impulse.domain.model.Spiel
 import de.kaserik.impulse.domain.model.Translation
 import de.kaserik.impulse.domain.repository.GameRepository
+import de.kaserik.impulse.frontend.game.CardDrawPreloader
+import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -21,6 +29,160 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DrawNextCardUseCaseTest {
+    @Test
+    fun idlePrefetchLoadsEveryCategoryAndRandomWithOneReadWithoutChangingSeenOrHistory() = runBlocking {
+        val game = spiel(
+            kategorie(1, kartentext(101), kartentext(102)),
+            kategorie(2, kartentext(201), kartentext(202)),
+        )
+        val repository = FakeGameRepository(game)
+        val drawNext = DrawNextCardUseCase(repository)
+        val preloader = CardDrawPreloader(this, drawNext, 10, idleDelayMillis = 0)
+        preloader.setActive(true)
+        awaitPrefetch()
+
+        val category = preloader.prepare(1)
+        assertEquals(setOf(101, 102), category.karte.kartentexte.map { it.kartentext.id() }.toSet())
+        assertEquals(setOf(201, 202), preloader.prepare(2).karte.kartentexte.map { it.kartentext.id() }.toSet())
+        assertEquals(2, preloader.prepare(null).karte.kartentexte.size)
+        assertEquals(1, repository.gameReadCount)
+        assertNull(repository.getCurrentCard(10))
+        assertEquals(game, repository.getGame(10))
+        assertTrue(repository.lastSeenCardTextIds.isEmpty())
+
+        val committed = drawNext.commit(10, category)
+        assertEquals(category.karte, committed.karte)
+        assertEquals(setOf(101, 102), repository.lastSeenCardTextIds)
+        assertTrue(committed.spiel.kategorien.single { it.id() == 2 }.kartentexte.none { it.gesehen })
+    }
+
+    @Test
+    fun idlePrefetchDoesNotApplyCycleResetsUntilTheChosenCardIsShown() = runBlocking {
+        val game = spiel(
+            kategorie(1, kartentext(101, gesehen = true, gespielt = true)),
+            kategorie(2, kartentext(201, gesehen = true, gespielt = true)),
+        )
+        val repository = FakeGameRepository(game)
+        val drawNext = DrawNextCardUseCase(repository)
+        val preloader = CardDrawPreloader(this, drawNext, 10, idleDelayMillis = 0)
+        preloader.setActive(true)
+        awaitPrefetch()
+
+        assertEquals(game, repository.getGame(10))
+        assertTrue(repository.lastResetSeenAndPlayedCategoryIds.isEmpty())
+        val committed = drawNext.commit(10, preloader.prepare(1))
+        assertEquals(setOf(101), repository.lastResetSeenAndPlayedCategoryIds)
+        assertTrue(committed.spiel.kategorien.single { it.id() == 2 }.kartentexte.single().gespielt)
+    }
+
+    @Test
+    fun heldPointerAndActiveAnimationsPostponePrefetchUntilInputStops() = runBlocking {
+        val repository = FakeGameRepository(spiel(kategorie(1, kartentext(101))))
+        val preloader = CardDrawPreloader(this, DrawNextCardUseCase(repository), 10, idleDelayMillis = 0)
+        preloader.setActive(true)
+        preloader.onPointerInput(pressed = true)
+        awaitPrefetch()
+        assertEquals(0, repository.gameReadCount)
+
+        preloader.setInteractionBlocked(true)
+        preloader.onPointerInput(pressed = false)
+        awaitPrefetch()
+        assertEquals(0, repository.gameReadCount)
+
+        preloader.setInteractionBlocked(false)
+        awaitPrefetch()
+        assertEquals(1, repository.gameReadCount)
+        preloader.onPointerInput(pressed = true)
+        preloader.onPointerInput(pressed = false)
+        awaitPrefetch()
+        assertEquals(1, repository.gameReadCount)
+    }
+
+    @Test
+    fun prefetchWaitsForAnIdleIntervalAndStopsWhenTheScreenIsInactive() = runBlocking {
+        val repository = FakeGameRepository(spiel(kategorie(1, kartentext(101))))
+        val preloader = CardDrawPreloader(this, DrawNextCardUseCase(repository), 10, idleDelayMillis = 60_000)
+        preloader.setActive(true)
+        yield()
+        assertEquals(0, repository.gameReadCount)
+        preloader.setActive(false)
+        awaitPrefetch()
+        assertEquals(0, repository.gameReadCount)
+    }
+
+    @Test
+    fun preparingSomeSlotsOnDemandStillPrefetchesTheRemainingCategories() = runBlocking {
+        val repository = FakeGameRepository(spiel(
+            kategorie(1, kartentext(101)),
+            kategorie(2, kartentext(201)),
+        ))
+        val preloader = CardDrawPreloader(this, DrawNextCardUseCase(repository), 10, idleDelayMillis = 0)
+        preloader.setActive(true)
+        preloader.onPointerInput(pressed = true)
+        val random = preloader.prepare(null)
+        val category = preloader.prepare(1)
+        preloader.onPointerInput(pressed = false)
+        awaitPrefetch()
+
+        assertEquals(random, preloader.prepare(null))
+        assertEquals(category, preloader.prepare(1))
+        assertEquals(201, preloader.prepare(2).karte.singleId())
+        assertEquals(3, repository.gameReadCount)
+    }
+
+    @Test
+    fun invalidationDiscardsCardsFromAnOutdatedDatabaseRead() = runBlocking {
+        val repository = FakeGameRepository(spiel(kategorie(1, kartentext(101), kartentext(102))))
+        val readStarted = CompletableDeferred<Unit>()
+        val releaseRead = CompletableDeferred<Unit>()
+        repository.afterGameRead = {
+            if (repository.gameReadCount == 1) {
+                readStarted.complete(Unit)
+                releaseRead.await()
+            }
+        }
+        val preloader = CardDrawPreloader(this, DrawNextCardUseCase(repository), 10, idleDelayMillis = 0)
+        preloader.setActive(true)
+        withTimeout(2_000) { readStarted.await() }
+        repository.setTextsPerCardOverride(10, 1)
+        preloader.invalidate()
+        releaseRead.complete(Unit)
+        awaitPrefetch()
+
+        assertEquals(1, preloader.prepare(1).karte.kartentexte.size)
+        assertEquals(1, preloader.prepare(null).karte.kartentexte.size)
+        assertEquals(2, repository.gameReadCount)
+        assertTrue(repository.lastSeenCardTextIds.isEmpty())
+    }
+
+    @Test
+    fun drawingOnDemandDoesNotWaitForAnInFlightPrefetch() = runBlocking {
+        val repository = FakeGameRepository(spiel(kategorie(1, kartentext(101))))
+        val readStarted = CompletableDeferred<Unit>()
+        val releaseRead = CompletableDeferred<Unit>()
+        repository.afterGameRead = {
+            if (repository.gameReadCount == 1) {
+                readStarted.complete(Unit)
+                releaseRead.await()
+            }
+        }
+        val preloader = CardDrawPreloader(this, DrawNextCardUseCase(repository), 10, idleDelayMillis = 0)
+        preloader.setActive(true)
+        withTimeout(2_000) { readStarted.await() }
+        preloader.onPointerInput(pressed = true)
+        val draw = withTimeout(2_000) { preloader.prepare(1) }
+
+        assertEquals(101, draw.karte.singleId())
+        assertTrue(repository.lastSeenCardTextIds.isEmpty())
+        releaseRead.complete(Unit)
+        awaitPrefetch()
+    }
+
+    private suspend fun CoroutineScope.awaitPrefetch() {
+        val pending = coroutineContext.job.children.toList()
+        withTimeout(2_000) { pending.joinAll() }
+    }
+
     @Test
     fun swipePreviewDoesNotChangeHistoryOrFlagsAndCommitUsesExactlyThePreviewedTexts() = runBlocking {
         listOf(null, 1).forEach { categoryId ->
@@ -426,6 +588,9 @@ class DrawNextCardUseCaseTest {
         private var spiel: Spiel = initialSpiel
         private val history = mutableListOf<CardHistoryState>()
         private var nextInstanceId = 1L
+        private val gameReads = AtomicInteger()
+        val gameReadCount: Int get() = gameReads.get()
+        var afterGameRead: suspend () -> Unit = {}
 
         var lastResetSeenCategoryIds: Set<Int> = emptySet()
             private set
@@ -441,7 +606,12 @@ class DrawNextCardUseCaseTest {
 
         override suspend fun getGames(): List<Spiel> = listOf(spiel)
 
-        override suspend fun getGame(gameId: Int): Spiel = spiel
+        override suspend fun getGame(gameId: Int): Spiel {
+            val snapshot = spiel
+            gameReads.incrementAndGet()
+            afterGameRead()
+            return snapshot
+        }
 
         override suspend fun commitCardDraw(
             gameId: Int,
